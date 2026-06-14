@@ -83,9 +83,9 @@ export type LeaveRequest = {
 };
 
 export type ManagerStats = {
-  activeProjects: number;
   openTasks: number;
   activeUsers: number;
+  activeProjects?: number;
 };
 
 export type ProjectProgress = {
@@ -136,15 +136,19 @@ export type SupervisorMember = {
   firstName?: string;
   lastName?: string;
   email?: string;
+  mobile?: string;
   role?: string;
   isActive?: boolean;
   score?: number;
   progressPercentage?: number;
   performanceStatus?: string;
+  performanceEvaluatedAt?: string;
   assignedTasks?: number;
   completedTasks?: number;
   assignedFixedTasks?: number;
   completedFixedTasks?: number;
+  totalTasks?: number;
+  totalFixedTasks?: number;
 };
 
 export type MemberPerformance = {
@@ -316,6 +320,9 @@ export type FixedTask = {
   doneTime?: string;
   lastGeneratedAt?: string;
   nextRunAt?: string;
+  startTime?: string;
+  endTime?: string;
+  endDate?: string;
   sourceExcel?: string;
   sourceSheet?: string;
   sourceRow?: number;
@@ -445,6 +452,20 @@ function qs(params?: Record<string, string | number | boolean | undefined>) {
   return q ? `?${q}` : "";
 }
 
+function toFormData(body: Record<string, unknown>, file?: File) {
+  const form = new FormData();
+  Object.entries(body).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (Array.isArray(value)) {
+      value.forEach((item) => form.append(key, String(item)));
+      return;
+    }
+    form.append(key, String(value));
+  });
+  if (file) form.append("file", file);
+  return form;
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (body: { mobile: string; password: string }) =>
@@ -475,18 +496,8 @@ export const taskApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
     request<Task[] | { data?: Task[] }>(`/tasks${qs({ page: 1, limit: 50, ...params })}`, {}, token),
   get: (token: string, id: string) => request<Task>(`/tasks/${id}`, {}, token),
-  create: (token: string, body: Record<string, unknown>) =>
-    request<Task>("/tasks", { method: "POST", body: JSON.stringify(body) }, token),
-  createWithFile: (token: string, body: Record<string, unknown>, file: File) => {
-    const form = new FormData();
-    Object.entries(body).forEach(([k, v]) => {
-      if (v === undefined || v === null) return;
-      if (Array.isArray(v)) v.forEach((item) => form.append(k, String(item)));
-      else form.append(k, String(v));
-    });
-    form.append("file", file);
-    return request<Task>("/tasks", { method: "POST", body: form }, token);
-  },
+  create: (token: string, body: Record<string, unknown>, file?: File) =>
+    request<Task>("/tasks", { method: "POST", body: toFormData(body, file) }, token),
   update: (token: string, id: string, body: Record<string, unknown>) =>
     request<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
   delete: (token: string, id: string) =>
@@ -510,10 +521,10 @@ export const managerApi = {
     request<User[] | { data?: User[] }>(`/manager/users${qs(params)}`, {}, token),
   updateUserRole: (token: string, userId: string, role: string) =>
     request(`/manager/users/${userId}/role`, { method: "PATCH", body: JSON.stringify({ role }) }, token),
-  taskStatusOverview: (token: string, projectId?: string) =>
-    request<TaskStatusOverview>(`/manager/tasks/status${qs(projectId ? { projectId } : {})}`, {}, token),
-  taskCountsByUsers: (token: string, projectId?: string) =>
-    request<UserTaskCount[] | { data?: UserTaskCount[] }>(`/manager/tasks/users/counts${qs(projectId ? { projectId } : {})}`, {}, token),
+  taskStatusOverview: (token: string) =>
+    request<TaskStatusOverview>("/manager/tasks/status", {}, token),
+  taskCountsByUsers: (token: string) =>
+    request<UserTaskCount[] | { data?: UserTaskCount[] }>("/manager/tasks/users/counts", {}, token),
   monthlyPerformance: (token: string, params?: Record<string, string | number | undefined>) =>
     request<MonthlyPerformance[] | { data?: MonthlyPerformance[] } | MonthlyPerformanceResponse>(`/manager/users/monthly-performance${qs(params)}`, {}, token),
   allTasks: (token: string, recurrence?: string) =>
@@ -526,24 +537,14 @@ export const managerApi = {
 
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 export const supervisorApi = {
-  statistics: (token: string) =>
-    request<SupervisorStats>("/supervisor/statistics", {}, token),
-  projects: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<Project[] | { data?: Project[] }>(`/supervisor/projects${qs(params)}`, {}, token),
-  assignProjectSpecialist: (token: string, projectId: string, assigneeId: string) =>
-    request(`/supervisor/projects/${projectId}/assignee`, { method: "PATCH", body: JSON.stringify({ assigneeId }) }, token),
-  projectAssignee: (token: string, projectId: string) =>
-    request<User | null>(`/supervisor/projects/${projectId}/assignee`, {}, token),
-  projectAssigneePerformance: (token: string, projectId: string) =>
-    request<MemberPerformance | MemberPerformance[] | { data?: MemberPerformance[] } | { members?: MemberPerformance[] }>(`/supervisor/projects/${projectId}/assignee/performance`, {}, token),
-  updateTaskStatus: (token: string, projectId: string, taskId: string, status: string) =>
-    request(`/supervisor/projects/${projectId}/tasks/${taskId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }, token),
-  overdueTasks: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<Task[] | { data?: Task[] }>(`/supervisor/tasks/overdue${qs(params)}`, {}, token),
-  projectReport: (token: string, projectId: string) =>
-    request<ProjectReport>(`/supervisor/projects/${projectId}/report`, {}, token),
-  teamPerformance: (token: string) =>
-    request<MemberPerformance[] | { data?: MemberPerformance[] } | { members?: MemberPerformance[] }>("/supervisor/team/performance", {}, token),
+  statistics: (token: string, recurrence?: FixedTaskRecurrence) =>
+    request<SupervisorStats>(`/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`, {}, token),
+  members: (token: string, params?: Record<string, string | number | undefined>) =>
+    request<SupervisorMember[] | { data?: SupervisorMember[] }>(`/supervisor/members${qs(params)}`, {}, token),
+  tasks: (token: string, params?: Record<string, string | number | undefined>) =>
+    request<Task[] | { data?: Task[] }>(`/supervisor/tasks${qs(params)}`, {}, token),
+  fixedTasks: (token: string, params?: Record<string, string | number | boolean | undefined>) =>
+    request<FixedTask[] | { data?: FixedTask[] }>(`/supervisor/fixed-tasks${qs(params)}`, {}, token),
 };
 
 // ─── Notifications ───────────────────────────────────────────────────────────
@@ -570,15 +571,13 @@ export const fixedTaskApi = {
   get: (token: string, id: string) => request<FixedTask>(`/fixed-tasks/${id}`, {}, token),
   create: (token: string, body: Record<string, unknown>) =>
     request<FixedTask>("/fixed-tasks", { method: "POST", body: JSON.stringify(body) }, token),
-  update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<FixedTask>(`/fixed-tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+  update: (token: string, id: string, userId: string, body: Record<string, unknown>) =>
+    request<FixedTask>(`/fixed-tasks/${id}${qs({ userId })}`, { method: "PATCH", body: JSON.stringify(body) }, token),
   // Assignee (specialist) may PATCH only the status field — board drag & drop.
-  updateStatus: (token: string, id: string, status: FixedTaskStatus) =>
-    request<FixedTask>(`/fixed-tasks/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }, token),
+  updateStatus: (token: string, id: string, userId: string, status: FixedTaskStatus) =>
+    request<FixedTask>(`/fixed-tasks/${id}${qs({ userId })}`, { method: "PATCH", body: JSON.stringify({ status }) }, token),
   delete: (token: string, id: string) =>
     request(`/fixed-tasks/${id}`, { method: "DELETE" }, token),
-  incompleteReport: (token: string, params?: Record<string, string | number | boolean | undefined>) =>
-    request<IncompleteFixedTask[] | { data?: IncompleteFixedTask[] }>(`/fixed-tasks/reports/incomplete${qs(params)}`, {}, token),
   seedFromExcel: (token: string) =>
     request<{ message?: string; usersCreated?: number; fixedTasksCreated?: number }>("/fixed-tasks/seed/excel", { method: "POST" }, token),
   bySpecialist: (token: string, userId: string, params?: Record<string, string | number | undefined>) =>
@@ -600,7 +599,7 @@ export const leaveApi = {
     request(`/leave-requests/${id}`, { method: "DELETE" }, token),
   approve: (token: string, id: string, approvedBy: string) =>
     request(`/leave-requests/${id}/approve`, { method: "POST", body: JSON.stringify({ approvedBy }) }, token),
-  reject: (token: string, id: string, approvedBy: string, rejectionReason?: string) =>
+  reject: (token: string, id: string, approvedBy: string, rejectionReason: string) =>
     request(`/leave-requests/${id}/reject`, { method: "POST", body: JSON.stringify({ approvedBy, rejectionReason }) }, token),
 };
 

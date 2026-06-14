@@ -17,9 +17,9 @@ export function TaskPanel({
   onDownloadExcel: () => void;
   onCommentChange: (c: string) => void;
   onStatusChange: (s: string) => void;
-  onDescriptionChange: (d: string) => void;
+  onDescriptionChange?: (d: string) => void;
   onAssign: (userId: string) => void;
-  onUnassign: (userId: string) => void;
+  onUnassign?: (userId: string) => void;
   onClaim: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -111,7 +111,7 @@ export function TaskPanel({
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold text-[--text-3]">توضیحات</p>
-              {canEditAssignments && !descEditing && (
+              {onDescriptionChange && !descEditing && (
                 <button className="text-xs font-semibold text-[#1f7a8c] hover:underline" onClick={() => setDescEditing(true)} type="button">
                   {desc ? "ویرایش" : "افزودن"}
                 </button>
@@ -129,7 +129,7 @@ export function TaskPanel({
                 <div className="flex gap-2">
                   <button
                     className="flex h-8 flex-1 items-center justify-center rounded-lg bg-[#1f7a8c] text-xs font-semibold text-white transition hover:bg-[#196b7b]"
-                    onClick={() => { onDescriptionChange(desc); setDescEditing(false); }}
+                    onClick={() => { onDescriptionChange?.(desc); setDescEditing(false); }}
                     type="button"
                   >ذخیره</button>
                   <button
@@ -141,7 +141,7 @@ export function TaskPanel({
               </div>
             ) : desc ? (
               <p className="rounded-xl bg-[--surface-2] px-3 py-2.5 text-sm text-[--text] leading-relaxed">{desc}</p>
-            ) : canEditAssignments ? (
+            ) : onDescriptionChange ? (
               <button
                 className="w-full rounded-xl border border-dashed border-[--border] p-3 text-center text-xs text-[--text-3] transition hover:border-[#1f7a8c]/40 hover:text-[#1f7a8c]"
                 onClick={() => setDescEditing(true)}
@@ -240,7 +240,7 @@ export function TaskPanel({
                           <p className="text-xs text-[--text-3]">{fullUser?.roles || "specialist"}</p>
                         </div>
                       </div>
-                      {canEditAssignments && (
+                      {canEditAssignments && onUnassign && (
                         <button
                           className="flex h-6 w-6 items-center justify-center rounded-md text-[--text-3] transition hover:bg-red-50 hover:text-red-500"
                           onClick={() => onUnassign(id)}

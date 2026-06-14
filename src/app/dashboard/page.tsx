@@ -1,6 +1,6 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_store/hooks";
+import { useTaskinoPageContext } from "../_components/taskino-context";
 import type { TaskPeriod } from "../_lib/task-constants";
 
 export default function DashboardPage() {
@@ -26,7 +26,7 @@ function DashboardPageContent() {
                     <p className="mt-1 text-sm text-violet-200">{overdueTasks.length > 0 ? `${overdueTasks.length} گزارش معوق نیاز به بررسی دارد` : "همه گزارش‌ها در موعد هستند"}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-5">
-                    {[{ n: supervisorStats?.supervisedProjects ?? 0, l: "پروژه" }, { n: supervisorInProgressReports, l: "در حال انجام" }, { n: supervisorOwnDoneReports, l: "تکمیل شده" }].map((s: any, i: number) => (
+                    {[{ n: (supervisorStats?.supervisedTasks ?? 0) + (supervisorStats?.supervisedFixedTasks ?? 0), l: "تحت نظر" }, { n: supervisorInProgressReports, l: "در حال انجام" }, { n: supervisorOwnDoneReports, l: "تکمیل شده" }].map((s: any, i: number) => (
                       <div key={i} className="text-center">
                         <p className="text-2xl font-extrabold">{s.n}</p>
                         <p className="text-[11px] text-violet-200">{s.l}</p>
@@ -39,9 +39,9 @@ function DashboardPageContent() {
               {/* Stats cards */}
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 {[
-                  { label: "پروژه‌های تحت نظر", value: supervisorStats?.supervisedProjects ?? 0, sub: "پروژه", icon: FolderKanban, a: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900" },
+                  { label: "گزارش‌های تحت نظر", value: (supervisorStats?.supervisedTasks ?? 0) + (supervisorStats?.supervisedFixedTasks ?? 0), sub: "عادی و ثابت", icon: FolderKanban, a: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900" },
                   { label: "گزارش‌های جاری", value: supervisorInProgressReports, sub: "در حال انجام", icon: Activity, a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20" },
-                  { label: "گزارش‌های موفق پروژه", value: supervisorProjectDoneReports, sub: "تکمیل شده", icon: CheckCircle2, a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900" },
+                  { label: "تکمیل به‌موقع", value: supervisorProjectDoneReports, sub: "موفق", icon: CheckCircle2, a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900" },
                   { label: "گزارش‌های معوق", value: overdueTasks.length, sub: "نیاز به بررسی", icon: AlertTriangle, a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900" },
                 ].map((s: any) => (
                   <div key={s.label} className="group rounded-xl border border-[--border] bg-[--surface] p-4 transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/5">

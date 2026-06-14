@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useTaskinoPageContext } from "../_store/hooks";
+import { useTaskinoPageContext } from "../_components/taskino-context";
 
 type SettingsFormValues = {
   firstName: string;

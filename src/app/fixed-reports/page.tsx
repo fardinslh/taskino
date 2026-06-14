@@ -1,6 +1,6 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_store/hooks";
+import { useTaskinoPageContext } from "../_components/taskino-context";
 
 export default function FixedReportsPage() {
   return <FixedReportsPageContent />;
@@ -8,7 +8,7 @@ export default function FixedReportsPage() {
 
 function FixedReportsPageContent() {
   const {
-    AlertTriangle, ClipboardList, Plus, RefreshCw, Trash2, Upload, X, Field,    Select, getId, formatDate, userName, currentUser, users, projects, fixedTasks,    incompleteFixedTasks, fixedReportsTab, showFixedTaskForm, editingFixedTask, ftTitle, ftAssignee, ftRecurrence, ftDescription,    ftProjectId, ftActive, ftNextRunAt, activeView, setFixedReportsTab, setFtTitle, setFtAssignee, setFtRecurrence,    setFtDescription, setFtProjectId, setFtActive, setFtNextRunAt, isManager, loadManagerAnalytics, openFixedTaskForm, closeFixedTaskForm,    saveFixedTask, toggleFixedTaskActive, deleteFixedTask, seedFixedTasksFromExcel
+    AlertTriangle, ClipboardList, Plus, RefreshCw, Trash2, Upload, X, Field, Select, getId, formatDate, userName, currentUser, users, fixedTasks, incompleteFixedTasks, fixedReportsTab, showFixedTaskForm, editingFixedTask, ftTitle, ftAssignee, ftRecurrence, ftDescription, ftActive, ftNextRunAt, activeView, setFixedReportsTab, setFtTitle, setFtAssignee, setFtRecurrence, setFtDescription, setFtActive, setFtNextRunAt, isManager, loadManagerAnalytics, openFixedTaskForm, closeFixedTaskForm, saveFixedTask, toggleFixedTaskActive, deleteFixedTask, seedFixedTasksFromExcel
   } = useTaskinoPageContext();
 
   return (
@@ -78,7 +78,7 @@ function FixedReportsPageContent() {
                   {showFixedTaskForm && (
                     <div className="border-b border-[--border] bg-[--surface-2]/70 p-4">
                       <p className="mb-3 text-sm font-bold">{editingFixedTask ? "ویرایش الگو" : "الگوی ثابت جدید"}</p>
-                      <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_180px_180px_1fr_auto]" onSubmit={saveFixedTask}>
+                      <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_180px_220px_auto]" onSubmit={saveFixedTask}>
                         <Field label="عنوان *" name="ftTitle" value={ftTitle} onChange={setFtTitle} required placeholder="مثلاً: گزارش روزانه" />
                         <label className="block">
                           <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">توالی *</span>
@@ -95,10 +95,6 @@ function FixedReportsPageContent() {
                         <Select label="مسئول * (هم‌حوزه)" value={ftAssignee} onChange={setFtAssignee}
                           options={users.filter((u: any) => (u.roles === "specialist" || u.roles === "supervisor") && (!currentUser?.workField || u.workField === currentUser.workField)).map((u: any) => [getId(u), userName(u)])}
                           placeholder="انتخاب مسئول هم‌حوزه"
-                        />
-                        <Select label="پروژه" value={ftProjectId} onChange={setFtProjectId}
-                          options={projects.map((p: any) => [getId(p), p.title])}
-                          placeholder="مستقل (بدون پروژه)"
                         />
                         <div className="flex items-end gap-2">
                           <button className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white disabled:opacity-50 transition hover:bg-[#196b7b]" disabled={!ftTitle.trim() || !ftAssignee} type="submit">
@@ -143,7 +139,6 @@ function FixedReportsPageContent() {
                             </div>
                             <p className="mt-0.5 text-xs text-[--text-3]">
                               {ft.assignedTo ? `مسئول: ${userName(ft.assignedTo)}` : ""}
-                              {ft.projectId ? ` · پروژه: ${typeof ft.projectId === "string" ? ft.projectId : ft.projectId.title}` : ""}
                               {ft.description ? ` · ${ft.description}` : ""}
                             </p>
                           </div>
@@ -198,7 +193,6 @@ function FixedReportsPageContent() {
                             <p className="mt-1 text-xs text-[--text-3]">
                               {item.recurrence === "daily" ? "روزانه" : item.recurrence === "weekly" ? "هفتگی" : "ماهانه"}
                               {item.assignedTo ? ` · مسئول: ${userName(item.assignedTo)}` : ""}
-                              {item.projectId ? ` · پروژه: ${typeof item.projectId === "string" ? item.projectId : item.projectId.title}` : ""}
                               {item.deadline ? ` · مهلت: ${formatDate(item.deadline)}` : ""}
                             </p>
                           </div>

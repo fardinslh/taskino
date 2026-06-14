@@ -1,7 +1,9 @@
 "use client";
 
+import type { User } from "@/lib/api";
+
 import { LeaveRequestForm } from "../_components/leave-request-form";
-import { useTaskinoPageContext } from "../_store/hooks";
+import { useTaskinoPageContext } from "../_components/taskino-context";
 
 type LeaveRequestView = {
   _id?: string;
@@ -10,8 +12,8 @@ type LeaveRequestView = {
   reason?: string;
   startDate: string;
   endDate: string;
-  user?: unknown;
-  approvedBy?: unknown;
+  user?: User | string;
+  approvedBy?: User | string;
 };
 
 export default function LeavePage() {
@@ -140,10 +142,10 @@ function LeaveRequestReviewRow({ formatDate, getId, handleLeaveAction, initials,
   formatDate: (value?: string) => string;
   getId: (item?: { _id?: string; id?: string } | string) => string;
   handleLeaveAction: (id: string, action: "approve" | "reject") => Promise<void>;
-  initials: (user?: unknown) => string;
+  initials: (user?: User | string) => string;
   leaveRequest: LeaveRequestView;
   statusLabel: (status?: string) => string;
-  userName: (user?: unknown) => string;
+  userName: (user?: User | string) => string;
 }) {
   const badge = leaveBadge(leaveRequest.status);
 
