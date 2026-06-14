@@ -1,4 +1,7 @@
+import axios, { type AxiosRequestConfig } from "axios";
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+const apiClient = axios.create({ baseURL: apiUrl });
 
 export type User = {
   _id?: string;
@@ -337,52 +340,92 @@ export function normalizeList<T>(v: T[] | { data?: T[]; items?: T[]; docs?: T[] 
   return v.data ?? v.items ?? v.docs ?? [];
 }
 
-export async function request<T>(path: string, opts: RequestInit = {}, token?: string): Promise<T> {
-  let res: Response;
+function requestHeaders(headers?: HeadersInit) {
+  const normalized: Record<string, string> = {};
+  new Headers(headers).forEach((value, key) => {
+    normalized[key] = value;
+  });
+  return normalized;
+}
+
+function extractErrorMessage(data: unknown, fallback: string) {
+  if (typeof data === "string") {
+    try {
+      return extractErrorMessage(JSON.parse(data), fallback);
+    } catch {
+      return data || fallback;
+    }
+  }
+
+  if (data && typeof data === "object" && "message" in data) {
+    const message = (data as { message?: string | string[] }).message;
+    if (Array.isArray(message)) return message.join("، ");
+    if (message) return message;
+  }
+
+  return fallback;
+}
+
+async function axiosErrorMessage(error: unknown, fallback: string) {
+  if (!axios.isAxiosError(error)) return fallback;
+  if (!error.response) return "اتصال به بک‌اند برقرار نشد.";
+
+  let data: unknown = error.response.data;
+  if (typeof Blob !== "undefined" && data instanceof Blob) {
+    data = await data.text();
+  }
+
+  return extractErrorMessage(data, fallback);
+}
+
+function axiosConfig(opts: RequestInit, token?: string): AxiosRequestConfig {
+  const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  const headers = requestHeaders(opts.headers);
+
+  if (!isFormData && !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  return {
+    method: opts.method ?? "GET",
+    headers,
+    data: opts.body ?? undefined,
+    signal: opts.signal ?? undefined,
+    withCredentials: opts.credentials === "include",
+  };
+}
+
+export async function request<T>(
+  path: string,
+  opts: RequestInit = {},
+  token?: string,
+  fallbackMessage = "درخواست ناموفق بود",
+): Promise<T> {
   try {
-    res = await fetch(`${apiUrl}${path}`, {
-      ...opts,
-      headers: {
-        ...(opts.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...opts.headers,
-      },
+    const response = await apiClient.request<T>({
+      url: path,
+      ...axiosConfig(opts, token),
     });
-  } catch {
-    throw new Error("اتصال به بک‌اند برقرار نشد.");
+    return response.data;
+  } catch (error) {
+    throw new Error(await axiosErrorMessage(error, fallbackMessage));
   }
-  const body = await res.text();
-  const data = body ? JSON.parse(body) : null;
-  if (!res.ok) {
-    const msg = data?.message;
-    throw new Error(Array.isArray(msg) ? msg.join("، ") : msg ?? "درخواست ناموفق بود");
-  }
-  return data as T;
 }
 
 export async function downloadBlob(path: string, filename: string, token?: string, opts: RequestInit = {}) {
-  let res: Response;
+  let blob: Blob;
   try {
-    res = await fetch(`${apiUrl}${path}`, {
-      ...opts,
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...opts.headers,
-      },
+    const response = await apiClient.request<Blob>({
+      url: path,
+      ...axiosConfig(opts, token),
+      responseType: "blob",
     });
-  } catch {
-    throw new Error("اتصال به بک‌اند برقرار نشد.");
+    blob = response.data;
+  } catch (error) {
+    throw new Error(await axiosErrorMessage(error, "دانلود ناموفق بود"));
   }
-  if (!res.ok) {
-    const body = await res.text();
-    let msg = "دانلود ناموفق بود";
-    try {
-      const data = body ? JSON.parse(body) : null;
-      msg = data?.message ?? msg;
-    } catch { /* ignore */ }
-    throw new Error(Array.isArray(msg) ? msg.join("، ") : msg);
-  }
-  const blob = await res.blob();
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -575,23 +618,12 @@ export const excelApi = {
   upload: async (token: string, file: File, createdBy: string, type: "import" | "export" = "import") => {
     const form = new FormData();
     form.append("file", file);
-    let res: Response;
-    try {
-      res = await fetch(`${apiUrl}/excel/upload?createdBy=${encodeURIComponent(createdBy)}&type=${type}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-    } catch {
-      throw new Error("اتصال به بک‌اند برقرار نشد.");
-    }
-    const body = await res.text();
-    const data = body ? JSON.parse(body) : null;
-    if (!res.ok) {
-      const msg = data?.message;
-      throw new Error(Array.isArray(msg) ? msg.join("، ") : msg ?? "آپلود ناموفق بود");
-    }
-    return data as ExcelFile;
+    return request<ExcelFile>(
+      `/excel/upload?createdBy=${encodeURIComponent(createdBy)}&type=${type}`,
+      { method: "POST", body: form },
+      token,
+      "آپلود ناموفق بود",
+    );
   },
   download: (token: string, id: string, filename: string) =>
     downloadBlob(`/excel/${id}/download`, filename, token),
