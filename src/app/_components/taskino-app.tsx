@@ -169,7 +169,7 @@ export function TaskinoApp({ initialView = "dashboard", children }: TaskinoAppPr
   const [loadingSupervisorProject, setLoadingSupervisorProject] = useState(false);
 
   // UI state
-  const [activeView, setActiveViewState] = useState<View>(initialView);
+  const [activeViewState, setActiveViewState] = useState<View>(initialView);
   const [selectedProjectFilter, setSelectedProjectFilter] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("");
   const [selectedAssigneeFilter, setSelectedAssigneeFilter] = useState("");
@@ -180,6 +180,9 @@ export function TaskinoApp({ initialView = "dashboard", children }: TaskinoAppPr
   const [darkMode, setDarkMode] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskPriorities, setTaskPriorities] = useState<Record<string, Priority>>({});
+  const routeView = (Object.entries(VIEW_PATHS).find(([, path]) => path === pathname)?.[0] as View | undefined)
+    ?? (pathname === "/" ? "dashboard" : undefined);
+  const activeView = routeView ?? activeViewState;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);

@@ -1,7 +1,6 @@
 "use client";
 
 import { LeaveRequestForm } from "../_components/leave-request-form";
-import { TaskinoApp } from "../_components/taskino-app";
 import { useTaskinoPageContext } from "../_store/hooks";
 
 type LeaveRequestView = {
@@ -16,11 +15,7 @@ type LeaveRequestView = {
 };
 
 export default function LeavePage() {
-  return (
-    <TaskinoApp initialView="leave">
-      <LeavePageContent />
-    </TaskinoApp>
-  );
+  return <LeavePageContent />;
 }
 
 function LeavePageContent() {

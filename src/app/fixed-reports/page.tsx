@@ -1,12 +1,9 @@
 "use client";
 
-import { TaskinoApp } from "../_components/taskino-app";
 import { useTaskinoPageContext } from "../_store/hooks";
 
 export default function FixedReportsPage() {
-  return (
-    <TaskinoApp initialView="fixed-reports"><FixedReportsPageContent /></TaskinoApp>
-  );
+  return <FixedReportsPageContent />;
 }
 
 function FixedReportsPageContent() {

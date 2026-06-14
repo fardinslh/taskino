@@ -1,13 +1,10 @@
 "use client";
 
-import { TaskinoApp } from "../_components/taskino-app";
 import { useTaskinoPageContext } from "../_store/hooks";
 import type { TaskPeriod } from "../_lib/task-constants";
 
 export default function TasksPage() {
-  return (
-    <TaskinoApp initialView="tasks"><TasksPageContent /></TaskinoApp>
-  );
+  return <TasksPageContent />;
 }
 
 function TasksPageContent() {

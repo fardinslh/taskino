@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { TaskinoApp } from "../_components/taskino-app";
 import { useTaskinoPageContext } from "../_store/hooks";
 
 type SettingsFormValues = {
@@ -12,11 +11,7 @@ type SettingsFormValues = {
 };
 
 export default function SettingsPage() {
-  return (
-    <TaskinoApp initialView="settings">
-      <SettingsPageContent />
-    </TaskinoApp>
-  );
+  return <SettingsPageContent />;
 }
 
 function SettingsPageContent() {

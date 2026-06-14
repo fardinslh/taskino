@@ -3,7 +3,6 @@
 import { useForm } from "react-hook-form";
 import type { User, WorkField } from "@/lib/api";
 import { LeaveRequestForm } from "../_components/leave-request-form";
-import { TaskinoApp } from "../_components/taskino-app";
 import { WORK_FIELDS } from "../_lib/task-constants";
 import { useTaskinoPageContext } from "../_store/hooks";
 
@@ -22,11 +21,7 @@ type SearchUserFormValues = {
 };
 
 export default function TeamPage() {
-  return (
-    <TaskinoApp initialView="team">
-      <TeamPageContent />
-    </TaskinoApp>
-  );
+  return <TeamPageContent />;
 }
 
 function TeamPageContent() {

@@ -1,12 +1,9 @@
 "use client";
 
-import { TaskinoApp } from "../../_components/taskino-app";
 import { useTaskinoPageContext } from "../../_store/hooks";
 
 export default function SupervisorTeamPage() {
-  return (
-    <TaskinoApp initialView="supervisor-team"><SupervisorTeamPageContent /></TaskinoApp>
-  );
+  return <SupervisorTeamPageContent />;
 }
 
 function SupervisorTeamPageContent() {

@@ -1,12 +1,9 @@
 "use client";
 
-import { TaskinoApp } from "../../_components/taskino-app";
 import { useTaskinoPageContext } from "../../_store/hooks";
 
 export default function SupervisorProjectsPage() {
-  return (
-    <TaskinoApp initialView="supervisor-projects"><SupervisorProjectsPageContent /></TaskinoApp>
-  );
+  return <SupervisorProjectsPageContent />;
 }
 
 function SupervisorProjectsPageContent() {

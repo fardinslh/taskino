@@ -1,12 +1,9 @@
 "use client";
 
-import { TaskinoApp } from "../_components/taskino-app";
 import { useTaskinoPageContext } from "../_store/hooks";
 
 export default function AnalyticsPage() {
-  return (
-    <TaskinoApp initialView="analytics"><AnalyticsPageContent /></TaskinoApp>
-  );
+  return <AnalyticsPageContent />;
 }
 
 function AnalyticsPageContent() {

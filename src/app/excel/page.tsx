@@ -1,12 +1,9 @@
 "use client";
 
-import { TaskinoApp } from "../_components/taskino-app";
 import { useTaskinoPageContext } from "../_store/hooks";
 
 export default function ExcelPage() {
-  return (
-    <TaskinoApp initialView="excel"><ExcelPageContent /></TaskinoApp>
-  );
+  return <ExcelPageContent />;
 }
 
 function ExcelPageContent() {

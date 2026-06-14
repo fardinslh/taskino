@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppShell } from "./_components/app-shell";
 import { StoreProvider } from "./_store/provider";
 import "./globals.css";
 
@@ -19,7 +20,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body><StoreProvider>{children}</StoreProvider></body>
+      <body>
+        <StoreProvider>
+          <AppShell>{children}</AppShell>
+        </StoreProvider>
+      </body>
     </html>
   );
 }

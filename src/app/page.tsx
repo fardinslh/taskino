@@ -1,5 +1,5 @@
-import { TaskinoApp } from "./_components/taskino-app";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <TaskinoApp initialView="dashboard" />;
+  redirect("/dashboard");
 }
