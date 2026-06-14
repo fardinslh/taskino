@@ -1,15 +1,27 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_components/taskino-context";
+import { Target, TrendingUp, UsersRound } from "lucide-react";
+
+import { getId } from "@/lib/api";
+import {
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../_components/taskino-context";
 
 export default function AnalyticsPage() {
   return <AnalyticsPageContent />;
 }
 
 function AnalyticsPageContent() {
+  const { activeView } = useNavigationContext();
+  const { isManager } = useSessionContext();
   const {
-    Target, TrendingUp, UsersRound, getId, managerTaskStatus, managerUserCounts, managerMonthlyPerf,    managerUserProgress, activeView, isManager
-  } = useTaskinoPageContext();
+    managerTaskStatus,
+    managerUserCounts,
+    managerMonthlyPerf,
+    managerUserProgress,
+  } = useManagementContext();
 
   return (
     <>

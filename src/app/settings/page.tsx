@@ -2,7 +2,14 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useTaskinoPageContext } from "../_components/taskino-context";
+
+import { userApi } from "@/lib/api";
+import { Field } from "../_components/shared";
+import {
+  useFeedbackContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../_components/taskino-context";
 
 type SettingsFormValues = {
   firstName: string;
@@ -15,18 +22,15 @@ export default function SettingsPage() {
 }
 
 function SettingsPageContent() {
+  const { activeView } = useNavigationContext();
   const {
-    Field,
-    activeView,
     currentUser,
     isManager,
     myId,
     setCurrentUser,
-    setError,
-    setMessage,
     token,
-    userApi,
-  } = useTaskinoPageContext();
+  } = useSessionContext();
+  const { setError, setMessage } = useFeedbackContext();
 
   const { formState: { isSubmitting }, handleSubmit, register, reset } = useForm<SettingsFormValues>({
     defaultValues: {

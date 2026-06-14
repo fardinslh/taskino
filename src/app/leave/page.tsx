@@ -1,9 +1,21 @@
 "use client";
 
 import type { User } from "@/lib/api";
+import { getId } from "@/lib/api";
+import { CalendarDays } from "lucide-react";
 
 import { LeaveRequestForm } from "../_components/leave-request-form";
-import { useTaskinoPageContext } from "../_components/taskino-context";
+import {
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../_components/taskino-context";
+import {
+  formatDate,
+  initials,
+  statusLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 type LeaveRequestView = {
   _id?: string;
@@ -21,19 +33,9 @@ export default function LeavePage() {
 }
 
 function LeavePageContent() {
-  const {
-    CalendarDays,
-    activeView,
-    formatDate,
-    getId,
-    handleLeaveAction,
-    initials,
-    isManager,
-    isSupervisor,
-    leaveRequests,
-    statusLabel,
-    userName,
-  } = useTaskinoPageContext();
+  const { activeView } = useNavigationContext();
+  const { isManager, isSupervisor } = useSessionContext();
+  const { handleLeaveAction, leaveRequests } = useManagementContext();
 
   if (activeView !== "leave") return null;
 

@@ -1,6 +1,24 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_components/taskino-context";
+import {
+  ClipboardList,
+  FileSpreadsheet,
+  FolderKanban,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+
+import { getId } from "@/lib/api";
+import { Field, Select } from "../_components/shared";
+import {
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+  useTaskContext,
+} from "../_components/taskino-context";
+import { COLUMNS } from "../_lib/task-constants";
+import { statusLabel, userName } from "../_lib/task-helpers";
 
 export default function ProjectsPage() {
   return <ProjectsPageContent />;
@@ -8,8 +26,21 @@ export default function ProjectsPage() {
 
 function ProjectsPageContent() {
   const {
-    ClipboardList, FileSpreadsheet, FolderKanban, Plus, Trash2, X, Field, Select,    COLUMNS, getId, statusLabel, userName, users, tasks, taskTitle, taskAssignee,    taskFile, showNewProjectForm, taLookupFirst, taLookupLast, taLookupResult, taCompletionExpert, taCompletionResult, taCountUser,    taCountStart, taCountEnd, taCountResult, activeView, setTaskTitle, setTaskAssignee, setTaskFile, setShowNewProjectForm,    setTaLookupFirst, setTaLookupLast, setTaCompletionExpert, setTaCountUser, setTaCountStart, setTaCountEnd, setSelectedTask, isManager,    createTask, deleteTask, taLookupTasks, taRunCompletionStats, taRunDateCount
-  } = useTaskinoPageContext();
+    activeView,
+    setSelectedTask,
+    setShowNewProjectForm,
+    showNewProjectForm,
+  } = useNavigationContext();
+  const { isManager } = useSessionContext();
+  const { users } = useManagementContext();
+  const {
+    tasks, taskTitle, taskAssignee, taskFile, taLookupFirst, taLookupLast,
+    taLookupResult, taCompletionExpert, taCompletionResult, taCountUser,
+    taCountStart, taCountEnd, taCountResult, setTaskTitle, setTaskAssignee,
+    setTaskFile, setTaLookupFirst, setTaLookupLast, setTaCompletionExpert,
+    setTaCountUser, setTaCountStart, setTaCountEnd, createTask, deleteTask,
+    taLookupTasks, taRunCompletionStats, taRunDateCount,
+  } = useTaskContext();
 
   return (
     <>

@@ -1,15 +1,21 @@
 "use client";
 
-import { useTaskinoPageContext } from "../../_components/taskino-context";
+import { Award, RefreshCw, UsersRound } from "lucide-react";
+
+import {
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../../_components/taskino-context";
 
 export default function SupervisorTeamPage() {
   return <SupervisorTeamPageContent />;
 }
 
 function SupervisorTeamPageContent() {
-  const {
-    Award, RefreshCw, UsersRound, managerUserProgress, activeView, isSupervisor, loadSupervisorData
-  } = useTaskinoPageContext();
+  const { activeView } = useNavigationContext();
+  const { isSupervisor } = useSessionContext();
+  const { managerUserProgress, loadSupervisorData } = useManagementContext();
 
   return (
     <>

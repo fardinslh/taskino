@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useEffectEvent, useState } from "react";
@@ -34,7 +34,6 @@ import {
   type TaskPeriod,
   type View,
 } from "../_lib/task-constants";
-import { taskinoPageDependencies } from "./taskino-page-dependencies";
 import { useFixedTaskActions } from "./use-fixed-task-actions";
 import { useTaskinoDerivedData } from "./use-taskino-derived-data";
 import { useTaskinoExcel } from "./use-taskino-excel";
@@ -344,7 +343,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       if (role === "supervisor") void loadSupervisorData(authToken);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+        err instanceof Error ? err.message : "دریافت اطلاعات ناموفق بود",
       );
     } finally {
       setLoadingData(false);
@@ -537,10 +536,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaskRecurrence("");
       setTaskFile(null);
       setShowNewProjectForm(false);
-      setMessage("Ú¯Ø²Ø§Ø±Ø´ Ø¬Ø¯ÛŒØ¯ Ø³Ø§Ø®ØªÙ‡ Ø´Ø¯.");
+      setMessage("گزارش جدید ساخته شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø³Ø§Ø®Øª Ú¯Ø²Ø§Ø±Ø´ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "ساخت گزارش ناموفق بود");
     }
   }
 
@@ -553,9 +552,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTasks((prev) => prev.map((t) => (getId(t) === taskId ? updated : t)));
       if (selectedTask && getId(selectedTask) === taskId)
         setSelectedTask(updated);
-      setMessage("Ú¯Ø²Ø§Ø±Ø´ Ø¨Ø±Ø§ÛŒ Ø´Ù…Ø§ Ø§Ø³Ø§ÛŒÙ† Ø´Ø¯.");
+      setMessage("گزارش برای شما اساین شد.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø§Ø³Ø§ÛŒÙ† Ú¯Ø²Ø§Ø±Ø´ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "اساین گزارش ناموفق بود");
     }
   }
 
@@ -572,7 +571,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
           prev ? { ...prev, status: newStatus } : prev,
         );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ØªØºÛŒÛŒØ± ÙˆØ¶Ø¹ÛŒØª Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "تغییر وضعیت ناموفق بود");
     }
   }
 
@@ -584,10 +583,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
       );
       if (selectedTask && getId(selectedTask) === taskId)
         setSelectedTask((prev) => (prev ? { ...prev, ...updated } : prev));
-      setMessage("Ú¯Ø²Ø§Ø±Ø´ Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ø´Ø¯.");
+      setMessage("گزارش بروزرسانی شد.");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ú¯Ø²Ø§Ø±Ø´ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+        err instanceof Error ? err.message : "بروزرسانی گزارش ناموفق بود",
       );
     }
   }
@@ -597,16 +596,16 @@ export function useTaskinoController(initialView: View = "dashboard") {
       await taskApi.delete(token, taskId);
       setTasks((prev) => prev.filter((t) => getId(t) !== taskId));
       setSelectedTask(null);
-      setMessage("Ú¯Ø²Ø§Ø±Ø´ Ø­Ø°Ù Ø´Ø¯.");
+      setMessage("گزارش حذف شد.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø­Ø°Ù Ú¯Ø²Ø§Ø±Ø´ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "حذف گزارش ناموفق بود");
     }
   }
 
   async function taLookupTasks(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!taLookupFirst.trim() || !taLookupLast.trim()) {
-      setError("Ù†Ø§Ù… Ùˆ Ù†Ø§Ù… Ø®Ø§Ù†ÙˆØ§Ø¯Ú¯ÛŒ Ø±Ø§ ÙˆØ§Ø±Ø¯ Ú©Ù†ÛŒØ¯.");
+      setError("نام و نام خانوادگی را وارد کنید.");
       return;
     }
     try {
@@ -618,7 +617,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaLookupResult(normalizeList(res));
     } catch (err) {
       setTaLookupResult([]);
-      setError(err instanceof Error ? err.message : "Ø¬Ø³ØªØ¬Ùˆ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "جستجو ناموفق بود");
     }
   }
 
@@ -632,7 +631,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       });
       setTaCompletionResult(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª Ø¢Ù…Ø§Ø± Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "دریافت آمار ناموفق بود");
     }
   }
 
@@ -647,7 +646,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       });
       setTaCountResult(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª ØªØ¹Ø¯Ø§Ø¯ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "دریافت تعداد ناموفق بود");
     }
   }
 
@@ -656,10 +655,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
     if (!myId) return;
     try {
       await loadData();
-      setMessage("Ø¯Ø±Ø®ÙˆØ§Ø³Øª Ù…Ø±Ø®ØµÛŒ Ø«Ø¨Øª Ø´Ø¯.");
+      setMessage("درخواست مرخصی ثبت شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø«Ø¨Øª Ù…Ø±Ø®ØµÛŒ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "ثبت مرخصی ناموفق بود");
     }
   }
 
@@ -671,10 +670,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
     }
     try {
       await leaveApi.approve(token, id, myId);
-      setMessage("Ù…Ø±Ø®ØµÛŒ ØªØ£ÛŒÛŒØ¯ Ø´Ø¯.");
+      setMessage("مرخصی تأیید شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø¹Ù…Ù„ÛŒØ§Øª Ù…Ø±Ø®ØµÛŒ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "عملیات مرخصی ناموفق بود");
     }
   }
 
@@ -684,41 +683,41 @@ export function useTaskinoController(initialView: View = "dashboard") {
       await leaveApi.reject(token, rejectLeaveId, myId, rejectReason.trim());
       setRejectLeaveId(null);
       setRejectReason("");
-      setMessage("Ù…Ø±Ø®ØµÛŒ Ø±Ø¯ Ø´Ø¯.");
+      setMessage("مرخصی رد شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø±Ø¯ Ù…Ø±Ø®ØµÛŒ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "رد مرخصی ناموفق بود");
     }
   }
 
   async function updateUserRole(userId: string, role: string) {
     try {
       await managerApi.updateUserRole(token, userId, role);
-      setMessage("Ù†Ù‚Ø´ Ú©Ø§Ø±Ø¨Ø± Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ø´Ø¯.");
+      setMessage("نقش کاربر بروزرسانی شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ØªØºÛŒÛŒØ± Ù†Ù‚Ø´ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "تغییر نقش ناموفق بود");
     }
   }
 
   async function approveUser(userId: string) {
     try {
       await userApi.approve(token, userId);
-      setMessage("Ú©Ø§Ø±Ø¨Ø± ØªØ£ÛŒÛŒØ¯ Ø´Ø¯.");
+      setMessage("کاربر تأیید شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ØªØ£ÛŒÛŒØ¯ Ú©Ø§Ø±Ø¨Ø± Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "تأیید کاربر ناموفق بود");
     }
   }
 
   async function deleteUser(userId: string) {
-    if (!window.confirm("Ø­Ø°Ù Ø§ÛŒÙ† Ú©Ø§Ø±Ø¨Ø±ØŸ Ø§ÛŒÙ† Ø¹Ù…Ù„ Ù‚Ø§Ø¨Ù„ Ø¨Ø§Ø²Ú¯Ø´Øª Ù†ÛŒØ³Øª.")) return;
+    if (!window.confirm("حذف این کاربر؟ این عمل قابل بازگشت نیست.")) return;
     try {
       await userApi.delete(token, userId);
-      setMessage("Ú©Ø§Ø±Ø¨Ø± Ø­Ø°Ù Ø´Ø¯.");
+      setMessage("کاربر حذف شد.");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø­Ø°Ù Ú©Ø§Ø±Ø¨Ø± Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "حذف کاربر ناموفق بود");
     }
   }
 
@@ -726,7 +725,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     e.preventDefault();
     const parts: string[] = [];
     if (parts.length < 2) {
-      setError("Ù†Ø§Ù… Ùˆ Ù†Ø§Ù… Ø®Ø§Ù†ÙˆØ§Ø¯Ú¯ÛŒ Ø±Ø§ Ø¨Ø§ ÙØ§ØµÙ„Ù‡ ÙˆØ§Ø±Ø¯ Ú©Ù†ÛŒØ¯.");
+      setError("نام و نام خانوادگی را با فاصله وارد کنید.");
       return;
     }
     const firstName = parts[0];
@@ -764,11 +763,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
             .updateUserRole(token, newId, "specialist")
             .catch(() => {});
       }
-      setMessage("Ú©Ø§Ø±Ø¨Ø± Ø¬Ø¯ÛŒØ¯ Ø³Ø§Ø®ØªÙ‡ Ø´Ø¯.");
+      setMessage("کاربر جدید ساخته شد.");
       setShowNewUserForm(false);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø³Ø§Ø®Øª Ú©Ø§Ø±Ø¨Ø± Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "ساخت کاربر ناموفق بود");
     }
   }
 
@@ -783,9 +782,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
       });
       setCurrentUser(updated);
       localStorage.setItem("taskino-user", JSON.stringify(updated));
-      setMessage("Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ø°Ø®ÛŒØ±Ù‡ Ø´Ø¯.");
+      setMessage("پروفایل ذخیره شد.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ø°Ø®ÛŒØ±Ù‡ Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(err instanceof Error ? err.message : "ذخیره پروفایل ناموفق بود");
     }
   }
 
@@ -811,9 +810,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     router.push("/login");
   }
 
-  // â”€â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Login ─────────────────────────────────────────────────────────────────
   const pageContext = {
-    ...taskinoPageDependencies,
     token,
     authHydrated,
     currentUser,

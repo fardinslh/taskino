@@ -1,15 +1,41 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_components/taskino-context";
+import {
+  AlertTriangle,
+  ClipboardList,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+
+import { getId } from "@/lib/api";
+import { Field, Select } from "../_components/shared";
+import {
+  useFixedTaskContext,
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../_components/taskino-context";
+import { formatDate, userName } from "../_lib/task-helpers";
 
 export default function FixedReportsPage() {
   return <FixedReportsPageContent />;
 }
 
 function FixedReportsPageContent() {
+  const { activeView } = useNavigationContext();
+  const { currentUser, isManager } = useSessionContext();
+  const { users, loadManagerAnalytics } = useManagementContext();
   const {
-    AlertTriangle, ClipboardList, Plus, RefreshCw, Trash2, Upload, X, Field, Select, getId, formatDate, userName, currentUser, users, fixedTasks, incompleteFixedTasks, fixedReportsTab, showFixedTaskForm, editingFixedTask, ftTitle, ftAssignee, ftRecurrence, ftDescription, ftActive, ftNextRunAt, activeView, setFixedReportsTab, setFtTitle, setFtAssignee, setFtRecurrence, setFtDescription, setFtActive, setFtNextRunAt, isManager, loadManagerAnalytics, openFixedTaskForm, closeFixedTaskForm, saveFixedTask, toggleFixedTaskActive, deleteFixedTask, seedFixedTasksFromExcel
-  } = useTaskinoPageContext();
+    fixedTasks, incompleteFixedTasks, fixedReportsTab, showFixedTaskForm,
+    editingFixedTask, ftTitle, ftAssignee, ftRecurrence, ftDescription,
+    ftActive, ftNextRunAt, setFixedReportsTab, setFtTitle, setFtAssignee,
+    setFtRecurrence, setFtDescription, setFtActive, setFtNextRunAt,
+    openFixedTaskForm, closeFixedTaskForm, saveFixedTask,
+    toggleFixedTaskActive, deleteFixedTask, seedFixedTasksFromExcel,
+  } = useFixedTaskContext();
 
   return (
     <>

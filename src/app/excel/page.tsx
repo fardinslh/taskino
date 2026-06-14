@@ -1,15 +1,32 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_components/taskino-context";
+import { Download, Loader2, Trash2, Upload } from "lucide-react";
+
+import { getId } from "@/lib/api";
+import {
+  useExcelContext,
+  useNavigationContext,
+  useTaskContext,
+} from "../_components/taskino-context";
+import { statusLabel } from "../_lib/task-helpers";
 
 export default function ExcelPage() {
   return <ExcelPageContent />;
 }
 
 function ExcelPageContent() {
+  const { activeView } = useNavigationContext();
+  const { tasks } = useTaskContext();
   const {
-    Download, Loader2, Trash2, Upload, getId, statusLabel, tasks, excelFiles,    excelStats, excelUploading, activeView, handleExcelUpload, downloadExcelFile, processExcelFile, deleteExcelFile, exportTasksToExcel
-  } = useTaskinoPageContext();
+    excelFiles,
+    excelStats,
+    excelUploading,
+    handleExcelUpload,
+    downloadExcelFile,
+    processExcelFile,
+    deleteExcelFile,
+    exportTasksToExcel,
+  } = useExcelContext();
 
   return (
     <>

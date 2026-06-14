@@ -1,7 +1,41 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_components/taskino-context";
-import type { TaskPeriod } from "../_lib/task-constants";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+} from "@hello-pangea/dnd";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart2,
+  CalendarDays,
+  CheckCircle2,
+  CircleDashed,
+  ClipboardList,
+  FileSpreadsheet,
+  FolderKanban,
+  Plus,
+  TrendingUp,
+  UsersRound,
+} from "lucide-react";
+
+import { getId } from "@/lib/api";
+import { AssigneeStack } from "../_components/shared";
+import {
+  useFixedTaskContext,
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+  useTaskContext,
+} from "../_components/taskino-context";
+import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
+import {
+  formatDate,
+  recurrenceLabel,
+  statusLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 export default function DashboardPage() {
   return <DashboardPageContent />;
@@ -9,8 +43,25 @@ export default function DashboardPage() {
 
 function DashboardPageContent() {
   const {
-    Activity, AlertTriangle, BarChart2, CalendarDays, CheckCircle2, CircleDashed, ClipboardList, FileSpreadsheet,    FolderKanban, Plus, TrendingUp, UsersRound, DragDropContext, Draggable, Droppable, AssigneeStack,    COLUMNS, getId, formatDate, recurrenceLabel, statusLabel, userName, currentUser, users,    tasks, projects, taskQuery, managerStats, boardShowAll, leaveRequests, fixedTasks, managerTaskStatus,    supervisorStats, overdueTasks, teamPerformance, activeView, selectedPeriodFilter, setTaskQuery, setBoardShowAll, setActiveView,    setSelectedPeriodFilter, setSelectedTask, isManager, isSupervisor, isSpecialist, doneTasks, activeTasks, inProgressTasks,    progress, statsUsers, supervisorInProgressReports, supervisorProjectDoneReports, supervisorOwnDoneReports, teamAssignees, teamAssigneeCount, filteredFixedTemplates,    handleLeaveAction, openFixedTaskForm, onDragEnd
-  } = useTaskinoPageContext();
+    activeView, boardShowAll, selectedPeriodFilter, setActiveView,
+    setBoardShowAll, setSelectedPeriodFilter, setSelectedTask, setTaskQuery,
+    taskQuery,
+  } = useNavigationContext();
+  const {
+    currentUser, isManager, isSpecialist, isSupervisor,
+  } = useSessionContext();
+  const {
+    activeTasks, doneTasks, inProgressTasks, progress, projects, tasks,
+  } = useTaskContext();
+  const {
+    handleLeaveAction, leaveRequests, managerStats, managerTaskStatus,
+    overdueTasks, statsUsers, supervisorInProgressReports,
+    supervisorOwnDoneReports, supervisorProjectDoneReports, supervisorStats,
+    teamAssigneeCount, teamAssignees, teamPerformance, users,
+  } = useManagementContext();
+  const {
+    filteredFixedTemplates, fixedTasks, onDragEnd, openFixedTaskForm,
+  } = useFixedTaskContext();
 
   return (
     <>

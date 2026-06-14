@@ -1,25 +1,27 @@
 "use client";
 
-import { useTaskinoPageContext } from "../../_components/taskino-context";
+import { ClipboardList, RefreshCw } from "lucide-react";
+
+import { getId } from "@/lib/api";
+import {
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../../_components/taskino-context";
+import { statusLabel, userName } from "../../_lib/task-helpers";
 
 export default function SupervisorProjectsPage() {
   return <SupervisorWorkPageContent />;
 }
 
 function SupervisorWorkPageContent() {
+  const { activeView, setSelectedTask } = useNavigationContext();
+  const { isSupervisor } = useSessionContext();
   const {
-    ClipboardList,
-    RefreshCw,
-    getId,
-    statusLabel,
-    userName,
     supervisorTasks,
     supervisorFixedTasks,
-    activeView,
-    isSupervisor,
     loadSupervisorData,
-    setSelectedTask,
-  } = useTaskinoPageContext();
+  } = useManagementContext();
 
   if (!isSupervisor || activeView !== "supervisor-projects") return null;
 

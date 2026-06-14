@@ -1,7 +1,12 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useTaskinoPageContext } from "./taskino-context";
+import { leaveApi } from "@/lib/api";
+import { Field } from "./shared";
+import {
+  useFeedbackContext,
+  useSessionContext,
+} from "./taskino-context";
 
 type LeaveRequestFormValues = {
   startDate: string;
@@ -10,7 +15,8 @@ type LeaveRequestFormValues = {
 };
 
 export function LeaveRequestForm() {
-  const { Field, leaveApi, loadData, myId, setError, setMessage, token } = useTaskinoPageContext();
+  const { myId, token } = useSessionContext();
+  const { loadData, setError, setMessage } = useFeedbackContext();
   const { formState: { isSubmitting }, handleSubmit, register, reset } = useForm<LeaveRequestFormValues>({
     defaultValues: {
       startDate: "",

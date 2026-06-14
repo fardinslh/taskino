@@ -1,10 +1,36 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import type { User, WorkField } from "@/lib/api";
+import {
+  Loader2,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+
+import {
+  getId,
+  managerApi,
+  userApi,
+  type User,
+  type WorkField,
+} from "@/lib/api";
 import { LeaveRequestForm } from "../_components/leave-request-form";
+import { Field, Select } from "../_components/shared";
 import { WORK_FIELDS } from "../_lib/task-constants";
-import { useTaskinoPageContext } from "../_components/taskino-context";
+import {
+  useFeedbackContext,
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+} from "../_components/taskino-context";
+import {
+  formatDate,
+  initials,
+  statusLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 type CreateUserFormValues = {
   firstName: string;
@@ -25,40 +51,14 @@ export default function TeamPage() {
 }
 
 function TeamPageContent() {
+  const { activeView } = useNavigationContext();
+  const { isManager, myId, token } = useSessionContext();
+  const { loadData, setError, setMessage } = useFeedbackContext();
   const {
-    Field,
-    Loader2,
-    Plus,
-    Search,
-    Select,
-    Trash2,
-    X,
-    activeView,
-    approveUser,
-    deleteUser,
-    formatDate,
-    getId,
-    initials,
-    isManager,
-    leaveRequests,
-    loadData,
-    managerApi,
-    myId,
-    setError,
-    setMessage,
-    setShowNewUserForm,
-    setTeamSearching,
-    setTeamSearchResult,
-    showNewUserForm,
-    statusLabel,
-    teamSearching,
-    teamSearchResult,
-    token,
-    updateUserRole,
-    userApi,
-    userName,
-    users,
-  } = useTaskinoPageContext();
+    approveUser, deleteUser, leaveRequests, setShowNewUserForm,
+    setTeamSearching, setTeamSearchResult, showNewUserForm, teamSearching,
+    teamSearchResult, updateUserRole, users,
+  } = useManagementContext();
 
   const {
     formState: { isSubmitting: isCreatingUser },

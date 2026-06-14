@@ -1,7 +1,36 @@
 "use client";
 
-import { useTaskinoPageContext } from "../_components/taskino-context";
-import type { TaskPeriod } from "../_lib/task-constants";
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+} from "@hello-pangea/dnd";
+import {
+  BarChart2,
+  CalendarDays,
+  CircleDashed,
+  ClipboardList,
+  FolderKanban,
+  Plus,
+  TrendingUp,
+  UsersRound,
+} from "lucide-react";
+
+import { getId } from "@/lib/api";
+import { AssigneeStack } from "../_components/shared";
+import {
+  useFixedTaskContext,
+  useManagementContext,
+  useNavigationContext,
+  useSessionContext,
+  useTaskContext,
+} from "../_components/taskino-context";
+import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
+import {
+  formatDate,
+  recurrenceLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 export default function TasksPage() {
   return <TasksPageContent />;
@@ -9,8 +38,21 @@ export default function TasksPage() {
 
 function TasksPageContent() {
   const {
-    BarChart2, CalendarDays, CircleDashed, ClipboardList, FolderKanban, Plus, TrendingUp, UsersRound,    DragDropContext, Draggable, Droppable, AssigneeStack, COLUMNS, getId, formatDate, recurrenceLabel,    userName, currentUser, users, tasks, projects, taskQuery, managerStats, boardShowAll,    fixedTasks, managerTaskStatus, activeView, selectedPeriodFilter, setTaskQuery, setBoardShowAll, setActiveView, setSelectedPeriodFilter,    isManager, isSupervisor, isSpecialist, doneTasks, activeTasks, inProgressTasks, progress, statsUsers,    filteredFixedTemplates, openFixedTaskForm, onDragEnd
-  } = useTaskinoPageContext();
+    activeView, boardShowAll, selectedPeriodFilter, setActiveView,
+    setBoardShowAll, setSelectedPeriodFilter, setTaskQuery, taskQuery,
+  } = useNavigationContext();
+  const {
+    currentUser, isManager, isSpecialist, isSupervisor,
+  } = useSessionContext();
+  const {
+    activeTasks, doneTasks, inProgressTasks, progress, projects, tasks,
+  } = useTaskContext();
+  const {
+    managerStats, managerTaskStatus, statsUsers, users,
+  } = useManagementContext();
+  const {
+    filteredFixedTemplates, fixedTasks, onDragEnd, openFixedTaskForm,
+  } = useFixedTaskContext();
 
   return (
     <>
