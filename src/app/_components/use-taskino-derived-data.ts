@@ -81,16 +81,19 @@ export function useTaskinoDerivedData({
   const progress = tasks.length
     ? Math.round((doneTasks / tasks.length) * 100)
     : 0;
-  const fixedDoneTasks = fixedTasks.filter(
+  const activeFixedTasks = fixedTasks.filter(
+    (item) => item.isActive !== false,
+  );
+  const fixedDoneTasks = activeFixedTasks.filter(
     (item) => item.status === "done",
   ).length;
-  const fixedOpenTasks = fixedTasks.filter(
-    (item) => item.status !== "done",
+  const fixedOpenTasks = activeFixedTasks.filter(
+    (item) => (item.status ?? "todo") === "todo",
   ).length;
-  const fixedInProgressTasks = fixedTasks.filter(
+  const fixedInProgressTasks = activeFixedTasks.filter(
     (item) => item.status === "in_progress",
   ).length;
-  const fixedTodoCount = fixedTasks.filter(
+  const fixedTodoCount = activeFixedTasks.filter(
     (item) => (item.status ?? "todo") === "todo",
   ).length;
   const statsProjects = managerStats?.activeProjects ?? projects.length;
@@ -117,10 +120,9 @@ export function useTaskinoDerivedData({
     teamPerformance?.assigneeCount ??
     teamPerformance?.membersCount ??
     teamAssignees.length;
-
   const incompleteFixedTasks = useMemo(
     () =>
-      fixedTasks
+      activeFixedTasks
         .filter((item) => item.status !== "done")
         .map((item) => {
           const deadline = item.endDate ?? item.nextRunAt;
@@ -133,7 +135,7 @@ export function useTaskinoDerivedData({
                 : "within_deadline",
           };
         }),
-    [currentTime, fixedTasks],
+    [activeFixedTasks, currentTime],
   );
 
   const filteredTasks = useMemo(() => {
@@ -186,7 +188,7 @@ export function useTaskinoDerivedData({
   ]);
 
   const filteredFixedTemplates = useMemo(() => {
-    let list = fixedTasks;
+    let list = activeFixedTasks;
     if (selectedAssigneeFilter) {
       list = list.filter(
         (item) => getId(item.assignedTo) === selectedAssigneeFilter,
@@ -213,15 +215,18 @@ export function useTaskinoDerivedData({
         .includes(query),
     );
   }, [
-    fixedTasks,
+    activeFixedTasks,
     selectedAssigneeFilter,
     selectedPeriodFilter,
     specialistSearchQuery,
     taskQuery,
   ]);
 
+  const activeFixedTaskCount = activeFixedTasks.length;
+
   return {
     activeTasks,
+    activeFixedTaskCount,
     doneTasks,
     fixedDoneTasks,
     fixedInProgressTasks,

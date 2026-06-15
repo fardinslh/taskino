@@ -52,6 +52,7 @@ function TasksPageContent() {
     filteredFixedTemplates,
     fixedDoneTasks,
     fixedOpenTasks,
+    activeFixedTaskCount,
     fixedTasks,
     onDragEnd,
     openFixedTaskForm,
@@ -132,7 +133,7 @@ function TasksPageContent() {
                     ))
                   : [
                       { n: tasks.length, l: "کل پروژه" },
-                      { n: fixedTasks.length, l: "گزارشات ثابت" },
+                      { n: activeFixedTaskCount, l: "گزارشات ثابت" },
                       { n: `${progress}%`, l: "پیشرفت" },
                     ].map((s: any, i: number) => (
                       <div key={i} className="text-center">
@@ -203,7 +204,7 @@ function TasksPageContent() {
                   },
                   {
                     label: "گزارشات ثابت",
-                    value: fixedTasks.length,
+                    value: activeFixedTaskCount,
                     sub: `${fixedOpenTasks} در انتظار`,
                     icon: ClipboardList,
                     a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
@@ -252,11 +253,13 @@ function TasksPageContent() {
                   <div>
                     <h2 className="font-bold text-[--text]">برد گزارشات ثابت</h2>
                     <p className="text-[11px] text-[--text-3]">
-                      گزارشات ثابت بر اساس دوره · {fixedTasks.length} مورد · {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
+                      گزارشات ثابت بر اساس دوره · {activeFixedTaskCount} مورد · {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
                       {(() => {
                         const od = fixedTasks.filter(
                           (f: any) =>
-                            f.nextRunAt && new Date(f.nextRunAt) < new Date(),
+                            f.isActive !== false &&
+                            f.nextRunAt &&
+                            new Date(f.nextRunAt) < new Date(),
                         ).length;
                         return od ? ` · ${od} مهلت‌گذشته` : "";
                       })()}

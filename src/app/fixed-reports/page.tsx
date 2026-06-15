@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
@@ -31,8 +31,11 @@ type FixedTaskFormValues = {
   recurrence: "daily" | "weekly" | "monthly";
   assignedTo: string;
   description: string;
-  nextRunAt: string;
-  isActive: boolean;
+};
+
+type ActivationFormValues = {
+  startDate: string;
+  endDate: string;
 };
 
 export default function FixedReportsPage() {
@@ -53,7 +56,8 @@ function FixedReportsPageContent() {
     openFixedTaskForm,
     closeFixedTaskForm,
     saveFixedTaskFromValues,
-    toggleFixedTaskActive,
+    activateFixedTask,
+    deactivateFixedTask,
     deleteFixedTask,
     seedFixedTasksFromExcel,
   } = useFixedTaskContext();
@@ -64,10 +68,14 @@ function FixedReportsPageContent() {
       recurrence: "daily",
       assignedTo: "",
       description: "",
-      nextRunAt: "",
-      isActive: false,
     },
   });
+  const activationForm = useForm<ActivationFormValues>({
+    defaultValues: { startDate: "", endDate: "" },
+  });
+  const [activatingTask, setActivatingTask] = useState<any>(null);
+  const activationRecurrence = activatingTask?.recurrence ?? "daily";
+  const visibleFixedTasks = fixedTasks.filter((item: any) => item.isActive !== true);
 
   useEffect(() => {
     if (!showFixedTaskForm) return;
@@ -76,8 +84,6 @@ function FixedReportsPageContent() {
       recurrence: editingFixedTask?.recurrence ?? "daily",
       assignedTo: getId(editingFixedTask?.assignedTo),
       description: editingFixedTask?.description ?? "",
-      nextRunAt: editingFixedTask?.nextRunAt ?? "",
-      isActive: editingFixedTask?.isActive !== false && !!editingFixedTask,
     });
   }, [editingFixedTask, form, showFixedTaskForm]);
 
@@ -87,7 +93,7 @@ function FixedReportsPageContent() {
     <section className="space-y-4">
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
-          { label: "الگوهای ثابت", value: fixedTasks.length },
+          { label: "الگوهای ثابت", value: visibleFixedTasks.length },
           { label: "انجام‌نشده", value: incompleteFixedTasks.length },
           {
             label: "فعال",
@@ -121,7 +127,7 @@ function FixedReportsPageContent() {
           onClick={() => setFixedReportsTab("templates")}
           type="button"
         >
-          الگوهای ثابت ({fixedTasks.length})
+          الگوهای ثابت ({visibleFixedTasks.length})
         </button>
         <button
           className={`rounded-lg px-5 py-2 text-sm font-semibold transition-all ${
@@ -146,7 +152,7 @@ function FixedReportsPageContent() {
               <div>
                 <h2 className="font-bold">مدیریت الگوهای ثابت</h2>
                 <p className="text-[11px] text-[--text-3]">
-                  {fixedTasks.length} الگو تعریف شده
+                  {visibleFixedTasks.length} الگو تعریف شده
                 </p>
               </div>
             </div>
@@ -243,51 +249,20 @@ function FixedReportsPageContent() {
                   </button>
                 </div>
               </form>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3">
                 <Field
                   label="توضیحات"
                   name="ftDescription"
                   placeholder="اختیاری"
                   registration={form.register("description")}
                 />
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                    {"\u0632\u0645\u0627\u0646 \u0627\u062c\u0631\u0627 (\u0627\u062e\u062a\u06cc\u0627\u0631\u06cc)"}
-                  </span>
-                  <Controller
-                    control={form.control}
-                    name="nextRunAt"
-                    render={({ field }) => (
-                      <DatePicker
-                        value={field.value ? new Date(field.value) : ""}
-                        onChange={(value) => {
-                          if (!value || Array.isArray(value)) {
-                            field.onChange("");
-                            return;
-                          }
-
-                          field.onChange(value.toDate().toISOString());
-                        }}
-                        calendar={jalali}
-                        locale={persianFa}
-                        format="YYYY/MM/DD HH:mm"
-                        calendarPosition="bottom-right"
-                        inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                        containerClassName="w-full"
-                        placeholder={"\u0627\u0646\u062a\u062e\u0627\u0628 \u062a\u0627\u0631\u06cc\u062e \u0648 \u0633\u0627\u0639\u062a"}
-                        plugins={[
-                          <TimePicker key="time-picker" position="bottom" hideSeconds />,
-                        ]}
-                      />
-                    )}
-                  />
-                </label>
               </div>
-              <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-sm text-[--text-2]">
+              <label className="hidden">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-[#1f7a8c]"
-                  {...form.register("isActive")}
+                  checked={false}
+                  readOnly
                 />
                 همین حالا فعال باشد
               </label>
@@ -295,7 +270,7 @@ function FixedReportsPageContent() {
           )}
 
           <div className="divide-y divide-[--border]">
-            {fixedTasks.length === 0 ? (
+            {visibleFixedTasks.length === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
                 <ClipboardList size={32} className="text-[--text-3]" />
                 <p className="mt-3 font-semibold text-[--text]">
@@ -311,7 +286,7 @@ function FixedReportsPageContent() {
                 </button>
               </div>
             ) : (
-              fixedTasks.map((task: any) => (
+              visibleFixedTasks.map((task: any) => (
                 <div
                   key={getId(task)}
                   className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
@@ -350,7 +325,14 @@ function FixedReportsPageContent() {
                           ? "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
                           : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400"
                       }`}
-                      onClick={() => void toggleFixedTaskActive(task)}
+                      onClick={() => {
+                        if (task.isActive !== false) {
+                          void deactivateFixedTask(task);
+                          return;
+                        }
+                        activationForm.reset({ startDate: "", endDate: "" });
+                        setActivatingTask(task);
+                      }}
                       type="button"
                     >
                       {task.isActive !== false ? "غیرفعال کن" : "فعال کن"}
@@ -373,6 +355,199 @@ function FixedReportsPageContent() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {activatingTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setActivatingTask(null);
+          }}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-[--border] bg-[--surface] p-5 shadow-2xl"
+            dir="rtl"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-bold">
+                  {"\u0641\u0639\u0627\u0644\u200c\u0633\u0627\u0632\u06cc \u0627\u0644\u06af\u0648\u06cc \u062b\u0627\u0628\u062a"}
+                </h3>
+                <p className="mt-1 text-xs text-[--text-3]">
+                  {activatingTask.title}
+                </p>
+              </div>
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[--border] text-[--text-2]"
+                onClick={() => setActivatingTask(null)}
+                type="button"
+              >
+                <X size={16} />
+              </button>
+            </div>
+              <form
+                className="space-y-4"
+                onSubmit={activationForm.handleSubmit(async (values) => {
+                  const startDate = new Date(values.startDate);
+                  const endDate = new Date(values.endDate);
+
+                  if (activationRecurrence === "weekly") {
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                  }
+
+                  if (activationRecurrence === "monthly") {
+                    startDate.setDate(1);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setMonth(endDate.getMonth() + 1, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                  }
+
+                  if (endDate <= startDate) {
+                    activationForm.setError("endDate", {
+                      message:
+                        "\u0632\u0645\u0627\u0646 \u067e\u0627\u06cc\u0627\u0646 \u0628\u0627\u06cc\u062f \u0628\u0639\u062f \u0627\u0632 \u0632\u0645\u0627\u0646 \u0634\u0631\u0648\u0639 \u0628\u0627\u0634\u062f.",
+                    });
+                    return;
+                  }
+
+                  const activated = await activateFixedTask(
+                    activatingTask,
+                    values,
+                  );
+                  if (activated) setActivatingTask(null);
+                })}
+              >
+                {activationRecurrence === "daily" ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {(["startDate", "endDate"] as const).map((name) => (
+                      <label className="block" key={name}>
+                        <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                          {name === "startDate"
+                            ? "\u062a\u0627\u0631\u06cc\u062e \u0648 \u0633\u0627\u0639\u062a \u0634\u0631\u0648\u0639 *"
+                            : "\u062a\u0627\u0631\u06cc\u062e \u0648 \u0633\u0627\u0639\u062a \u067e\u0627\u06cc\u0627\u0646 *"}
+                        </span>
+                        <Controller
+                          control={activationForm.control}
+                          name={name}
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <DatePicker
+                              value={field.value ? new Date(field.value) : ""}
+                              onChange={(value) => {
+                                if (!value || Array.isArray(value)) {
+                                  field.onChange("");
+                                  return;
+                                }
+
+                                field.onChange(value.toDate().toISOString());
+                              }}
+                              calendar={jalali}
+                              locale={persianFa}
+                              minDate={name === "startDate" ? new Date() : undefined}
+                              format="YYYY/MM/DD HH:mm"
+                              calendarPosition="bottom-right"
+                              inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface-2] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                              containerClassName="w-full"
+                              placeholder={
+                                name === "startDate"
+                                  ? "\u0627\u0646\u062a\u062e\u0627\u0628 \u0632\u0645\u0627\u0646 \u0634\u0631\u0648\u0639"
+                                  : "\u0627\u0646\u062a\u062e\u0627\u0628 \u0632\u0645\u0627\u0646 \u067e\u0627\u06cc\u0627\u0646"
+                              }
+                              plugins={[
+                                <TimePicker key="time-picker" position="bottom" hideSeconds />,
+                              ]}
+                            />
+                          )}
+                        />
+                        {activationForm.formState.errors[name] && (
+                          <span className="mt-1 block text-xs text-red-500">
+                            {activationForm.formState.errors[name]?.message ||
+                              "\u0627\u06cc\u0646 \u0641\u06cc\u0644\u062f \u0627\u0644\u0632\u0627\u0645\u06cc \u0627\u0633\u062a."}
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                      {activationRecurrence === "weekly"
+                        ? "\u0628\u0627\u0632\u0647 \u0647\u0641\u062a\u06af\u06cc *"
+                        : "\u0628\u0627\u0632\u0647 \u0645\u0627\u0647\u0627\u0646\u0647 *"}
+                    </span>
+                    <Controller
+                      control={activationForm.control}
+                      name="startDate"
+                      rules={{ required: true }}
+                      render={({ field }) => {
+                        const startValue = field.value ? new Date(field.value) : "";
+                        const endDateValue = activationForm.getValues("endDate");
+                        const endValue = endDateValue
+                          ? new Date(endDateValue)
+                          : "";
+
+                        return (
+                          <DatePicker
+                            value={startValue && endValue ? [startValue, endValue] : undefined}
+                            onChange={(value) => {
+                              if (!value || !Array.isArray(value) || value.length < 2) {
+                                field.onChange("");
+                                activationForm.setValue("endDate", "", {
+                                  shouldValidate: true,
+                                });
+                                return;
+                              }
+
+                              const [start, end] = value;
+                              field.onChange(start.toDate().toISOString());
+                              activationForm.setValue(
+                                "endDate",
+                                end.toDate().toISOString(),
+                                { shouldValidate: true },
+                              );
+                            }}
+                            calendar={jalali}
+                            locale={persianFa}
+                            minDate={new Date()}
+                            range
+                            weekPicker={activationRecurrence === "weekly"}
+                            onlyMonthPicker={activationRecurrence === "monthly"}
+                            format={
+                              activationRecurrence === "weekly"
+                                ? "YYYY/MM/DD"
+                                : "YYYY/MM"
+                            }
+                            calendarPosition="bottom-right"
+                            inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface-2] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                            containerClassName="w-full"
+                            placeholder={
+                              activationRecurrence === "weekly"
+                                ? "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u0627\u0632\u0647 \u0647\u0641\u062a\u06af\u06cc"
+                                : "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u0627\u0632\u0647 \u0645\u0627\u0647\u0627\u0646\u0647"
+                            }
+                          />
+                        );
+                      }}
+                    />
+                    {activationForm.formState.errors.startDate && (
+                      <span className="mt-1 block text-xs text-red-500">
+                        {activationForm.formState.errors.startDate.message ||
+                          "\u0627\u06cc\u0646 \u0641\u06cc\u0644\u062f \u0627\u0644\u0632\u0627\u0645\u06cc \u0627\u0633\u062a."}
+                      </span>
+                    )}
+                  </label>
+                )}
+              <button
+                className="h-11 w-full rounded-lg bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] disabled:opacity-50"
+                disabled={activationForm.formState.isSubmitting}
+                type="submit"
+              >
+                {"\u0641\u0639\u0627\u0644 \u06a9\u0646"}
+              </button>
+            </form>
           </div>
         </div>
       )}

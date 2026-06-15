@@ -110,6 +110,7 @@ const managementKeys = [
   "managerUserProgress",
   "loadManagerAnalytics",
   "leaveRequests",
+  "leaveStatistics",
   "handleLeaveAction",
   "updateUserRole",
   "approveUser",
@@ -137,6 +138,7 @@ const managementKeys = [
 
 const fixedTaskKeys = [
   "fixedTasks",
+  "activeFixedTaskCount",
   "incompleteFixedTasks",
   "fixedDoneTasks",
   "fixedInProgressTasks",
@@ -163,7 +165,8 @@ const fixedTaskKeys = [
   "closeFixedTaskForm",
   "saveFixedTask",
   "saveFixedTaskFromValues",
-  "toggleFixedTaskActive",
+  "activateFixedTask",
+  "deactivateFixedTask",
   "deleteFixedTask",
   "seedFixedTasksFromExcel",
   "onDragEnd",

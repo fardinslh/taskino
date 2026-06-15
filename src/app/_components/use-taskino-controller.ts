@@ -15,6 +15,7 @@ import {
   type FixedTask,
   userApi,
   type LeaveRequest,
+  type LeaveRequestStatistics,
   type ManagerStats,
   type ManagerAllTasks,
   type UserProgress,
@@ -119,6 +120,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
   const [rejectReason, setRejectReason] = useState("");
   const [boardShowAll, setBoardShowAll] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveStatistics, setLeaveStatistics] =
+    useState<LeaveRequestStatistics | null>(null);
   const [fixedTasks, setFixedTasks] = useState<FixedTask[]>([]);
 
   // Manager analytics state
@@ -199,11 +202,13 @@ export function useTaskinoController(initialView: View = "dashboard") {
     queueMicrotask(() => {
       setSpecialistSearchQuery("");
       setSelectedSpecialistId("");
+      setShowNewProjectForm(false);
     });
   }, [pathname]);
 
   const {
     activeTasks,
+    activeFixedTaskCount,
     doneTasks,
     fixedDoneTasks,
     fixedInProgressTasks,
@@ -306,7 +311,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setFtRecurrence,
     setFtTitle,
     showFixedTaskForm,
-    toggleFixedTaskActive,
+    activateFixedTask,
+    deactivateFixedTask,
   } = useFixedTaskActions({
     fixedTasks,
     loadData,
@@ -340,40 +346,48 @@ export function useTaskinoController(initialView: View = "dashboard") {
       const currentRole = (currentUser ?? storedUser)?.roles;
       const userIsManager = currentRole === "manager";
       const userIsSupervisor = currentRole === "supervisor";
+      const shouldLoadLeaveStats =
+        currentRole === "manager" || currentRole === "supervisor";
       const reportParams =
         !userIsManager && !userIsSupervisor && uid
           ? { assignedTo: uid }
           : undefined;
-      const [u, t, leaves, statsRes, unreadRes, notifRes] = await Promise.all([
-        userIsManager
-          ? managerApi.users(authToken, { limit: 100 }).catch(() => [])
-          : Promise.resolve([] as User[]),
-        userIsManager
-          ? managerApi
-              .allTasks(authToken)
-              .catch(() => ({ tasks: [] as Task[] }))
-          : userIsSupervisor
-            ? Promise.resolve([] as Task[])
-            : taskApi.list(authToken, reportParams).catch(() => []),
-        uid && !userIsManager && !userIsSupervisor
-          ? leaveApi.list(authToken, { limit: 50, user: uid })
-          : leaveApi.list(authToken, { limit: 50 }),
-        userIsManager
-          ? managerApi.statistics(authToken).catch(() => null)
-          : Promise.resolve(null),
-        notificationApi
-          .unreadCount(authToken)
-          .catch(() => ({ unreadCount: 0 })),
-        notificationApi
-          .list(authToken, { isRead: false, limit: 20 })
-          .catch(() => []),
-      ]);
+      const [u, t, leaves, statsRes, unreadRes, notifRes, leaveStatsRes] =
+        await Promise.all([
+          userIsManager
+            ? managerApi.users(authToken, { limit: 100 }).catch(() => [])
+            : Promise.resolve([] as User[]),
+          userIsManager
+            ? managerApi
+                .allTasks(authToken)
+                .catch(() => ({ tasks: [] as Task[] }))
+            : userIsSupervisor
+              ? Promise.resolve([] as Task[])
+              : taskApi.list(authToken, reportParams).catch(() => []),
+          uid && !userIsManager && !userIsSupervisor
+            ? leaveApi.list(authToken, { limit: 50, user: uid })
+            : leaveApi.list(authToken, { limit: 50 }),
+          userIsManager
+            ? managerApi.statistics(authToken).catch(() => null)
+            : Promise.resolve(null),
+          notificationApi
+            .unreadCount(authToken)
+            .catch(() => ({ unreadCount: 0 })),
+          notificationApi
+            .list(authToken, { isRead: false, limit: 20 })
+            .catch(() => []),
+          shouldLoadLeaveStats
+            ? leaveApi.statistics(authToken).catch(() => null)
+            : Promise.resolve(null),
+        ]);
       const taskList = normalizeList(
         ((t as ManagerAllTasks)?.tasks ?? t) as Task[] | { data?: Task[] },
       );
       setUsers(normalizeList(u));
       setTasks(taskList);
       setLeaveRequests(normalizeList(leaves));
+      setLeaveStatistics(leaveStatsRes);
+      console.log("[taskino] leaveStatistics state:", leaveStatsRes);
       setManagerStats(statsRes);
       setUnreadCount(unreadRes.unreadCount);
       setNotifications(
@@ -787,9 +801,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     }
   }
 
-  async function taRunCompletionStatsFromValues(
-    values: CompletionStatsValues,
-  ) {
+  async function taRunCompletionStatsFromValues(values: CompletionStatsValues) {
     if (!myId || !values.expertId) return;
     try {
       const res = await taskApi.completionStats(token, {
@@ -1040,10 +1052,12 @@ export function useTaskinoController(initialView: View = "dashboard") {
     rejectReason,
     boardShowAll,
     leaveRequests,
+    leaveStatistics,
     excelFiles,
     excelStats,
     excelUploading,
     fixedTasks,
+    activeFixedTaskCount,
     incompleteFixedTasks,
     fixedDoneTasks,
     fixedInProgressTasks,
@@ -1206,7 +1220,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     closeFixedTaskForm,
     saveFixedTask,
     saveFixedTaskFromValues,
-    toggleFixedTaskActive,
+    activateFixedTask,
+    deactivateFixedTask,
     deleteFixedTask,
     seedFixedTasksFromExcel,
     exportTasksToExcel,
@@ -1219,5 +1234,3 @@ export function useTaskinoController(initialView: View = "dashboard") {
 }
 
 export type TaskinoController = ReturnType<typeof useTaskinoController>;
-
-

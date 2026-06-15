@@ -64,6 +64,7 @@ function DashboardPageContent() {
     filteredFixedTemplates,
     fixedDoneTasks,
     fixedOpenTasks,
+    activeFixedTaskCount,
     fixedTasks,
     onDragEnd,
     openFixedTaskForm,
@@ -304,7 +305,7 @@ function DashboardPageContent() {
           {/* Specialist reminder/alert — above the board */}
           
 {isSpecialist && activeView === "dashboard" && (() => {
-            const overdueReports = fixedTasks.filter((f: any) => f.nextRunAt && new Date(f.nextRunAt) < new Date()).length;
+            const overdueReports = fixedTasks.filter((f: any) => f.isActive !== false && f.nextRunAt && new Date(f.nextRunAt) < new Date()).length;
             const fixedOpenReports = fixedOpenTasks;
             const fixedCompletedReports = fixedDoneTasks;
             const openTasks = tasks.filter((t: any) => t.status !== "done").length;
@@ -339,8 +340,8 @@ function DashboardPageContent() {
                 <div>
                     <h2 className="font-bold text-[--text]">برد گزارشات ثابت</h2>
                   <p className="text-[11px] text-[--text-3]">
-                      گزارشات ثابت بر اساس دوره · {fixedTasks.length} مورد · {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
-                    {(() => { const od = fixedTasks.filter((f: any) => f.nextRunAt && new Date(f.nextRunAt) < new Date()).length; return od ? ` · ${od} مهلت‌گذشته` : ""; })()}
+                      گزارشات ثابت بر اساس دوره · {activeFixedTaskCount} مورد · {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
+                    {(() => { const od = fixedTasks.filter((f: any) => f.isActive !== false && f.nextRunAt && new Date(f.nextRunAt) < new Date()).length; return od ? ` · ${od} مهلت‌گذشته` : ""; })()}
                   </p>
                 </div>
               </div>

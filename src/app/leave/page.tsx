@@ -35,7 +35,8 @@ export default function LeavePage() {
 function LeavePageContent() {
   const { activeView } = useNavigationContext();
   const { isManager, isSupervisor } = useSessionContext();
-  const { handleLeaveAction, leaveRequests } = useManagementContext();
+  const { handleLeaveAction, leaveRequests, leaveStatistics } =
+    useManagementContext();
 
   if (activeView !== "leave") return null;
 
@@ -78,10 +79,28 @@ function LeavePageContent() {
     <section className="space-y-4">
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
-          { label: "کل درخواست‌ها", value: leaveRequests.length },
-          { label: "در انتظار", value: leaveRequests.filter((lr: LeaveRequestView) => lr.status === "pending").length },
-          { label: "تأیید شده", value: leaveRequests.filter((lr: LeaveRequestView) => lr.status === "approved").length },
-          { label: "رد شده", value: leaveRequests.filter((lr: LeaveRequestView) => lr.status === "rejected").length },
+          {
+            label: "کل درخواست‌ها",
+            value: leaveStatistics?.total ?? leaveRequests.length,
+          },
+          {
+            label: "در انتظار",
+            value:
+              leaveStatistics?.pending ??
+              leaveRequests.filter((lr: LeaveRequestView) => lr.status === "pending").length,
+          },
+          {
+            label: "تأیید شده",
+            value:
+              leaveStatistics?.approved ??
+              leaveRequests.filter((lr: LeaveRequestView) => lr.status === "approved").length,
+          },
+          {
+            label: "رد شده",
+            value:
+              leaveStatistics?.rejected ??
+              leaveRequests.filter((lr: LeaveRequestView) => lr.status === "rejected").length,
+          },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl border border-[--border] bg-[--surface] p-4">
             <p className="text-xs text-[--text-3]">{stat.label}</p>

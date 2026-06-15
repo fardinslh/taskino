@@ -114,7 +114,6 @@ export function TaskinoApp({
             isManager={isManager}
             isSupervisor={isSupervisor}
             leaveRequests={leaveRequests}
-            onCreateTask={createTaskFromValues}
             onSetActiveView={setActiveView}
             onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
             overdueTasks={overdueTasks}
@@ -125,7 +124,6 @@ export function TaskinoApp({
             supervisorTasks={supervisorTasks}
             tasks={tasks}
             todoCount={todoCount}
-            users={users}
           />
 
           <main

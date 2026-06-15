@@ -1,6 +1,5 @@
 "use client";
 
-import { useForm } from "react-hook-form";
 import {
   BarChart2,
   CalendarDays,
@@ -9,23 +8,14 @@ import {
   ClipboardList,
   FolderKanban,
   LayoutDashboard,
-  Plus,
   Settings,
   ShieldCheck,
   UsersRound,
-  Zap,
 } from "lucide-react";
 import type { FixedTask, LeaveRequest, Task, User } from "@/lib/api";
-import { getId } from "@/lib/api";
-import { TASK_PERIODS, type View } from "../_lib/task-constants";
+import { type View } from "../_lib/task-constants";
 import { initials, userName } from "../_lib/task-helpers";
-import { Field, Select, SideItem } from "./shared";
-
-type QuickTaskFormValues = {
-  title: string;
-  assignee: string;
-  recurrence: string;
-};
+import { SideItem } from "./shared";
 
 type TaskinoSidebarProps = {
   activeView: View;
@@ -35,11 +25,6 @@ type TaskinoSidebarProps = {
   isManager: boolean;
   isSupervisor: boolean;
   leaveRequests: LeaveRequest[];
-  onCreateTask: (values: {
-    title: string;
-    assignee?: string;
-    recurrence?: string;
-  }) => Promise<void>;
   onSetActiveView: (view: View) => void;
   onToggleCollapsed: () => void;
   overdueTasks: Task[];
@@ -50,7 +35,6 @@ type TaskinoSidebarProps = {
   supervisorTasks: Task[];
   tasks: Task[];
   todoCount: number;
-  users: User[];
 };
 
 export function TaskinoSidebar({
@@ -61,7 +45,6 @@ export function TaskinoSidebar({
   isManager,
   isSupervisor,
   leaveRequests,
-  onCreateTask,
   onSetActiveView,
   onToggleCollapsed,
   overdueTasks,
@@ -72,30 +55,9 @@ export function TaskinoSidebar({
   supervisorTasks,
   tasks,
   todoCount,
-  users,
 }: TaskinoSidebarProps) {
   const pendingLeaves =
     leaveRequests.filter((request) => request.status === "pending").length;
-  const scopedAssigneeOptions = users
-    .filter((user) => {
-      const role = user.roles;
-      if (role !== "specialist" && role !== "supervisor") return false;
-      if (!currentUser?.workField) return true;
-      return user.workField === currentUser.workField;
-    })
-    .map((user) => [getId(user), userName(user)] as [string, string]);
-  const {
-    formState: { isSubmitting },
-    handleSubmit,
-    register,
-    reset,
-  } = useForm<QuickTaskFormValues>({
-    defaultValues: {
-      title: "",
-      assignee: "",
-      recurrence: "",
-    },
-  });
 
   return (
     <aside
@@ -292,52 +254,6 @@ export function TaskinoSidebar({
             </div>
           </div>
 
-          {isManager && (
-            <div className="mx-2 mt-2 rounded-xl border border-[--border] bg-[--surface-2] p-3">
-              <div className="mb-2.5 flex items-center gap-1.5">
-                <Zap size={13} className="text-[#1f7a8c]" />
-                <span className="text-xs font-semibold text-[--text]">
-                  افزودن گزارش به تیم
-                </span>
-              </div>
-              <form
-                className="space-y-2"
-                onSubmit={handleSubmit(async (values) => {
-                  await onCreateTask(values);
-                  reset();
-                })}
-              >
-                <Field
-                  label=""
-                  name="taskTitle"
-                  id="quick-task-title"
-                  required
-                  placeholder="عنوان گزارش…"
-                  registration={register("title", { required: true })}
-                />
-                <Select
-                  label=""
-                  options={TASK_PERIODS}
-                  placeholder="دوره گزارش (اختیاری)"
-                  registration={register("recurrence")}
-                />
-                <Select
-                  label=""
-                  options={scopedAssigneeOptions}
-                  placeholder="بدون مسئول"
-                  registration={register("assignee")}
-                />
-                <button
-                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] text-xs font-semibold text-white transition hover:bg-[#196b7b] active:scale-[0.98] disabled:opacity-60"
-                  disabled={isSubmitting}
-                  type="submit"
-                >
-                  <Plus size={14} />
-                  افزودن گزارش
-                </button>
-              </form>
-            </div>
-          )}
 
           {!isManager && (
             <div className="mx-2 my-2 rounded-xl border border-[--border] bg-[--surface-2] p-3">

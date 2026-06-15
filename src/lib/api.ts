@@ -122,6 +122,13 @@ export type LeaveRequest = {
   approvedBy?: string | User;
 };
 
+export type LeaveRequestStatistics = {
+  total?: number;
+  pending?: number;
+  approved?: number;
+  rejected?: number;
+};
+
 export type ManagerStats = {
   openTasks: number;
   activeUsers: number;
@@ -831,6 +838,10 @@ export const fixedTaskApi = {
 
 // ─── Leave Requests ──────────────────────────────────────────────────────────
 export const leaveApi = {
+  statistics: (token: string) =>
+    unwrapAxios(
+      apiClient.get<LeaveRequestStatistics>("/leave-requests/statistics"),
+    ),
   list: (token: string, params?: Record<string, string | number | undefined>) =>
     unwrapAxios(
       apiClient.get<LeaveRequest[] | { data?: LeaveRequest[] }>(

@@ -21,8 +21,11 @@ type FixedTaskFormValues = {
   assignedTo: string;
   recurrence: "daily" | "weekly" | "monthly";
   description?: string;
-  nextRunAt?: string;
-  isActive: boolean;
+};
+
+type FixedTaskActivationValues = {
+  startDate: string;
+  endDate: string;
 };
 
 type FixedTaskActionsInput = {
@@ -147,10 +150,6 @@ export function useFixedTaskActions({
 
   async function saveFixedTaskFromValues(values: FixedTaskFormValues) {
     if (!myId || !values.title.trim() || !values.assignedTo) return;
-    const { startDate, endDate } = buildDateRange(
-      values.recurrence,
-      values.nextRunAt,
-    );
     const specialistName = findSpecialistName(values.assignedTo);
 
     const body = {
@@ -159,12 +158,7 @@ export function useFixedTaskActions({
       specialistName,
       recurrence: values.recurrence,
       description: values.description?.trim() || undefined,
-      isActive: values.isActive,
-      startDate,
-      endDate,
-      ...(values.nextRunAt
-        ? { nextRunAt: new Date(values.nextRunAt).toISOString() }
-        : {}),
+      isActive: editingFixedTask?.isActive ?? false,
     };
 
     try {
@@ -199,11 +193,54 @@ export function useFixedTaskActions({
     }
   }
 
-  async function toggleFixedTaskActive(fixedTask: FixedTask) {
+  async function activateFixedTask(
+    fixedTask: FixedTask,
+    values: FixedTaskActivationValues,
+  ) {
+    if (!myId) return false;
+
+    const startDate = new Date(values.startDate);
+    const endDate = new Date(values.endDate);
+    const assignedTo = getId(fixedTask.assignedTo);
+    const formatTime = (date: Date) =>
+      `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+    try {
+      const created = await fixedTaskApi.create(token, {
+        title: fixedTask.title,
+        assignedTo,
+        specialistName:
+          fixedTask.specialistName || findSpecialistName(assignedTo),
+        recurrence: fixedTask.recurrence,
+        description: fixedTask.description?.trim() || undefined,
+        isActive: true,
+        startDate: startDate.toISOString(),
+        startTime: formatTime(startDate),
+        endDate: endDate.toISOString(),
+        endTime: formatTime(endDate),
+        nextRunAt: startDate.toISOString(),
+      });
+      setFixedTasks((current) => [
+        created,
+        ...current.filter((item) => getId(item) !== getId(fixedTask)),
+      ]);
+      setMessage("\u0627\u0644\u06af\u0648 \u0641\u0639\u0627\u0644 \u0634\u062f.");
+      return true;
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "\u0641\u0639\u0627\u0644\u200c\u0633\u0627\u0632\u06cc \u0627\u0644\u06af\u0648 \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f",
+      );
+      return false;
+    }
+  }
+
+  async function deactivateFixedTask(fixedTask: FixedTask) {
     if (!myId) return;
     try {
       const updated = await fixedTaskApi.update(token, getId(fixedTask), myId, {
-        isActive: !fixedTask.isActive,
+        isActive: false,
       });
       setFixedTasks((current) =>
         current.map((item) => getId(item) === getId(fixedTask) ? updated : item),
@@ -262,7 +299,9 @@ export function useFixedTaskActions({
   }
 
   return {
+    activateFixedTask,
     closeFixedTaskForm,
+    deactivateFixedTask,
     deleteFixedTask,
     editingFixedTask,
     fixedReportsTab,
@@ -286,6 +325,5 @@ export function useFixedTaskActions({
     setFtRecurrence,
     setFtTitle,
     showFixedTaskForm,
-    toggleFixedTaskActive,
   };
 }
