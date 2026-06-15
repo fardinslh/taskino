@@ -350,6 +350,7 @@ export type FixedTask = {
   _id?: string;
   id?: string;
   title: string;
+  specialistName?: string;
   assignedTo?: string | User;
   createdBy?: string | User;
   projectId?: string | Project;
@@ -360,6 +361,7 @@ export type FixedTask = {
   doneTime?: string;
   lastGeneratedAt?: string;
   nextRunAt?: string;
+  startDate?: string;
   startTime?: string;
   endTime?: string;
   endDate?: string;

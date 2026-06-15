@@ -1,27 +1,71 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { ClipboardList, RefreshCw } from "lucide-react";
 
-import { getId } from "@/lib/api";
+import { getId, type FixedTask } from "@/lib/api";
 import {
+  useFeedbackContext,
   useManagementContext,
   useNavigationContext,
   useSessionContext,
+  useTaskContext,
 } from "../../_components/taskino-context";
-import { statusLabel, userName } from "../../_lib/task-helpers";
+import { recurrenceLabel, statusLabel, userName } from "../../_lib/task-helpers";
+
+type FixedTaskStatusFilter = "in_progress" | "done";
 
 export default function SupervisorProjectsPage() {
   return <SupervisorWorkPageContent />;
 }
 
 function SupervisorWorkPageContent() {
+  const [currentTime] = useState(() => Date.now());
+  const [fixedTaskStatusFilter, setFixedTaskStatusFilter] =
+    useState<FixedTaskStatusFilter>("in_progress");
   const { activeView, setSelectedTask } = useNavigationContext();
   const { isSupervisor } = useSessionContext();
-  const {
-    supervisorTasks,
-    supervisorFixedTasks,
-    loadSupervisorData,
-  } = useManagementContext();
+  const { setError } = useFeedbackContext();
+  const { createTaskFromValues } = useTaskContext();
+  const { supervisorTasks, supervisorFixedTasks, loadSupervisorData } =
+    useManagementContext();
+
+  const filteredSupervisorFixedTasks = useMemo(() => {
+    return supervisorFixedTasks.filter((item) => {
+      if (item.isActive === false) return false;
+      if ((item.status ?? "todo") !== fixedTaskStatusFilter) return false;
+
+      const start = item.startDate ? new Date(item.startDate).getTime() : null;
+      const end = item.endDate ? new Date(item.endDate).getTime() : null;
+
+      if (start !== null && Number.isFinite(start) && currentTime < start) {
+        return false;
+      }
+      if (end !== null && Number.isFinite(end) && currentTime > end) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [currentTime, fixedTaskStatusFilter, supervisorFixedTasks]);
+
+  async function handleCreateTaskFromFixedTask(item: FixedTask) {
+    const assigneeId = getId(item.assignedTo);
+    if (!assigneeId) {
+      setError("برای این گزارش ثابت مسئولی ثبت نشده است.");
+      return;
+    }
+
+    await createTaskFromValues({
+      title: item.title,
+      assignee: assigneeId,
+      description: item.description ?? "",
+      startDate: item.startDate,
+      dueDate: item.endDate,
+      startTime: item.startTime,
+      endTime: item.endTime,
+    });
+  }
 
   if (!isSupervisor || activeView !== "supervisor-projects") return null;
 
@@ -53,20 +97,23 @@ function SupervisorWorkPageContent() {
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <WorkList
             emptyText="گزارش عادی تحت نظری یافت نشد"
+            getId={getId}
             items={supervisorTasks}
             onSelect={setSelectedTask}
             statusLabel={statusLabel}
             title="گزارش‌های عادی"
             userName={userName}
-            getId={getId}
           />
           <WorkList
-            emptyText="گزارش ثابت تحت نظری یافت نشد"
-            items={supervisorFixedTasks}
+            emptyText="گزارش ثابت منطبق با فیلتر پیدا نشد"
+            getId={getId}
+            items={filteredSupervisorFixedTasks}
+            onCreateTask={handleCreateTaskFromFixedTask}
+            onStatusFilterChange={setFixedTaskStatusFilter}
+            statusFilter={fixedTaskStatusFilter}
             statusLabel={statusLabel}
             title="گزارش‌های ثابت"
             userName={userName}
-            getId={getId}
           />
         </div>
       </div>
@@ -78,7 +125,10 @@ function WorkList({
   emptyText,
   getId,
   items,
+  onCreateTask,
+  onStatusFilterChange,
   onSelect,
+  statusFilter,
   statusLabel,
   title,
   userName,
@@ -86,7 +136,10 @@ function WorkList({
   emptyText: string;
   getId: (item: any) => string;
   items: any[];
+  onCreateTask?: (item: any) => void | Promise<void>;
+  onStatusFilterChange?: (status: FixedTaskStatusFilter) => void;
   onSelect?: (item: any) => void;
+  statusFilter?: FixedTaskStatusFilter;
   statusLabel: (status?: string) => string;
   title: string;
   userName: (user?: any) => string;
@@ -94,21 +147,53 @@ function WorkList({
   return (
     <div className="overflow-hidden rounded-xl border border-[--border]">
       <div className="border-b border-[--border] bg-[--surface-2] px-4 py-3">
-        <h3 className="text-sm font-bold">{title}</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-bold">{title}</h3>
+          {onStatusFilterChange && statusFilter ? (
+            <div className="flex items-center gap-1 rounded-lg border border-[--border] bg-[--surface] p-1">
+              <button
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
+                  statusFilter === "in_progress"
+                    ? "bg-[#1f7a8c] text-white"
+                    : "text-[--text-2] hover:bg-[--surface-2]"
+                }`}
+                onClick={() => onStatusFilterChange("in_progress")}
+                type="button"
+              >
+                در حال انجام
+              </button>
+              <button
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
+                  statusFilter === "done"
+                    ? "bg-emerald-600 text-white"
+                    : "text-[--text-2] hover:bg-[--surface-2]"
+                }`}
+                onClick={() => onStatusFilterChange("done")}
+                type="button"
+              >
+                تکمیل شده
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
       {items.length === 0 ? (
         <p className="py-10 text-center text-sm text-[--text-3]">{emptyText}</p>
       ) : (
         <div className="divide-y divide-[--border]">
           {items.map((item) => {
-            const assignee = Array.isArray(item.assignedTo) ? item.assignedTo[0] : item.assignedTo;
+            const assignee = Array.isArray(item.assignedTo)
+              ? item.assignedTo[0]
+              : item.assignedTo;
+            const specialistLabel =
+              item.specialistName || (assignee ? userName(assignee) : "بدون مسئول");
             const content = (
               <>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{item.title}</p>
                   <p className="mt-1 text-xs text-[--text-3]">
-                    {assignee ? `مسئول: ${userName(assignee)}` : "بدون مسئول"}
-                    {item.recurrence ? ` · ${item.recurrence}` : ""}
+                    {`مسئول: ${specialistLabel}`}
+                    {item.recurrence ? ` · ${recurrenceLabel(item.recurrence)}` : ""}
                   </p>
                 </div>
                 <span className="shrink-0 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] font-bold text-[--text-2]">
@@ -117,17 +202,37 @@ function WorkList({
               </>
             );
 
-            return onSelect ? (
-              <button
+            if (onCreateTask) {
+              return (
+                <button
+                  key={getId(item)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right transition hover:bg-[--surface-2]"
+                  onClick={() => void onCreateTask(item)}
+                  type="button"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            if (onSelect) {
+              return (
+                <button
+                  key={getId(item)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right transition hover:bg-[--surface-2]"
+                  onClick={() => onSelect(item)}
+                  type="button"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <div
                 key={getId(item)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right transition hover:bg-[--surface-2]"
-                onClick={() => onSelect(item)}
-                type="button"
+                className="flex items-center justify-between gap-3 px-4 py-3"
               >
-                {content}
-              </button>
-            ) : (
-              <div key={getId(item)} className="flex items-center justify-between gap-3 px-4 py-3">
                 {content}
               </div>
             );

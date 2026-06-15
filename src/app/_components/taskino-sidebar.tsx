@@ -76,6 +76,14 @@ export function TaskinoSidebar({
 }: TaskinoSidebarProps) {
   const pendingLeaves =
     leaveRequests.filter((request) => request.status === "pending").length;
+  const scopedAssigneeOptions = users
+    .filter((user) => {
+      const role = user.roles;
+      if (role !== "specialist" && role !== "supervisor") return false;
+      if (!currentUser?.workField) return true;
+      return user.workField === currentUser.workField;
+    })
+    .map((user) => [getId(user), userName(user)] as [string, string]);
   const {
     formState: { isSubmitting },
     handleSubmit,
@@ -315,7 +323,7 @@ export function TaskinoSidebar({
                 />
                 <Select
                   label=""
-                  options={users.map((user) => [getId(user), userName(user)])}
+                  options={scopedAssigneeOptions}
                   placeholder="بدون مسئول"
                   registration={register("assignee")}
                 />

@@ -383,7 +383,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       if (role === "manager") void loadManagerAnalytics(authToken);
       else if (role !== "supervisor" && uid) {
         // Specialist: public per-user endpoint (no role restriction).
-        fetchAllSpecialistFixedTasks(authToken, uid)
+        fetchAllSpecialistFixedTasks(authToken, uid, { status: "todo" })
           .then((r) => setFixedTasks(r))
           .catch(() => setFixedTasks([]));
       } else if (role === "supervisor") {
@@ -429,12 +429,13 @@ export function useTaskinoController(initialView: View = "dashboard") {
   async function fetchAllSpecialistFixedTasks(
     authToken: string,
     userId: string,
+    base: Record<string, string | number | boolean | undefined> = {},
   ) {
     const all: FixedTask[] = [];
     const limit = 100;
     for (let page = 1; page <= 50; page++) {
       const res = await fixedTaskApi
-        .bySpecialist(authToken, userId, { page, limit })
+        .bySpecialist(authToken, userId, { ...base, page, limit })
         .catch(() => null);
       if (!res) break;
       const list = normalizeList(res as FixedTask[] | { data?: FixedTask[] });
@@ -458,7 +459,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
           managerApi.taskStatusOverview(authToken).catch(() => null),
           managerApi.taskCountsByUsers(authToken).catch(() => []),
           managerApi.monthlyPerformance(authToken).catch(() => []),
-          fetchAllFixedTasks(authToken).catch(() => [] as FixedTask[]),
+          fetchAllFixedTasks(authToken, { status: "todo" }).catch(
+            () => [] as FixedTask[],
+          ),
           managerApi.usersProgress(authToken).catch(() => []),
         ]);
       setManagerTaskStatus(taskStatus);
@@ -566,7 +569,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
     specialistId: string,
   ) {
     if (!specialistId) return [];
-    return fetchAllSpecialistFixedTasks(authToken, specialistId);
+    return fetchAllSpecialistFixedTasks(authToken, specialistId, {
+      status: "todo",
+    });
   }
 
   const loadLatestData = useEffectEvent(loadData);

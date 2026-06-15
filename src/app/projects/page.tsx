@@ -32,11 +32,6 @@ type ProjectFormValues = {
   file: FileList | null;
 };
 
-type LookupFormValues = {
-  firstName: string;
-  lastName: string;
-};
-
 type CompletionFormValues = {
   expertId: string;
 };
@@ -58,16 +53,14 @@ function ProjectsPageContent() {
     setShowNewProjectForm,
     showNewProjectForm,
   } = useNavigationContext();
-  const { isManager } = useSessionContext();
+  const { currentUser, isManager } = useSessionContext();
   const { users } = useManagementContext();
   const {
     tasks,
-    taLookupResult,
     taCompletionResult,
     taCountResult,
     createTaskFromValues,
     deleteTask,
-    taLookupTasksFromValues,
     taRunCompletionStatsFromValues,
     taRunDateCountFromValues,
   } = useTaskContext();
@@ -83,9 +76,6 @@ function ProjectsPageContent() {
       endTime: "",
       file: null,
     },
-  });
-  const lookupForm = useForm<LookupFormValues>({
-    defaultValues: { firstName: "", lastName: "" },
   });
   const completionForm = useForm<CompletionFormValues>({
     defaultValues: { expertId: "" },
@@ -106,6 +96,26 @@ function ProjectsPageContent() {
       control: projectForm.control,
       name: "file",
     })?.[0] ?? null;
+
+  const scopedUsers = users.filter((user: any) => {
+    if (!currentUser?.workField) return true;
+    return user.workField === currentUser.workField;
+  });
+
+  const scopedAssigneeOptions = scopedUsers
+    .filter((user: any) => {
+      const role = user.roles;
+      return role === "specialist" || role === "supervisor";
+    })
+    .map((user: any) => [getId(user), userName(user)] as [string, string]);
+
+  const scopedSpecialistOptions = scopedUsers
+    .filter((user: any) => user.roles === "specialist")
+    .map((user: any) => [getId(user), userName(user)] as [string, string]);
+
+  const scopedUserOptions = scopedUsers.map(
+    (user: any) => [getId(user), userName(user)] as [string, string],
+  );
 
   return (
     <>
@@ -227,10 +237,7 @@ function ProjectsPageContent() {
                 />
                 <Select
                   label="مسئول (کارشناس)"
-                  options={users.map((user: any) => [
-                    getId(user),
-                    userName(user),
-                  ])}
+                  options={scopedAssigneeOptions}
                   placeholder="بدون مسئول (خودم)"
                   registration={projectForm.register("assignee")}
                 />
@@ -351,62 +358,6 @@ function ProjectsPageContent() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-            <h2 className="font-bold">پروژه‌های یک کاربر بر اساس نام</h2>
-            <form
-              className="mt-4 flex flex-wrap items-end gap-2"
-              onSubmit={lookupForm.handleSubmit(taLookupTasksFromValues)}
-            >
-              <Field
-                label="نام"
-                name="lookupFirstName"
-                registration={lookupForm.register("firstName", {
-                  required: true,
-                })}
-              />
-              <Field
-                label="نام خانوادگی"
-                name="lookupLastName"
-                registration={lookupForm.register("lastName", {
-                  required: true,
-                })}
-              />
-              <button
-                className="h-10 rounded-lg bg-[#1f7a8c] px-5 text-sm font-semibold text-white disabled:opacity-50"
-                disabled={lookupForm.formState.isSubmitting}
-                type="submit"
-              >
-                جستجو
-              </button>
-            </form>
-            {taLookupResult !== null && (
-              <div className="mt-4 space-y-2">
-                {taLookupResult.length === 0 ? (
-                  <p className="text-sm text-[--text-3]">
-                    پروژه‌ای برای این کاربر یافت نشد
-                  </p>
-                ) : (
-                  taLookupResult.map((task: any) => (
-                    <div
-                      key={getId(task)}
-                      className="flex items-center justify-between rounded-xl border border-[--border] bg-[--surface-2] px-4 py-2.5"
-                    >
-                      <p className="text-sm font-medium">{task.title}</p>
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                          COLUMNS.find((column: any) => column.status === task.status)
-                            ?.badge ?? "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {statusLabel(task.status)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
               <h2 className="font-bold">آمار تکمیل پروژه</h2>
@@ -422,9 +373,7 @@ function ProjectsPageContent() {
                 <div className="min-w-[200px] flex-1">
                   <Select
                     label="متخصص"
-                    options={users
-                      .filter((user: any) => user.roles === "specialist")
-                      .map((user: any) => [getId(user), userName(user)])}
+                    options={scopedSpecialistOptions}
                     placeholder="انتخاب متخصص"
                     registration={completionForm.register("expertId", {
                       required: true,
@@ -498,10 +447,7 @@ function ProjectsPageContent() {
                 <div className="sm:col-span-2">
                   <Select
                     label="کاربر"
-                    options={users.map((user: any) => [
-                      getId(user),
-                      userName(user),
-                    ])}
+                    options={scopedUserOptions}
                     placeholder="انتخاب کاربر"
                     registration={dateCountForm.register("userId", {
                       required: true,
