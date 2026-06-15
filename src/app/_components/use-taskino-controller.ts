@@ -27,6 +27,8 @@ import {
   type Task,
   type TaskStatusOverview,
   type User,
+  type MyProgressStats,
+  type StatusCounts,
   type UserTaskCount,
 } from "@/lib/api";
 
@@ -149,6 +151,12 @@ export function useTaskinoController(initialView: View = "dashboard") {
   >([]);
   const [overdueTasks, setOverdueTasks] = useState<Task[]>([]);
   const [teamPerformance, setTeamPerformance] = useState<any>(null);
+  const [specialistTaskCounts, setSpecialistTaskCounts] =
+    useState<StatusCounts | null>(null);
+  const [specialistFixedTaskCounts, setSpecialistFixedTaskCounts] =
+    useState<StatusCounts | null>(null);
+  const [specialistProgressStats, setSpecialistProgressStats] =
+    useState<MyProgressStats | null>(null);
 
   // UI state
   const [activeViewState, setActiveViewState] = useState<View>(initialView);
@@ -346,6 +354,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       const currentRole = (currentUser ?? storedUser)?.roles;
       const userIsManager = currentRole === "manager";
       const userIsSupervisor = currentRole === "supervisor";
+      const userIsSpecialist = currentRole === "specialist";
       const shouldLoadLeaveStats =
         currentRole === "manager" || currentRole === "supervisor";
       const reportParams =
@@ -380,6 +389,14 @@ export function useTaskinoController(initialView: View = "dashboard") {
             ? leaveApi.statistics(authToken).catch(() => null)
             : Promise.resolve(null),
         ]);
+      const [specialistTaskCountsRes, specialistFixedTaskCountsRes, specialistProgressRes] =
+        userIsSpecialist
+          ? await Promise.all([
+              taskApi.statusCounts(authToken).catch(() => null),
+              fixedTaskApi.statusCounts(authToken).catch(() => null),
+              userApi.meProgress(authToken).catch(() => null),
+            ])
+          : [null, null, null];
       const taskList = normalizeList(
         ((t as ManagerAllTasks)?.tasks ?? t) as Task[] | { data?: Task[] },
       );
@@ -387,7 +404,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTasks(taskList);
       setLeaveRequests(normalizeList(leaves));
       setLeaveStatistics(leaveStatsRes);
-      console.log("[taskino] leaveStatistics state:", leaveStatsRes);
+      setSpecialistTaskCounts(specialistTaskCountsRes);
+      setSpecialistFixedTaskCounts(specialistFixedTaskCountsRes);
+      setSpecialistProgressStats(specialistProgressRes);
       setManagerStats(statsRes);
       setUnreadCount(unreadRes.unreadCount);
       setNotifications(
@@ -990,6 +1009,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setSupervisorMembers([]);
     setOverdueTasks([]);
     setTeamPerformance(null);
+    setSpecialistTaskCounts(null);
+    setSpecialistFixedTaskCounts(null);
+    setSpecialistProgressStats(null);
     setActiveViewState("dashboard");
     localStorage.removeItem("taskino-token");
     localStorage.removeItem("taskino-user");
@@ -1082,6 +1104,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
     supervisorMembers,
     overdueTasks,
     teamPerformance,
+    specialistTaskCounts,
+    specialistFixedTaskCounts,
+    specialistProgressStats,
     activeView,
     selectedProjectFilter,
     selectedStatusFilter,
@@ -1154,6 +1179,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setSupervisorMembers,
     setOverdueTasks,
     setTeamPerformance,
+    setSpecialistTaskCounts,
+    setSpecialistFixedTaskCounts,
+    setSpecialistProgressStats,
     setActiveView,
     setActiveViewState,
     setSelectedProjectFilter,

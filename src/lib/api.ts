@@ -248,6 +248,24 @@ export type TaskStatusOverview = {
   total?: number;
 };
 
+export type StatusCounts = {
+  total?: number;
+  todo?: number;
+  inProgress?: number;
+  in_progress?: number;
+  done?: number;
+  pending?: number;
+  completed?: number;
+};
+
+export type MyProgressStats = {
+  progressPercentage?: number;
+  score?: number;
+  completedTasks?: number;
+  totalTasks?: number;
+  doneTasks?: number;
+};
+
 export type UserTaskCount = {
   userId?: string;
   _id?: string;
@@ -580,6 +598,8 @@ export const userApi = {
       apiClient.post("/users/increase-score", body),
       "افزایش امتیاز ناموفق بود",
     ),
+  meProgress: (token: string) =>
+    unwrapAxios(apiClient.get<MyProgressStats>("/users/me/progress")),
 };
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
@@ -635,6 +655,8 @@ export const taskApi = {
         `/tasks/specialist/${userId}${qs(params)}`,
       ),
     ),
+  statusCounts: (token: string) =>
+    unwrapAxios(apiClient.get<StatusCounts>("/tasks/status-counts")),
 };
 
 // ─── Manager ─────────────────────────────────────────────────────────────────
@@ -834,6 +856,8 @@ export const fixedTaskApi = {
         `/fixed-tasks/specialist/${userId}${qs(params)}`,
       ),
     ),
+  statusCounts: (token: string) =>
+    unwrapAxios(apiClient.get<StatusCounts>("/fixed-tasks/status-counts")),
 };
 
 // ─── Leave Requests ──────────────────────────────────────────────────────────

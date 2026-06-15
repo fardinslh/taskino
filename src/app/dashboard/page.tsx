@@ -53,6 +53,7 @@ function DashboardPageContent() {
   } = useSessionContext();
   const {
     activeTasks, doneTasks, inProgressTasks, progress, projects, tasks,
+    specialistFixedTaskCounts, specialistProgressStats, specialistTaskCounts,
   } = useTaskContext();
   const {
     handleLeaveAction, leaveRequests, managerStats, managerTaskStatus,
@@ -70,6 +71,18 @@ function DashboardPageContent() {
     openFixedTaskForm,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
+  const specialistDoneCount =
+    (specialistTaskCounts?.done ?? specialistTaskCounts?.completed ?? 0) +
+    (specialistFixedTaskCounts?.done ?? specialistFixedTaskCounts?.completed ?? 0);
+  const specialistTotalCount =
+    (specialistTaskCounts?.total ?? 0) +
+    (specialistFixedTaskCounts?.total ?? 0);
+  const specialistProgress =
+    specialistProgressStats?.progressPercentage ??
+    (specialistTotalCount
+      ? Math.round((specialistDoneCount / specialistTotalCount) * 100)
+      : 0);
+  const specialistScore = specialistProgressStats?.score ?? 0;
   const specialistMatches = specialistSearchQuery.trim()
     ? specialistUsers.filter((u: any) =>
         userName(u)
@@ -234,7 +247,7 @@ function DashboardPageContent() {
                   ? [{ n: managerStats?.activeProjects ?? projects.length, l: "پروژه فعال" }, { n: managerStats?.openTasks ?? tasks.length, l: "گزارش باز" }, { n: managerStats?.activeUsers ?? users.length, l: "کاربر فعال" }].map((s: any, i: number) => (
                       <div key={i} className="text-center"><p className="text-2xl font-extrabold">{s.n}</p><p className="text-[11px] opacity-75">{s.l}</p></div>
                     ))
-                  : [{ n: tasks.length, l: "کل پروژه" }, { n: projects.length, l: "پروژه" }, { n: `${progress}%`, l: "پیشرفت" }].map((s: any, i: number) => (
+                  : [{ n: `${specialistProgress}%`, l: "پیشرفت" }, { n: specialistDoneCount, l: "تکمیل‌شده" }, { n: specialistTotalCount, l: "کل پروژه" }].map((s: any, i: number) => (
                       <div key={i} className="text-center"><p className="text-2xl font-extrabold">{s.n}</p><p className="text-[11px] opacity-75">{s.l}</p></div>
                     ))
                 }
@@ -500,9 +513,9 @@ function DashboardPageContent() {
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                   {[
-                    { l: "امتیاز", v: currentUser?.score ?? 0, c: "text-amber-600" },
-                    { l: "تکمیل‌شده", v: doneCount, c: "text-emerald-600" },
-                    { l: "کل پروژه", v: totalCount, c: "text-[--text]" },
+                    { l: "امتیاز", v: specialistScore, c: "text-amber-600" },
+                    { l: "تکمیل‌شده", v: specialistDoneCount, c: "text-emerald-600" },
+                    { l: "کل پروژه", v: specialistTotalCount, c: "text-[--text]" },
                   ].map((s: any) => (
                     <div key={s.l} className="rounded-xl bg-[--surface-2] py-3">
                       <p className={`text-xl font-bold ${s.c}`}>{s.v}</p>

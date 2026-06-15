@@ -99,6 +99,9 @@ const taskKeys = [
   "todoCount",
   "progress",
   "filteredTasks",
+  "specialistTaskCounts",
+  "specialistFixedTaskCounts",
+  "specialistProgressStats",
 ] as const;
 
 const managementKeys = [
