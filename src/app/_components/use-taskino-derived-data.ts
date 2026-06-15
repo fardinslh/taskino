@@ -79,6 +79,18 @@ export function useTaskinoDerivedData({
   const progress = tasks.length
     ? Math.round((doneTasks / tasks.length) * 100)
     : 0;
+  const fixedDoneTasks = fixedTasks.filter(
+    (item) => item.status === "done",
+  ).length;
+  const fixedOpenTasks = fixedTasks.filter(
+    (item) => item.status !== "done",
+  ).length;
+  const fixedInProgressTasks = fixedTasks.filter(
+    (item) => item.status === "in_progress",
+  ).length;
+  const fixedTodoCount = fixedTasks.filter(
+    (item) => (item.status ?? "todo") === "todo",
+  ).length;
   const statsProjects = managerStats?.activeProjects ?? projects.length;
   const statsUsers = managerStats?.activeUsers ?? users.length;
   const supervisorInProgressReports =
@@ -197,6 +209,10 @@ export function useTaskinoDerivedData({
   return {
     activeTasks,
     doneTasks,
+    fixedDoneTasks,
+    fixedInProgressTasks,
+    fixedOpenTasks,
+    fixedTodoCount,
     filteredFixedTemplates,
     filteredTasks,
     incompleteFixedTasks,

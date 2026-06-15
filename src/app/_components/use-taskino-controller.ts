@@ -55,6 +55,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
   const [taskAssignee, setTaskAssignee] = useState("");
   const [taskProjectId, setTaskProjectId] = useState("");
   const [taskRecurrence, setTaskRecurrence] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskStartDate, setTaskStartDate] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState("");
+  const [taskStartTime, setTaskStartTime] = useState("");
+  const [taskEndTime, setTaskEndTime] = useState("");
   const [taskFile, setTaskFile] = useState<File | null>(null);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   // Tasks-admin view
@@ -163,6 +168,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
   const {
     activeTasks,
     doneTasks,
+    fixedDoneTasks,
+    fixedInProgressTasks,
+    fixedOpenTasks,
+    fixedTodoCount,
     filteredFixedTemplates,
     filteredTasks,
     incompleteFixedTasks,
@@ -526,7 +535,12 @@ export function useTaskinoController(initialView: View = "dashboard") {
       title: taskTitle.trim(),
       assignedTo: [assignee],
       status: "todo",
+      ...(taskDescription.trim() ? { description: taskDescription.trim() } : {}),
       ...(taskRecurrence ? { recurrence: taskRecurrence } : {}),
+      ...(taskStartDate ? { startDate: new Date(taskStartDate).toISOString() } : {}),
+      ...(taskDueDate ? { dueDate: new Date(taskDueDate).toISOString() } : {}),
+      ...(taskStartTime ? { startTime: taskStartTime } : {}),
+      ...(taskEndTime ? { endTime: taskEndTime } : {}),
     };
     try {
       await taskApi.create(token, body, taskFile ?? undefined);
@@ -534,6 +548,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaskAssignee("");
       setTaskProjectId("");
       setTaskRecurrence("");
+      setTaskDescription("");
+      setTaskStartDate("");
+      setTaskDueDate("");
+      setTaskStartTime("");
+      setTaskEndTime("");
       setTaskFile(null);
       setShowNewProjectForm(false);
       setMessage("گزارش جدید ساخته شد.");
@@ -825,6 +844,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
     taskAssignee,
     taskProjectId,
     taskRecurrence,
+    taskDescription,
+    taskStartDate,
+    taskDueDate,
+    taskStartTime,
+    taskEndTime,
     taskFile,
     showNewProjectForm,
     taLookupFirst,
@@ -853,6 +877,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
     excelUploading,
     fixedTasks,
     incompleteFixedTasks,
+    fixedDoneTasks,
+    fixedInProgressTasks,
+    fixedOpenTasks,
+    fixedTodoCount,
     fixedReportsTab,
     showFixedTaskForm,
     editingFixedTask,
@@ -896,6 +924,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setTaskAssignee,
     setTaskProjectId,
     setTaskRecurrence,
+    setTaskDescription,
+    setTaskStartDate,
+    setTaskDueDate,
+    setTaskStartTime,
+    setTaskEndTime,
     setTaskFile,
     setShowNewProjectForm,
     setTaLookupFirst,

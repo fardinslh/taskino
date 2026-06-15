@@ -60,7 +60,12 @@ function DashboardPageContent() {
     teamAssigneeCount, teamAssignees, teamPerformance, users,
   } = useManagementContext();
   const {
-    filteredFixedTemplates, fixedTasks, onDragEnd, openFixedTaskForm,
+    filteredFixedTemplates,
+    fixedDoneTasks,
+    fixedOpenTasks,
+    fixedTasks,
+    onDragEnd,
+    openFixedTaskForm,
   } = useFixedTaskContext();
 
   return (
@@ -195,15 +200,15 @@ function DashboardPageContent() {
             <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium opacity-75">سلام، {userName(currentUser ?? undefined).split(" ")[0]}</p>
-                <h1 className="mt-0.5 text-xl font-bold">{isManager ? "داشبورد مدیر" : "داشبورد گزارش‌ها"}</h1>
-                <p className="mt-1 text-sm opacity-75">{isManager ? `${managerStats?.activeProjects ?? projects.length} پروژه فعال · ${managerStats?.activeUsers ?? users.length} کاربر` : activeTasks === 0 ? "همه گزارش‌ها تکمیل شده‌اند" : `${activeTasks} گزارش باز داری`}</p>
+                <h1 className="mt-0.5 text-xl font-bold">{isManager ? "داشبورد مدیر" : "داشبورد پروژه‌ها"}</h1>
+                <p className="mt-1 text-sm opacity-75">{isManager ? `${managerStats?.activeProjects ?? projects.length} پروژه فعال · ${managerStats?.activeUsers ?? users.length} کاربر` : activeTasks === 0 ? "همه پروژه‌ها تکمیل شده‌اند" : `${activeTasks} پروژه باز داری`}</p>
               </div>
               <div className="flex shrink-0 items-center gap-5">
                 {isManager
                   ? [{ n: managerStats?.activeProjects ?? projects.length, l: "پروژه فعال" }, { n: managerStats?.openTasks ?? tasks.length, l: "گزارش باز" }, { n: managerStats?.activeUsers ?? users.length, l: "کاربر فعال" }].map((s: any, i: number) => (
                       <div key={i} className="text-center"><p className="text-2xl font-extrabold">{s.n}</p><p className="text-[11px] opacity-75">{s.l}</p></div>
                     ))
-                  : [{ n: tasks.length, l: "کل گزارش" }, { n: projects.length, l: "پروژه" }, { n: `${progress}%`, l: "پیشرفت" }].map((s: any, i: number) => (
+                  : [{ n: tasks.length, l: "کل پروژه" }, { n: projects.length, l: "پروژه" }, { n: `${progress}%`, l: "پیشرفت" }].map((s: any, i: number) => (
                       <div key={i} className="text-center"><p className="text-2xl font-extrabold">{s.n}</p><p className="text-[11px] opacity-75">{s.l}</p></div>
                     ))
                 }
@@ -222,7 +227,7 @@ function DashboardPageContent() {
                 ]
               : [
                   { label: "پروژه‌ها", value: tasks.length, sub: "واگذارشده", icon: FolderKanban, a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900", onClick: () => setActiveView("tasks-admin") },
-                  { label: "گزارش‌های باز", value: activeTasks, sub: `${inProgressTasks} جاری`, icon: ClipboardList, a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20", onClick: undefined },
+                  { label: "پروژه‌های باز", value: activeTasks, sub: `${inProgressTasks} جاری`, icon: ClipboardList, a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20", onClick: undefined },
                   { label: "اعضای تیم", value: statsUsers, sub: "کاربر", icon: UsersRound, a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900", onClick: undefined },
                   { label: "تکمیل شده", value: doneTasks, sub: `${progress}% پیشرفت`, icon: TrendingUp, a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900", onClick: undefined },
                 ]
@@ -275,11 +280,13 @@ function DashboardPageContent() {
           
 {isSpecialist && activeView === "dashboard" && (() => {
             const overdueReports = fixedTasks.filter((f: any) => f.nextRunAt && new Date(f.nextRunAt) < new Date()).length;
-            const dailyReports = fixedTasks.filter((f: any) => f.isActive !== false && (f.recurrence ?? "daily") === "daily").length;
+            const fixedOpenReports = fixedOpenTasks;
+            const fixedCompletedReports = fixedDoneTasks;
             const openTasks = tasks.filter((t: any) => t.status !== "done").length;
             const parts: string[] = [];
             if (overdueReports) parts.push(`${overdueReports} گزارش مهلت‌گذشته`);
-            if (dailyReports) parts.push(`${dailyReports} گزارش روزانه برای امروز`);
+            if (fixedOpenReports) parts.push(`${fixedOpenReports} گزارش ثابت در انتظار`);
+            if (fixedCompletedReports) parts.push(`${fixedCompletedReports} گزارش ثابت تکمیل شده`);
             if (openTasks) parts.push(`${openTasks} پروژه باز`);
             if (parts.length === 0) return null;
             const urgent = overdueReports > 0;
@@ -305,9 +312,9 @@ function DashboardPageContent() {
                   <ClipboardList size={17} />
                 </div>
                 <div>
-                  <h2 className="font-bold text-[--text]">برد گزارش‌ها</h2>
+                    <h2 className="font-bold text-[--text]">برد گزارشات ثابت</h2>
                   <p className="text-[11px] text-[--text-3]">
-                    گزارش‌های ثابت بر اساس دوره · {fixedTasks.length} گزارش
+                      گزارشات ثابت بر اساس دوره · {fixedTasks.length} مورد · {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
                     {(() => { const od = fixedTasks.filter((f: any) => f.nextRunAt && new Date(f.nextRunAt) < new Date()).length; return od ? ` · ${od} مهلت‌گذشته` : ""; })()}
                   </p>
                 </div>

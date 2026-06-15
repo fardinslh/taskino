@@ -34,13 +34,25 @@ function ProjectsPageContent() {
   const { isManager } = useSessionContext();
   const { users } = useManagementContext();
   const {
-    tasks, taskTitle, taskAssignee, taskFile, taLookupFirst, taLookupLast,
-    taLookupResult, taCompletionExpert, taCompletionResult, taCountUser,
-    taCountStart, taCountEnd, taCountResult, setTaskTitle, setTaskAssignee,
-    setTaskFile, setTaLookupFirst, setTaLookupLast, setTaCompletionExpert,
-    setTaCountUser, setTaCountStart, setTaCountEnd, createTask, deleteTask,
-    taLookupTasks, taRunCompletionStats, taRunDateCount,
+    tasks, taskTitle, taskAssignee, taskDescription, taskStartDate,
+    taskDueDate, taskStartTime, taskEndTime, taskFile, taLookupFirst,
+    taLookupLast, taLookupResult, taCompletionExpert, taCompletionResult,
+    taCountUser, taCountStart, taCountEnd, taCountResult, setTaskTitle,
+    setTaskAssignee, setTaskDescription, setTaskStartDate, setTaskDueDate,
+    setTaskStartTime, setTaskEndTime, setTaskFile, setTaLookupFirst,
+    setTaLookupLast, setTaCompletionExpert, setTaCountUser, setTaCountStart,
+    setTaCountEnd, createTask, deleteTask, taLookupTasks,
+    taRunCompletionStats, taRunDateCount,
   } = useTaskContext();
+
+  const completionStats = taCompletionResult as Record<string, any> | null;
+
+  const completionManager = completionStats
+    ? users.find((u: any) => getId(u) === String(completionStats.managerId))
+    : null;
+  const completionExpert = completionStats
+    ? users.find((u: any) => getId(u) === String(completionStats.expertId))
+    : null;
 
   return (
     <>
@@ -100,12 +112,17 @@ function ProjectsPageContent() {
                   <form className="grid gap-3 border-t border-[--border] bg-[--surface-2]/60 p-4 sm:grid-cols-2 xl:grid-cols-3" onSubmit={createTask}>
                     <Field label="عنوان پروژه *" name="projTitle" value={taskTitle} onChange={setTaskTitle} required placeholder="مثلاً: تکمیل اکسل فروش" />
                     <Select label="مسئول (کارشناس)" value={taskAssignee} onChange={setTaskAssignee} options={users.map((u: any) => [getId(u), userName(u)])} placeholder="بدون مسئول (خودم)" />
+                    <Field label="توضیحات" name="projDescription" value={taskDescription} onChange={setTaskDescription} placeholder="شرح کوتاه پروژه" />
+                    <Field label="شروع" name="projStartDate" type="datetime-local" value={taskStartDate} onChange={setTaskStartDate} />
+                    <Field label="ددلاین" name="projDueDate" type="datetime-local" value={taskDueDate} onChange={setTaskDueDate} />
+                    <Field label="ساعت شروع روزانه" name="projStartTime" type="time" value={taskStartTime} onChange={setTaskStartTime} />
+                    <Field label="ساعت پایان روزانه" name="projEndTime" type="time" value={taskEndTime} onChange={setTaskEndTime} />
                     <label className="flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[--border] bg-[--surface] px-3 text-sm font-medium text-[--text-2] transition hover:bg-[--surface-2] sm:col-span-2">
                       <FileSpreadsheet size={15} className="text-[#1f7a8c]" />
                       <span className="truncate">{taskFile ? taskFile.name : "ضمیمه فایل اکسل (اختیاری)"}</span>
                       <input accept=".xlsx,.xls" className="hidden" onChange={(e) => setTaskFile(e.target.files?.[0] ?? null)} type="file" />
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 sm:col-span-2 xl:col-span-3">
                       <button className="h-10 flex-1 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white disabled:opacity-50" disabled={!taskTitle.trim()} type="submit">ایجاد پروژه</button>
                       {taskFile && <button className="h-10 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs font-medium text-red-500" onClick={() => setTaskFile(null)} type="button">حذف فایل</button>}
                     </div>
@@ -118,7 +135,7 @@ function ProjectsPageContent() {
                 <div className="flex items-center gap-3 border-b border-[--border] px-5 py-4">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-white"><ClipboardList size={17} /></div>
                   <div>
-                    <h2 className="font-bold">همه گزارش‌ها</h2>
+                    <h2 className="font-bold">همه پروژه‌ها</h2>
                     <p className="text-[11px] text-[--text-3]">{tasks.length} پروژه</p>
                   </div>
                 </div>
@@ -168,11 +185,36 @@ function ProjectsPageContent() {
                   <h2 className="font-bold">آمار تکمیل پروژه</h2>
                   <p className="mt-1 text-xs text-[--text-3]">پروژه‌های ساخته‌شده توسط شما و واگذارشده به یک متخصص</p>
                   <form className="mt-4 flex flex-wrap items-end gap-2" onSubmit={taRunCompletionStats}>
-                    <div className="min-w-[200px] flex-1"><Select label="متخصص" value={taCompletionExpert} onChange={setTaCompletionExpert} options={users.map((u: any) => [getId(u), userName(u)])} placeholder="انتخاب متخصص" /></div>
+                    <div className="min-w-[200px] flex-1"><Select label="متخصص" value={taCompletionExpert} onChange={setTaCompletionExpert} options={users.filter((u: any) => u.roles === "specialist").map((u: any) => [getId(u), userName(u)])} placeholder="انتخاب متخصص" /></div>
                     <button className="h-10 rounded-lg bg-[#1f7a8c] px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={!taCompletionExpert} type="submit">محاسبه</button>
                   </form>
                   {taCompletionResult && (
-                    <pre className="mt-4 overflow-x-auto rounded-xl bg-[--surface-2] p-3 text-xs text-[--text-2]" dir="ltr">{JSON.stringify(taCompletionResult, null, 2)}</pre>
+                    <div className="mt-4 space-y-3 rounded-xl bg-[--surface-2] p-4">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-lg bg-[--surface] p-3">
+                          <p className="text-[11px] text-[--text-3]">مدیر</p>
+                          <p className="mt-1 text-sm font-semibold">{completionManager ? userName(completionManager) : completionStats?.managerId}</p>
+                        </div>
+                        <div className="rounded-lg bg-[--surface] p-3">
+                          <p className="text-[11px] text-[--text-3]">متخصص</p>
+                          <p className="mt-1 text-sm font-semibold">{completionExpert ? userName(completionExpert) : completionStats?.expertId}</p>
+                        </div>
+                        <div className="rounded-lg bg-[--surface] p-3">
+                          <p className="text-[11px] text-[--text-3]">کل پروژه‌ها</p>
+                          <p className="mt-1 text-sm font-semibold">{completionStats?.totalTasks}</p>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30">
+                          <p className="text-[11px] text-emerald-700 dark:text-emerald-400">تکمیل شده</p>
+                          <p className="mt-1 text-sm font-semibold text-emerald-700 dark:text-emerald-400">{completionStats?.completedTasks}</p>
+                        </div>
+                        <div className="rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
+                          <p className="text-[11px] text-amber-700 dark:text-amber-400">در انتظار</p>
+                          <p className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-400">{completionStats?.pendingTasks}</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 

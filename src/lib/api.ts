@@ -3,6 +3,23 @@ import axios, { type AxiosRequestConfig } from "axios";
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
 const apiClient = axios.create({ baseURL: apiUrl });
 
+apiClient.interceptors.request.use((config) => {
+  const headers = config.headers ?? {};
+  const hasAuthHeader = Object.keys(headers).some(
+    (key) => key.toLowerCase() === "authorization",
+  );
+
+  if (!hasAuthHeader && typeof window !== "undefined") {
+    const token = localStorage.getItem("taskino-token");
+    if (token) {
+      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    }
+  }
+
+  config.headers = headers;
+  return config;
+});
+
 export type User = {
   _id?: string;
   id?: string;
@@ -18,7 +35,12 @@ export type User = {
   progressPercentage?: number;
 };
 
-export type WorkField = "it" | "human_resources" | "finance" | "sales" | "operations";
+export type WorkField =
+  | "it"
+  | "human_resources"
+  | "finance"
+  | "sales"
+  | "operations";
 export type FixedTaskRecurrence = "daily" | "weekly" | "monthly";
 export type FixedTaskStatus = "todo" | "in_progress" | "done";
 export type DeadlineStatus = "overdue" | "within_deadline";
@@ -35,7 +57,9 @@ export type Task = {
   taskComment?: string;
   isPublic?: boolean;
   file?: string;
-  excelFile?: string | { _id?: string; id?: string; fileName?: string; originalName?: string };
+  excelFile?:
+    | string
+    | { _id?: string; id?: string; fileName?: string; originalName?: string };
   recurrence?: string;
   startDate?: string;
   dueDate?: string;
@@ -339,10 +363,12 @@ export type IncompleteFixedTask = FixedTask & {
 
 export function getId(item?: { _id?: string; id?: string } | string) {
   if (!item) return "";
-  return typeof item === "string" ? item : item._id ?? item.id ?? "";
+  return typeof item === "string" ? item : (item._id ?? item.id ?? "");
 }
 
-export function normalizeList<T>(v: T[] | { data?: T[]; items?: T[]; docs?: T[] }) {
+export function normalizeList<T>(
+  v: T[] | { data?: T[]; items?: T[]; docs?: T[] },
+) {
   if (Array.isArray(v)) return v;
   return v.data ?? v.items ?? v.docs ?? [];
 }
@@ -386,10 +412,14 @@ async function axiosErrorMessage(error: unknown, fallback: string) {
 }
 
 function axiosConfig(opts: RequestInit, token?: string): AxiosRequestConfig {
-  const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && opts.body instanceof FormData;
   const headers = requestHeaders(opts.headers);
 
-  if (!isFormData && !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")) {
+  if (
+    !isFormData &&
+    !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")
+  ) {
     headers["Content-Type"] = "application/json";
   }
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -412,7 +442,7 @@ export async function request<T>(
   try {
     const response = await apiClient.request<T>({
       url: path,
-      ...axiosConfig(opts, token),
+      ...axiosConfig(opts),
     });
     return response.data;
   } catch (error) {
@@ -420,12 +450,16 @@ export async function request<T>(
   }
 }
 
-export async function downloadBlob(path: string, filename: string, token?: string, opts: RequestInit = {}) {
+export async function downloadBlob(
+  path: string,
+  filename: string,
+  opts: RequestInit = {},
+) {
   let blob: Blob;
   try {
     const response = await apiClient.request<Blob>({
       url: path,
-      ...axiosConfig(opts, token),
+      ...axiosConfig(opts),
       responseType: "blob",
     });
     blob = response.data;
@@ -447,7 +481,9 @@ function qs(params?: Record<string, string | number | boolean | undefined>) {
   if (!params) return "";
   const q = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== "")
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .map(
+      ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`,
+    )
     .join("&");
   return q ? `?${q}` : "";
 }
@@ -469,171 +505,357 @@ function toFormData(body: Record<string, unknown>, file?: File) {
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (body: { mobile: string; password: string }) =>
-    request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+    request<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   register: (body: Record<string, string>) =>
-    request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
+    request<AuthResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const userApi = {
   list: (token: string, page = 1, limit = 50) =>
-    request<User[] | { data?: User[] }>(`/users${qs({ page, limit })}`, {}, token),
-  get: (token: string, id: string) => request<User>(`/users/${id}`, {}, token),
+    request<User[] | { data?: User[] }>(
+      `/users${qs({ page, limit })}`,
+      {},
+    ),
+  get: (token: string, id: string) => request<User>(`/users/${id}`, {}),
   create: (token: string, body: Record<string, unknown>) =>
-    request<User>("/users", { method: "POST", body: JSON.stringify(body) }, token),
+    request<User>(
+      "/users",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<User>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+    request<User>(
+      `/users/${id}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    ),
   delete: (token: string, id: string) =>
-    request(`/users/${id}`, { method: "DELETE" }, token),
+    request(`/users/${id}`, { method: "DELETE" }),
   approve: (token: string, id: string) =>
-    request(`/users/${id}/approve`, { method: "PATCH" }, token),
+    request(`/users/${id}/approve`, { method: "PATCH" }),
   increaseScore: (token: string, body: { userId: string; score: number }) =>
-    request("/users/increase-score", { method: "POST", body: JSON.stringify(body) }, token),
+    request(
+      "/users/increase-score",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
 };
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
 export const taskApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<Task[] | { data?: Task[] }>(`/tasks${qs({ page: 1, limit: 50, ...params })}`, {}, token),
-  get: (token: string, id: string) => request<Task>(`/tasks/${id}`, {}, token),
+    request<Task[] | { data?: Task[] }>(
+      `/tasks${qs({ page: 1, limit: 50, ...params })}`,
+      {},
+    ),
+  get: (token: string, id: string) => request<Task>(`/tasks/${id}`, {}),
   create: (token: string, body: Record<string, unknown>, file?: File) =>
-    request<Task>("/tasks", { method: "POST", body: toFormData(body, file) }, token),
+    request<Task>(
+      "/tasks",
+      { method: "POST", body: toFormData(body, file) },
+    ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+    request<Task>(
+      `/tasks/${id}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    ),
   delete: (token: string, id: string) =>
-    request(`/tasks/${id}`, { method: "DELETE" }, token),
+    request(`/tasks/${id}`, { method: "DELETE" }),
   updateStatus: (token: string, id: string, status: string) =>
-    request(`/tasks/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }, token),
+    request(
+      `/tasks/${id}/status`,
+      { method: "PATCH", body: JSON.stringify({ status }) },
+    ),
   completionStats: (token: string, body: Record<string, unknown>) =>
-    request<Record<string, unknown>>("/tasks/completion-stats", { method: "POST", body: JSON.stringify(body) }, token),
+    request<Record<string, unknown>>(
+      "/tasks/completion-stats",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
   dateCount: (token: string, body: Record<string, unknown>) =>
-    request<Record<string, unknown>>("/tasks/date-count", { method: "POST", body: JSON.stringify(body) }, token),
+    request<Record<string, unknown>>(
+      "/tasks/date-count",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
   byUserName: (token: string, userName: string, lastName: string) =>
-    request<Task[] | { data?: Task[] }>(`/tasks/user${qs({ userName, lastName })}`, {}, token),
-  bySpecialist: (token: string, userId: string, params?: Record<string, string | number | undefined>) =>
-    request<Task[] | { data?: Task[] }>(`/tasks/specialist/${userId}${qs(params)}`, {}, token),
+    request<Task[] | { data?: Task[] }>(
+      `/tasks/user${qs({ userName, lastName })}`,
+      {},
+    ),
+  bySpecialist: (
+    token: string,
+    userId: string,
+    params?: Record<string, string | number | undefined>,
+  ) =>
+    request<Task[] | { data?: Task[] }>(
+      `/tasks/specialist/${userId}${qs(params)}`,
+      {},
+    ),
 };
 
 // ─── Manager ─────────────────────────────────────────────────────────────────
 export const managerApi = {
-  statistics: (token: string) => request<ManagerStats>("/manager/statistics", {}, token),
-  users: (token: string, params?: Record<string, string | number | boolean | undefined>) =>
-    request<User[] | { data?: User[] }>(`/manager/users${qs(params)}`, {}, token),
+  statistics: (token: string) =>
+    request<ManagerStats>("/manager/statistics", {}),
+  users: (
+    token: string,
+    params?: Record<string, string | number | boolean | undefined>,
+  ) =>
+    request<User[] | { data?: User[] }>(
+      `/manager/users${qs(params)}`,
+      {},
+    ),
   updateUserRole: (token: string, userId: string, role: string) =>
-    request(`/manager/users/${userId}/role`, { method: "PATCH", body: JSON.stringify({ role }) }, token),
+    request(
+      `/manager/users/${userId}/role`,
+      { method: "PATCH", body: JSON.stringify({ role }) },
+    ),
   taskStatusOverview: (token: string) =>
-    request<TaskStatusOverview>("/manager/tasks/status", {}, token),
+    request<TaskStatusOverview>("/manager/tasks/status", {}),
   taskCountsByUsers: (token: string) =>
-    request<UserTaskCount[] | { data?: UserTaskCount[] }>("/manager/tasks/users/counts", {}, token),
-  monthlyPerformance: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<MonthlyPerformance[] | { data?: MonthlyPerformance[] } | MonthlyPerformanceResponse>(`/manager/users/monthly-performance${qs(params)}`, {}, token),
+    request<UserTaskCount[] | { data?: UserTaskCount[] }>(
+      "/manager/tasks/users/counts",
+      {},
+    ),
+  monthlyPerformance: (
+    token: string,
+    params?: Record<string, string | number | undefined>,
+  ) =>
+    request<
+      | MonthlyPerformance[]
+      | { data?: MonthlyPerformance[] }
+      | MonthlyPerformanceResponse
+    >(`/manager/users/monthly-performance${qs(params)}`, {}),
   allTasks: (token: string, recurrence?: string) =>
-    request<ManagerAllTasks>(`/manager/tasks${qs(recurrence ? { recurrence } : {})}`, {}, token),
+    request<ManagerAllTasks>(
+      `/manager/tasks${qs(recurrence ? { recurrence } : {})}`,
+      {},
+    ),
   findUserByName: (token: string, firstName: string, lastName: string) =>
-    request<User>(`/manager/users/by-name${qs({ firstName, lastName })}`, {}, token),
+    request<User>(
+      `/manager/users/by-name${qs({ firstName, lastName })}`,
+      {},
+    ),
   usersProgress: (token: string) =>
-    request<UserProgress[] | { data?: UserProgress[] }>("/manager/users/progress", {}, token),
+    request<UserProgress[] | { data?: UserProgress[] }>(
+      "/manager/users/progress",
+      {},
+    ),
 };
 
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 export const supervisorApi = {
   statistics: (token: string, recurrence?: FixedTaskRecurrence) =>
-    request<SupervisorStats>(`/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`, {}, token),
-  members: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<SupervisorMember[] | { data?: SupervisorMember[] }>(`/supervisor/members${qs(params)}`, {}, token),
-  tasks: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<Task[] | { data?: Task[] }>(`/supervisor/tasks${qs(params)}`, {}, token),
-  fixedTasks: (token: string, params?: Record<string, string | number | boolean | undefined>) =>
-    request<FixedTask[] | { data?: FixedTask[] }>(`/supervisor/fixed-tasks${qs(params)}`, {}, token),
+    request<SupervisorStats>(
+      `/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`,
+      {},
+    ),
+  members: (
+    token: string,
+    params?: Record<string, string | number | undefined>,
+  ) =>
+    request<SupervisorMember[] | { data?: SupervisorMember[] }>(
+      `/supervisor/members${qs(params)}`,
+      {},
+    ),
+  tasks: (
+    token: string,
+    params?: Record<string, string | number | undefined>,
+  ) =>
+    request<Task[] | { data?: Task[] }>(
+      `/supervisor/tasks${qs(params)}`,
+      {},
+    ),
+  fixedTasks: (
+    token: string,
+    params?: Record<string, string | number | boolean | undefined>,
+  ) =>
+    request<FixedTask[] | { data?: FixedTask[] }>(
+      `/supervisor/fixed-tasks${qs(params)}`,
+      {},
+    ),
 };
 
 // ─── Notifications ───────────────────────────────────────────────────────────
 export const notificationApi = {
-  list: (token: string, params?: Record<string, string | number | boolean | undefined>) =>
-    request<Notification[] | { data?: Notification[] }>(`/notifications/me${qs(params)}`, {}, token),
+  list: (
+    token: string,
+    params?: Record<string, string | number | boolean | undefined>,
+  ) =>
+    request<Notification[] | { data?: Notification[] }>(
+      `/notifications/me${qs(params)}`,
+      {},
+    ),
   unreadCount: (token: string) =>
-    request<{ unreadCount: number }>("/notifications/me/unread-count", {}, token),
-  get: (token: string, id: string) => request<Notification>(`/notifications/${id}`, {}, token),
+    request<{ unreadCount: number }>(
+      "/notifications/me/unread-count",
+      {},
+    ),
+  get: (token: string, id: string) =>
+    request<Notification>(`/notifications/${id}`, {}),
   markRead: (token: string, id: string) =>
-    request(`/notifications/${id}`, { method: "PATCH", body: JSON.stringify({ isRead: true }) }, token),
+    request(
+      `/notifications/${id}`,
+      { method: "PATCH", body: JSON.stringify({ isRead: true }) },
+    ),
   markAllRead: (token: string) =>
-    request("/notifications/me/read-all", { method: "PATCH" }, token),
+    request("/notifications/me/read-all", { method: "PATCH" }),
   delete: (token: string, id: string) =>
-    request(`/notifications/${id}`, { method: "DELETE" }, token),
+    request(`/notifications/${id}`, { method: "DELETE" }),
   deleteRead: (token: string) =>
-    request("/notifications/me/read", { method: "DELETE" }, token),
+    request("/notifications/me/read", { method: "DELETE" }),
 };
 
 // ─── Fixed Tasks ─────────────────────────────────────────────────────────────
 export const fixedTaskApi = {
-  list: (token: string, params?: Record<string, string | number | boolean | undefined>) =>
-    request<FixedTask[] | { data?: FixedTask[] }>(`/fixed-tasks${qs(params)}`, {}, token),
-  get: (token: string, id: string) => request<FixedTask>(`/fixed-tasks/${id}`, {}, token),
+  list: (
+    token: string,
+    params?: Record<string, string | number | boolean | undefined>,
+  ) =>
+    request<FixedTask[] | { data?: FixedTask[] }>(
+      `/fixed-tasks${qs(params)}`,
+      {},
+    ),
+  get: (token: string, id: string) =>
+    request<FixedTask>(`/fixed-tasks/${id}`, {}),
   create: (token: string, body: Record<string, unknown>) =>
-    request<FixedTask>("/fixed-tasks", { method: "POST", body: JSON.stringify(body) }, token),
-  update: (token: string, id: string, userId: string, body: Record<string, unknown>) =>
-    request<FixedTask>(`/fixed-tasks/${id}${qs({ userId })}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+    request<FixedTask>(
+      "/fixed-tasks",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+  update: (
+    token: string,
+    id: string,
+    userId: string,
+    body: Record<string, unknown>,
+  ) =>
+    request<FixedTask>(
+      `/fixed-tasks/${id}${qs({ userId })}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    ),
   // Assignee (specialist) may PATCH only the status field — board drag & drop.
-  updateStatus: (token: string, id: string, userId: string, status: FixedTaskStatus) =>
-    request<FixedTask>(`/fixed-tasks/${id}${qs({ userId })}`, { method: "PATCH", body: JSON.stringify({ status }) }, token),
+  updateStatus: (
+    token: string,
+    id: string,
+    userId: string,
+    status: FixedTaskStatus,
+  ) =>
+    request<FixedTask>(
+      `/fixed-tasks/${id}${qs({ userId })}`,
+      { method: "PATCH", body: JSON.stringify({ status }) },
+    ),
   delete: (token: string, id: string) =>
-    request(`/fixed-tasks/${id}`, { method: "DELETE" }, token),
+    request(`/fixed-tasks/${id}`, { method: "DELETE" }),
   seedFromExcel: (token: string) =>
-    request<{ message?: string; usersCreated?: number; fixedTasksCreated?: number }>("/fixed-tasks/seed/excel", { method: "POST" }, token),
-  bySpecialist: (token: string, userId: string, params?: Record<string, string | number | undefined>) =>
-    request<FixedTask[] | { data?: FixedTask[] }>(`/fixed-tasks/specialist/${userId}${qs(params)}`, {}, token),
+    request<{
+      message?: string;
+      usersCreated?: number;
+      fixedTasksCreated?: number;
+    }>("/fixed-tasks/seed/excel", { method: "POST" }),
+  bySpecialist: (
+    token: string,
+    userId: string,
+    params?: Record<string, string | number | undefined>,
+  ) =>
+    request<FixedTask[] | { data?: FixedTask[] }>(
+      `/fixed-tasks/specialist/${userId}${qs(params)}`,
+      {},
+    ),
 };
 
 // ─── Leave Requests ──────────────────────────────────────────────────────────
 export const leaveApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<LeaveRequest[] | { data?: LeaveRequest[] }>(`/leave-requests${qs(params)}`, {}, token),
+    request<LeaveRequest[] | { data?: LeaveRequest[] }>(
+      `/leave-requests${qs(params)}`,
+      {},
+    ),
   byUser: (token: string, userId: string) =>
-    request<LeaveRequest[]>(`/leave-requests/user/${userId}`, {}, token),
-  get: (token: string, id: string) => request<LeaveRequest>(`/leave-requests/${id}`, {}, token),
+    request<LeaveRequest[]>(`/leave-requests/user/${userId}`, {}),
+  get: (token: string, id: string) =>
+    request<LeaveRequest>(`/leave-requests/${id}`, {}),
   create: (token: string, body: Record<string, unknown>) =>
-    request<LeaveRequest>("/leave-requests", { method: "POST", body: JSON.stringify(body) }, token),
+    request<LeaveRequest>(
+      "/leave-requests",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<LeaveRequest>(`/leave-requests/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+    request<LeaveRequest>(
+      `/leave-requests/${id}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    ),
   delete: (token: string, id: string) =>
-    request(`/leave-requests/${id}`, { method: "DELETE" }, token),
+    request(`/leave-requests/${id}`, { method: "DELETE" }),
   approve: (token: string, id: string, approvedBy: string) =>
-    request(`/leave-requests/${id}/approve`, { method: "POST", body: JSON.stringify({ approvedBy }) }, token),
-  reject: (token: string, id: string, approvedBy: string, rejectionReason: string) =>
-    request(`/leave-requests/${id}/reject`, { method: "POST", body: JSON.stringify({ approvedBy, rejectionReason }) }, token),
+    request(
+      `/leave-requests/${id}/approve`,
+      { method: "POST", body: JSON.stringify({ approvedBy }) },
+    ),
+  reject: (
+    token: string,
+    id: string,
+    approvedBy: string,
+    rejectionReason: string,
+  ) =>
+    request(
+      `/leave-requests/${id}/reject`,
+      { method: "POST", body: JSON.stringify({ approvedBy, rejectionReason }) },
+    ),
 };
 
 // ─── Excel ───────────────────────────────────────────────────────────────────
 export const excelApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<ExcelFile[] | { data?: ExcelFile[] }>(`/excel${qs(params)}`, {}, token),
-  get: (token: string, id: string) => request<ExcelFile>(`/excel/${id}`, {}, token),
+    request<ExcelFile[] | { data?: ExcelFile[] }>(
+      `/excel${qs(params)}`,
+      {},
+    ),
+  get: (token: string, id: string) =>
+    request<ExcelFile>(`/excel/${id}`, {}),
   create: (token: string, body: Record<string, unknown>) =>
-    request<ExcelFile>("/excel", { method: "POST", body: JSON.stringify(body) }, token),
+    request<ExcelFile>(
+      "/excel",
+      { method: "POST", body: JSON.stringify(body) },
+    ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<ExcelFile>(`/excel/${id}`, { method: "PATCH", body: JSON.stringify(body) }, token),
+    request<ExcelFile>(
+      `/excel/${id}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    ),
   delete: (token: string, id: string) =>
-    request(`/excel/${id}`, { method: "DELETE" }, token),
-  upload: async (token: string, file: File, createdBy: string, type: "import" | "export" = "import") => {
+    request(`/excel/${id}`, { method: "DELETE" }),
+  upload: async (
+    token: string,
+    file: File,
+    createdBy: string,
+    type: "import" | "export" = "import",
+  ) => {
     const form = new FormData();
     form.append("file", file);
     return request<ExcelFile>(
       `/excel/upload?createdBy=${encodeURIComponent(createdBy)}&type=${type}`,
       { method: "POST", body: form },
-      token,
       "آپلود ناموفق بود",
     );
   },
   download: (token: string, id: string, filename: string) =>
-    downloadBlob(`/excel/${id}/download`, filename, token),
+    downloadBlob(`/excel/${id}/download`, filename),
   process: (token: string, id: string) =>
-    request(`/excel/${id}/process`, { method: "POST" }, token),
+    request(`/excel/${id}/process`, { method: "POST" }),
   statistics: (token: string, userId: string) =>
-    request<ExcelStatistics>(`/excel/statistics/${userId}`, {}, token),
-  generateExport: (token: string, body: Record<string, unknown>, filename = "export.xlsx") =>
-    downloadBlob("/excel/export/generate", filename, token, {
+    request<ExcelStatistics>(`/excel/statistics/${userId}`, {}),
+  generateExport: (
+    token: string,
+    body: Record<string, unknown>,
+    filename = "export.xlsx",
+  ) =>
+    downloadBlob("/excel/export/generate", filename, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
 };
+
