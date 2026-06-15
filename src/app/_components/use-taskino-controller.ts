@@ -11,6 +11,7 @@ import {
   notificationApi,
   supervisorApi,
   taskApi,
+  UNAUTHORIZED_EVENT,
   type FixedTask,
   userApi,
   type LeaveRequest,
@@ -759,7 +760,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
 
   async function taLookupTasksFromValues(values: TaskLookupValues) {
     if (!values.firstName.trim() || !values.lastName.trim()) {
-      setError("Ù†Ø§Ù… Ùˆ Ù†Ø§Ù… Ø®Ø§Ù†ÙˆØ§Ø¯Ú¯ÛŒ Ø±Ø§ ÙˆØ§Ø±Ø¯ Ú©Ù†ÛŒØ¯.");
+      setError(
+        "\u0646\u0627\u0645 \u0648 \u0646\u0627\u0645 \u062e\u0627\u0646\u0648\u0627\u062f\u06af\u06cc \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f.",
+      );
       return;
     }
     try {
@@ -771,7 +774,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaLookupResult(normalizeList(res));
     } catch (err) {
       setTaLookupResult([]);
-      setError(err instanceof Error ? err.message : "Ø¬Ø³ØªØ¬Ùˆ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "\u062c\u0633\u062a\u062c\u0648 \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f",
+      );
     }
   }
 
@@ -787,7 +794,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaCompletionResult(res);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª Ø¢Ù…Ø§Ø± Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+        err instanceof Error
+          ? err.message
+          : "\u062f\u0631\u06cc\u0627\u0641\u062a \u0622\u0645\u0627\u0631 \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f",
       );
     }
   }
@@ -803,7 +812,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaCountResult(res);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª ØªØ¹Ø¯Ø§Ø¯ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+        err instanceof Error
+          ? err.message
+          : "\u062f\u0631\u06cc\u0627\u0641\u062a \u062a\u0639\u062f\u0627\u062f \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f",
       );
     }
   }
@@ -967,6 +978,17 @@ export function useTaskinoController(initialView: View = "dashboard") {
     localStorage.removeItem("taskino-user");
     router.push("/login");
   }
+
+  const handleUnauthorized = useEffectEvent(() => {
+    logout();
+  });
+
+  useEffect(() => {
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => {
+      window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    };
+  }, []);
 
   // ─── Login ─────────────────────────────────────────────────────────────────
   const pageContext = {

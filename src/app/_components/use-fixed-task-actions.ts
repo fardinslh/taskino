@@ -184,11 +184,17 @@ export function useFixedTaskActions({
         const created = await fixedTaskApi.create(token, body);
         setFixedTasks((current) => [created, ...current]);
       }
-      setMessage(editingFixedTask ? "Ø§Ù„Ú¯ÙˆÛŒ Ø«Ø§Ø¨Øª Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ø´Ø¯." : "Ø§Ù„Ú¯ÙˆÛŒ Ø«Ø§Ø¨Øª Ø³Ø§Ø®ØªÙ‡ Ø´Ø¯.");
+      setMessage(
+        editingFixedTask
+          ? "\u0627\u0644\u06af\u0648\u06cc \u062b\u0627\u0628\u062a \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06cc \u0634\u062f."
+          : "\u0627\u0644\u06af\u0648\u06cc \u062b\u0627\u0628\u062a \u0633\u0627\u062e\u062a\u0647 \u0634\u062f.",
+      );
       closeFixedTaskForm();
     } catch (error) {
       setError(
-        error instanceof Error ? error.message : "Ø°Ø®ÛŒØ±Ù‡ Ø§Ù„Ú¯Ùˆ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+        error instanceof Error
+          ? error.message
+          : "\u0630\u062e\u06cc\u0631\u0647 \u0627\u0644\u06af\u0648 \u0646\u0627\u0645\u0648\u0641\u0642 \u0628\u0648\u062f",
       );
     }
   }

@@ -2,6 +2,7 @@ import axios, { type AxiosRequestConfig } from "axios";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
 const apiClient = axios.create({ baseURL: apiUrl });
+export const UNAUTHORIZED_EVENT = "taskino:unauthorized";
 
 apiClient.interceptors.request.use((config) => {
   const headers = config.headers ?? {};
@@ -19,6 +20,21 @@ apiClient.interceptors.request.use((config) => {
   config.headers = headers;
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      typeof window !== "undefined" &&
+      axios.isAxiosError(error) &&
+      error.response?.status === 401
+    ) {
+      window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT));
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 export type User = {
   _id?: string;
