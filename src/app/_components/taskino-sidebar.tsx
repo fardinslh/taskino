@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { FixedTask, LeaveRequest, Task, User } from "@/lib/api";
 import { type View } from "../_lib/task-constants";
-import { initials, userName } from "../_lib/task-helpers";
+import { initials, roleLabel, userName } from "../_lib/task-helpers";
 import { SideItem } from "./shared";
 
 type TaskinoSidebarProps = {
@@ -250,7 +250,7 @@ export function TaskinoSidebar({
             </div>
             <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-[--surface] px-2.5 py-1.5 text-xs font-medium text-[--text-2]">
               <ShieldCheck size={12} />
-              {currentUser?.roles || "specialist"}
+              {roleLabel(currentUser?.roles)}
             </div>
           </div>
 

@@ -28,6 +28,7 @@ import {
 import {
   formatDate,
   initials,
+  roleLabel,
   statusLabel,
   userName,
 } from "../_lib/task-helpers";
@@ -162,7 +163,7 @@ function TeamPageContent() {
             <Field label="موبایل" name="mobile" placeholder="اختیاری · 09xxxxxxxxx" registration={registerCreate("mobile")} />
             <Field label="رمز عبور *" name="password" required type="password" placeholder="حداقل ۶ کاراکتر" registration={registerCreate("password", { required: true, minLength: 6 })} />
             <Select label="حوزه کاری *" options={WORK_FIELDS} registration={registerCreate("workField", { required: true })} />
-            <Select label="نقش" options={[["specialist", "specialist"], ["supervisor", "supervisor"], ["manager", "manager"]]} registration={registerCreate("role")} />
+            <Select label="نقش" options={[["specialist", "متخصص"], ["supervisor", "سرپرست"], ["manager", "مدیر"]]} registration={registerCreate("role")} />
             <div className="sm:col-span-2">
               <button className="h-10 rounded-lg bg-[#1f7a8c] px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={isCreatingUser} type="submit">
                 ساخت کاربر
@@ -222,9 +223,9 @@ function TeamPageContent() {
                     value={user.roles ?? "specialist"}
                     onChange={(event) => void updateUserRole(getId(user), event.target.value)}
                   >
-                    <option value="specialist">specialist</option>
-                    <option value="supervisor">supervisor</option>
-                    <option value="manager">manager</option>
+                    <option value="specialist">متخصص</option>
+                    <option value="supervisor">سرپرست</option>
+                    <option value="manager">مدیر</option>
                   </select>
                   {getId(user) !== myId && (
                     <button className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40" onClick={() => void deleteUser(getId(user))} type="button">
@@ -233,7 +234,7 @@ function TeamPageContent() {
                   )}
                 </div>
               ) : (
-                <span className="rounded-lg bg-[--surface] px-2.5 py-1 text-xs font-medium">{user.roles ?? "specialist"}</span>
+                <span className="rounded-lg bg-[--surface] px-2.5 py-1 text-xs font-medium">{roleLabel(user.roles)}</span>
               )}
             </div>
           ))}

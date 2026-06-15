@@ -22,8 +22,24 @@ export function initials(user?: User | string) {
 }
 
 export function statusLabel(s?: string) {
-  const m: Record<string, string> = { todo: "در انتظار", in_progress: "در حال انجام", done: "تکمیل شده", pending: "در انتظار", completed: "تکمیل شده" };
+  const m: Record<string, string> = {
+    todo: "در انتظار",
+    in_progress: "در حال انجام",
+    done: "تکمیل شده",
+    pending: "در انتظار",
+    completed: "تکمیل شده",
+    rejected: "رد شد",
+  };
   return m[s ?? ""] ?? s ?? "نامشخص";
+}
+
+export function roleLabel(role?: string) {
+  const m: Record<string, string> = {
+    specialist: "متخصص",
+    supervisor: "سرپرست",
+    manager: "مدیر",
+  };
+  return m[role ?? ""] ?? role ?? "نامشخص";
 }
 
 export function workFieldLabel(field?: string) {

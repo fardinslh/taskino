@@ -69,6 +69,9 @@ type DateCountValues = {
   startDate: string;
   endDate: string;
 };
+
+const darkModeStorageKey = "taskino-dark-mode";
+
 export function useTaskinoController(initialView: View = "dashboard") {
   const router = useRouter();
   const pathname = usePathname();
@@ -170,7 +173,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
     TaskPeriod | ""
   >("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(darkModeStorageKey) === "true";
+  });
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskPriorities, setTaskPriorities] = useState<
     Record<string, Priority>
@@ -183,6 +189,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem(darkModeStorageKey, String(darkMode));
   }, [darkMode]);
 
   function setActiveView(view: View) {
