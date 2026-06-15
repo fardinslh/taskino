@@ -11,6 +11,7 @@ import {
 import {
   fixedTaskApi,
   getId,
+  type User,
   type FixedTask,
   type FixedTaskStatus,
 } from "@/lib/api";
@@ -29,6 +30,7 @@ type FixedTaskActionsInput = {
   loadData: () => Promise<void>;
   loadManagerAnalytics: () => Promise<void>;
   myId: string;
+  users?: User[];
   setError: Dispatch<SetStateAction<string>>;
   setFixedTasks: Dispatch<SetStateAction<FixedTask[]>>;
   setMessage: Dispatch<SetStateAction<string>>;
@@ -40,6 +42,7 @@ export function useFixedTaskActions({
   loadData,
   loadManagerAnalytics,
   myId,
+  users = [],
   setError,
   setFixedTasks,
   setMessage,
@@ -69,6 +72,40 @@ export function useFixedTaskActions({
     setFtActive(fixedTask?.isActive !== false && !!fixedTask);
     setFtNextRunAt(fixedTask?.nextRunAt?.slice(0, 16) ?? "");
     setShowFixedTaskForm(true);
+  }
+
+  function buildDateRange(
+    recurrence: "daily" | "weekly" | "monthly",
+    nextRunAt?: string,
+  ) {
+    const baseDate = nextRunAt ? new Date(nextRunAt) : new Date();
+    const startDate = new Date(baseDate);
+    const endDate = new Date(baseDate);
+
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    if (recurrence === "weekly") {
+      endDate.setDate(startDate.getDate() + 6);
+    }
+
+    if (recurrence === "monthly") {
+      endDate.setMonth(startDate.getMonth() + 1, 0);
+    }
+
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+  }
+
+  function findSpecialistName(assignedTo: string) {
+    const specialist = users.find((user) => getId(user) === assignedTo);
+    const fullName = [specialist?.firstName, specialist?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    return fullName || specialist?.mobile || specialist?.email || undefined;
   }
 
   async function saveFixedTask(event: FormEvent<HTMLFormElement>) {
@@ -110,13 +147,21 @@ export function useFixedTaskActions({
 
   async function saveFixedTaskFromValues(values: FixedTaskFormValues) {
     if (!myId || !values.title.trim() || !values.assignedTo) return;
+    const { startDate, endDate } = buildDateRange(
+      values.recurrence,
+      values.nextRunAt,
+    );
+    const specialistName = findSpecialistName(values.assignedTo);
 
     const body = {
       title: values.title.trim(),
       assignedTo: values.assignedTo,
+      specialistName,
       recurrence: values.recurrence,
       description: values.description?.trim() || undefined,
       isActive: values.isActive,
+      startDate,
+      endDate,
       ...(values.nextRunAt
         ? { nextRunAt: new Date(values.nextRunAt).toISOString() }
         : {}),

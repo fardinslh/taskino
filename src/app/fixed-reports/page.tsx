@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+import DatePicker from "react-multi-date-picker";
+import jalali from "react-date-object/calendars/jalali";
+import persianFa from "react-date-object/locales/persian_fa";
+import TimePicker from "react-multi-date-picker/plugins/time_picker";
 import {
   AlertTriangle,
   ClipboardList,
@@ -72,7 +76,7 @@ function FixedReportsPageContent() {
       recurrence: editingFixedTask?.recurrence ?? "daily",
       assignedTo: getId(editingFixedTask?.assignedTo),
       description: editingFixedTask?.description ?? "",
-      nextRunAt: editingFixedTask?.nextRunAt?.slice(0, 16) ?? "",
+      nextRunAt: editingFixedTask?.nextRunAt ?? "",
       isActive: editingFixedTask?.isActive !== false && !!editingFixedTask,
     });
   }, [editingFixedTask, form, showFixedTaskForm]);
@@ -246,12 +250,38 @@ function FixedReportsPageContent() {
                   placeholder="اختیاری"
                   registration={form.register("description")}
                 />
-                <Field
-                  label="زمان اجرا (اختیاری)"
-                  name="ftNextRunAt"
-                  type="datetime-local"
-                  registration={form.register("nextRunAt")}
-                />
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                    {"\u0632\u0645\u0627\u0646 \u0627\u062c\u0631\u0627 (\u0627\u062e\u062a\u06cc\u0627\u0631\u06cc)"}
+                  </span>
+                  <Controller
+                    control={form.control}
+                    name="nextRunAt"
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value ? new Date(field.value) : ""}
+                        onChange={(value) => {
+                          if (!value || Array.isArray(value)) {
+                            field.onChange("");
+                            return;
+                          }
+
+                          field.onChange(value.toDate().toISOString());
+                        }}
+                        calendar={jalali}
+                        locale={persianFa}
+                        format="YYYY/MM/DD HH:mm"
+                        calendarPosition="bottom-right"
+                        inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                        containerClassName="w-full"
+                        placeholder={"\u0627\u0646\u062a\u062e\u0627\u0628 \u062a\u0627\u0631\u06cc\u062e \u0648 \u0633\u0627\u0639\u062a"}
+                        plugins={[
+                          <TimePicker key="time-picker" position="bottom" hideSeconds />,
+                        ]}
+                      />
+                    )}
+                  />
+                </label>
               </div>
               <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-sm text-[--text-2]">
                 <input

@@ -311,6 +311,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     loadData,
     loadManagerAnalytics,
     myId,
+    users,
     setError,
     setFixedTasks,
     setMessage,
