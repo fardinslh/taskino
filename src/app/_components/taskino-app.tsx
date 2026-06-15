@@ -25,7 +25,7 @@ export function TaskinoApp({
     authHydrated,
     claimTask,
     confirmRejectLeave,
-    createTask,
+    createTaskFromValues,
     currentUser,
     darkMode,
     deleteTask,
@@ -59,20 +59,14 @@ export function TaskinoApp({
     setSelectedTask,
     setShowNotifications,
     setSidebarCollapsed,
-    setTaskAssignee,
     setTaskQuery,
-    setTaskRecurrence,
-    setTaskTitle,
     showNotifications,
     sidebarCollapsed,
     statsUsers,
     supervisorFixedTasks,
     supervisorTasks,
-    taskAssignee,
     taskQuery,
-    taskRecurrence,
     tasks,
-    taskTitle,
     todoCount,
     token,
     unreadCount,
@@ -120,11 +114,8 @@ export function TaskinoApp({
             isManager={isManager}
             isSupervisor={isSupervisor}
             leaveRequests={leaveRequests}
-            onCreateTask={createTask}
+            onCreateTask={createTaskFromValues}
             onSetActiveView={setActiveView}
-            onTaskAssigneeChange={setTaskAssignee}
-            onTaskRecurrenceChange={setTaskRecurrence}
-            onTaskTitleChange={setTaskTitle}
             onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
             overdueTasks={overdueTasks}
             progress={progress}
@@ -132,10 +123,7 @@ export function TaskinoApp({
             statsUsers={statsUsers}
             supervisorFixedTasks={supervisorFixedTasks}
             supervisorTasks={supervisorTasks}
-            taskAssignee={taskAssignee}
-            taskRecurrence={taskRecurrence}
             tasks={tasks}
-            taskTitle={taskTitle}
             todoCount={todoCount}
             users={users}
           />

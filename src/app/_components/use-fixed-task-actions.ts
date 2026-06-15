@@ -15,6 +15,15 @@ import {
   type FixedTaskStatus,
 } from "@/lib/api";
 
+type FixedTaskFormValues = {
+  title: string;
+  assignedTo: string;
+  recurrence: "daily" | "weekly" | "monthly";
+  description?: string;
+  nextRunAt?: string;
+  isActive: boolean;
+};
+
 type FixedTaskActionsInput = {
   fixedTasks: FixedTask[];
   loadData: () => Promise<void>;
@@ -99,6 +108,46 @@ export function useFixedTaskActions({
     }
   }
 
+  async function saveFixedTaskFromValues(values: FixedTaskFormValues) {
+    if (!myId || !values.title.trim() || !values.assignedTo) return;
+
+    const body = {
+      title: values.title.trim(),
+      assignedTo: values.assignedTo,
+      recurrence: values.recurrence,
+      description: values.description?.trim() || undefined,
+      isActive: values.isActive,
+      ...(values.nextRunAt
+        ? { nextRunAt: new Date(values.nextRunAt).toISOString() }
+        : {}),
+    };
+
+    try {
+      if (editingFixedTask) {
+        const updated = await fixedTaskApi.update(
+          token,
+          getId(editingFixedTask),
+          myId,
+          body,
+        );
+        setFixedTasks((current) =>
+          current.map((item) =>
+            getId(item) === getId(editingFixedTask) ? updated : item,
+          ),
+        );
+      } else {
+        const created = await fixedTaskApi.create(token, body);
+        setFixedTasks((current) => [created, ...current]);
+      }
+      setMessage(editingFixedTask ? "Ø§Ù„Ú¯ÙˆÛŒ Ø«Ø§Ø¨Øª Ø¨Ø±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ø´Ø¯." : "Ø§Ù„Ú¯ÙˆÛŒ Ø«Ø§Ø¨Øª Ø³Ø§Ø®ØªÙ‡ Ø´Ø¯.");
+      closeFixedTaskForm();
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Ø°Ø®ÛŒØ±Ù‡ Ø§Ù„Ú¯Ùˆ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+      );
+    }
+  }
+
   async function toggleFixedTaskActive(fixedTask: FixedTask) {
     if (!myId) return;
     try {
@@ -176,6 +225,7 @@ export function useFixedTaskActions({
     onDragEnd,
     openFixedTaskForm,
     saveFixedTask,
+    saveFixedTaskFromValues,
     seedFixedTasksFromExcel,
     setFixedReportsTab,
     setFtActive,

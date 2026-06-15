@@ -36,7 +36,10 @@ function TasksPageContent() {
     setActiveView,
     setBoardShowAll,
     setSelectedPeriodFilter,
+    setSelectedSpecialistId,
+    setSpecialistSearchQuery,
     setTaskQuery,
+    specialistSearchQuery,
     taskQuery,
   } = useNavigationContext();
   const { currentUser, isManager, isSpecialist, isSupervisor } =
@@ -53,6 +56,30 @@ function TasksPageContent() {
     onDragEnd,
     openFixedTaskForm,
   } = useFixedTaskContext();
+  const specialistUsers = users.filter((u: any) => u.roles === "specialist");
+  const specialistMatches = specialistSearchQuery.trim()
+    ? specialistUsers.filter((u: any) =>
+        userName(u)
+          .trim()
+          .toLowerCase()
+          .includes(specialistSearchQuery.trim().toLowerCase()),
+      )
+    : [];
+  const resolveSpecialistId = (value: string) => {
+    const query = value.trim().toLowerCase();
+    if (!query) return "";
+
+    const exactMatch = specialistUsers.find(
+      (u: any) => userName(u).trim().toLowerCase() === query,
+    );
+    if (exactMatch) return getId(exactMatch);
+
+    const partialMatches = specialistUsers.filter((u: any) =>
+      userName(u).trim().toLowerCase().includes(query),
+    );
+
+    return partialMatches.length === 1 ? getId(partialMatches[0]) : "";
+  };
 
   return (
     <>
@@ -264,6 +291,35 @@ function TasksPageContent() {
                     value={taskQuery}
                     onChange={(e) => setTaskQuery(e.target.value)}
                   />
+                  <div className="relative">
+                    <input
+                      className="h-8 w-56 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c]"
+                      placeholder="جستجوی متخصص…"
+                      value={specialistSearchQuery}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSpecialistSearchQuery(value);
+                        setSelectedSpecialistId(resolveSpecialistId(value));
+                      }}
+                    />
+                    {specialistSearchQuery.trim() && specialistMatches.length > 0 && (
+                      <div className="absolute right-0 top-10 z-20 max-h-48 w-56 overflow-y-auto rounded-lg border border-[--border] bg-[--surface] p-1 shadow-lg">
+                        {specialistMatches.slice(0, 8).map((u: any) => (
+                          <button
+                            key={getId(u)}
+                            className="block w-full rounded-md px-3 py-2 text-right text-xs text-[--text] transition hover:bg-[--surface-2]"
+                            onClick={() => {
+                              setSpecialistSearchQuery(userName(u));
+                              setSelectedSpecialistId(getId(u));
+                            }}
+                            type="button"
+                          >
+                            {userName(u)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {isManager && (
                     <button
                       className="flex h-8 items-center gap-1.5 rounded-lg bg-[#1f7a8c] px-3 text-xs font-semibold text-white transition hover:bg-[#196b7b]"

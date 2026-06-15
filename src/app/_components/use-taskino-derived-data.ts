@@ -36,6 +36,7 @@ type DerivedDataInput = {
   selectedPriorityFilter: Priority | "";
   selectedProjectFilter: string;
   selectedStatusFilter: string;
+  specialistSearchQuery: string;
   supervisorStats: SupervisorStats | null;
   taskPriorities: Record<string, Priority>;
   taskQuery: string;
@@ -54,6 +55,7 @@ export function useTaskinoDerivedData({
   selectedPriorityFilter,
   selectedProjectFilter,
   selectedStatusFilter,
+  specialistSearchQuery,
   supervisorStats,
   taskPriorities,
   taskQuery,
@@ -195,6 +197,12 @@ export function useTaskinoDerivedData({
         (item) => (item.recurrence ?? "daily") === selectedPeriodFilter,
       );
     }
+    const specialistQuery = specialistSearchQuery.trim().toLowerCase();
+    if (specialistQuery) {
+      list = list.filter((item) =>
+        userName(item.assignedTo).trim().toLowerCase().includes(specialistQuery),
+      );
+    }
 
     const query = taskQuery.trim().toLowerCase();
     if (!query) return list;
@@ -204,7 +212,13 @@ export function useTaskinoDerivedData({
         .toLowerCase()
         .includes(query),
     );
-  }, [fixedTasks, selectedAssigneeFilter, selectedPeriodFilter, taskQuery]);
+  }, [
+    fixedTasks,
+    selectedAssigneeFilter,
+    selectedPeriodFilter,
+    specialistSearchQuery,
+    taskQuery,
+  ]);
 
   return {
     activeTasks,

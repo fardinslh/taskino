@@ -38,6 +38,33 @@ import { useFixedTaskActions } from "./use-fixed-task-actions";
 import { useTaskinoDerivedData } from "./use-taskino-derived-data";
 import { useTaskinoExcel } from "./use-taskino-excel";
 import { useTaskinoNotifications } from "./use-taskino-notifications";
+
+type CreateTaskValues = {
+  title: string;
+  assignee?: string;
+  recurrence?: string;
+  description?: string;
+  startDate?: string;
+  dueDate?: string;
+  startTime?: string;
+  endTime?: string;
+  file?: File | null;
+};
+
+type TaskLookupValues = {
+  firstName: string;
+  lastName: string;
+};
+
+type CompletionStatsValues = {
+  expertId: string;
+};
+
+type DateCountValues = {
+  userId: string;
+  startDate: string;
+  endDate: string;
+};
 export function useTaskinoController(initialView: View = "dashboard") {
   const router = useRouter();
   const pathname = usePathname();
@@ -79,6 +106,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     unknown
   > | null>(null);
   const [taskQuery, setTaskQuery] = useState("");
+  const [specialistSearchQuery, setSpecialistSearchQuery] = useState("");
+  const [selectedSpecialistId, setSelectedSpecialistId] = useState("");
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [teamSearchResult, setTeamSearchResult] = useState<User[] | null>(null);
   const [teamSearching, setTeamSearching] = useState(false);
@@ -165,6 +194,13 @@ export function useTaskinoController(initialView: View = "dashboard") {
     if (token && isAuthRoute) router.replace(VIEW_PATHS[activeView]);
   }, [activeView, authHydrated, isAuthRoute, router, token]);
 
+  useEffect(() => {
+    queueMicrotask(() => {
+      setSpecialistSearchQuery("");
+      setSelectedSpecialistId("");
+    });
+  }, [pathname]);
+
   const {
     activeTasks,
     doneTasks,
@@ -199,6 +235,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     selectedPriorityFilter,
     selectedProjectFilter,
     selectedStatusFilter,
+    specialistSearchQuery,
     supervisorStats,
     taskPriorities,
     taskQuery,
@@ -258,6 +295,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     onDragEnd,
     openFixedTaskForm,
     saveFixedTask,
+    saveFixedTaskFromValues,
     seedFixedTasksFromExcel,
     setFixedReportsTab,
     setFtActive,
@@ -346,10 +384,11 @@ export function useTaskinoController(initialView: View = "dashboard") {
         fetchAllSpecialistFixedTasks(authToken, uid)
           .then((r) => setFixedTasks(r))
           .catch(() => setFixedTasks([]));
+      } else if (role === "supervisor") {
+        void loadSupervisorData(authToken);
       } else {
         setFixedTasks([]);
       }
-      if (role === "supervisor") void loadSupervisorData(authToken);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "دریافت اطلاعات ناموفق بود",
@@ -520,30 +559,74 @@ export function useTaskinoController(initialView: View = "dashboard") {
     } catch {}
   }
 
+  async function loadSelectedSpecialistFixedTasks(
+    authToken: string,
+    specialistId: string,
+  ) {
+    if (!specialistId) return [];
+    return fetchAllSpecialistFixedTasks(authToken, specialistId);
+  }
+
   const loadLatestData = useEffectEvent(loadData);
+
+  const loadLatestManagerAnalytics = useEffectEvent(loadManagerAnalytics);
+  const loadLatestSpecialistFixedTasks = useEffectEvent(
+    loadSelectedSpecialistFixedTasks,
+  );
 
   useEffect(() => {
     queueMicrotask(() => void loadLatestData());
   }, [token]);
 
-  async function createTask(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!myId || !taskTitle.trim()) return;
+  useEffect(() => {
+    if (!authHydrated || !token) return;
+    const role = currentUser?.roles;
+    if (role !== "supervisor" && role !== "manager") return;
+
+    if (!selectedSpecialistId) {
+      if (role === "supervisor") {
+        queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
+      } else {
+        void loadLatestManagerAnalytics(token);
+      }
+      return;
+    }
+
+    void loadLatestSpecialistFixedTasks(token, selectedSpecialistId)
+      .then((r) => setFixedTasks(r))
+      .catch(() => setFixedTasks([]));
+  }, [
+    authHydrated,
+    currentUser?.roles,
+    selectedSpecialistId,
+    supervisorFixedTasks,
+    token,
+  ]);
+
+  async function createTask(values: CreateTaskValues) {
+    const title = values.title.trim();
+    if (!myId || !title) return;
     // Backend requires exactly one assignee; fall back to the current user.
-    const assignee = taskAssignee || myId;
+    const assignee = values.assignee || myId;
     const body = {
-      title: taskTitle.trim(),
+      title,
       assignedTo: [assignee],
       status: "todo",
-      ...(taskDescription.trim() ? { description: taskDescription.trim() } : {}),
-      ...(taskRecurrence ? { recurrence: taskRecurrence } : {}),
-      ...(taskStartDate ? { startDate: new Date(taskStartDate).toISOString() } : {}),
-      ...(taskDueDate ? { dueDate: new Date(taskDueDate).toISOString() } : {}),
-      ...(taskStartTime ? { startTime: taskStartTime } : {}),
-      ...(taskEndTime ? { endTime: taskEndTime } : {}),
+      ...(values.description?.trim()
+        ? { description: values.description.trim() }
+        : {}),
+      ...(values.recurrence ? { recurrence: values.recurrence } : {}),
+      ...(values.startDate
+        ? { startDate: new Date(values.startDate).toISOString() }
+        : {}),
+      ...(values.dueDate
+        ? { dueDate: new Date(values.dueDate).toISOString() }
+        : {}),
+      ...(values.startTime ? { startTime: values.startTime } : {}),
+      ...(values.endTime ? { endTime: values.endTime } : {}),
     };
     try {
-      await taskApi.create(token, body, taskFile ?? undefined);
+      await taskApi.create(token, body, values.file ?? undefined);
       setTaskTitle("");
       setTaskAssignee("");
       setTaskProjectId("");
@@ -560,6 +643,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
     } catch (err) {
       setError(err instanceof Error ? err.message : "ساخت گزارش ناموفق بود");
     }
+  }
+
+  async function createTaskFromValues(values: CreateTaskValues) {
+    return createTask(values);
   }
 
   async function claimTask(taskId: string) {
@@ -666,6 +753,57 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setTaCountResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : "دریافت تعداد ناموفق بود");
+    }
+  }
+
+  async function taLookupTasksFromValues(values: TaskLookupValues) {
+    if (!values.firstName.trim() || !values.lastName.trim()) {
+      setError("Ù†Ø§Ù… Ùˆ Ù†Ø§Ù… Ø®Ø§Ù†ÙˆØ§Ø¯Ú¯ÛŒ Ø±Ø§ ÙˆØ§Ø±Ø¯ Ú©Ù†ÛŒØ¯.");
+      return;
+    }
+    try {
+      const res = await taskApi.byUserName(
+        token,
+        values.firstName.trim(),
+        values.lastName.trim(),
+      );
+      setTaLookupResult(normalizeList(res));
+    } catch (err) {
+      setTaLookupResult([]);
+      setError(err instanceof Error ? err.message : "Ø¬Ø³ØªØ¬Ùˆ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯");
+    }
+  }
+
+  async function taRunCompletionStatsFromValues(
+    values: CompletionStatsValues,
+  ) {
+    if (!myId || !values.expertId) return;
+    try {
+      const res = await taskApi.completionStats(token, {
+        managerId: myId,
+        expertId: values.expertId,
+      });
+      setTaCompletionResult(res);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª Ø¢Ù…Ø§Ø± Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+      );
+    }
+  }
+
+  async function taRunDateCountFromValues(values: DateCountValues) {
+    if (!values.userId || !values.startDate || !values.endDate) return;
+    try {
+      const res = await taskApi.dateCount(token, {
+        userId: values.userId,
+        startdate: values.startDate,
+        enddate: values.endDate,
+      });
+      setTaCountResult(res);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Ø¯Ø±ÛŒØ§ÙØª ØªØ¹Ø¯Ø§Ø¯ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+      );
     }
   }
 
@@ -861,6 +999,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     taCountEnd,
     taCountResult,
     taskQuery,
+    specialistSearchQuery,
+    selectedSpecialistId,
     showNewUserForm,
     teamSearchResult,
     teamSearching,
@@ -941,6 +1081,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setTaCountEnd,
     setTaCountResult,
     setTaskQuery,
+    setSpecialistSearchQuery,
+    setSelectedSpecialistId,
     setShowNewUserForm,
     setTeamSearchResult,
     setTeamSearching,
@@ -1004,13 +1146,17 @@ export function useTaskinoController(initialView: View = "dashboard") {
     loadManagerAnalytics,
     loadSupervisorData,
     createTask,
+    createTaskFromValues,
     claimTask,
     moveTask,
     updateTask,
     deleteTask,
     taLookupTasks,
+    taLookupTasksFromValues,
     taRunCompletionStats,
+    taRunCompletionStatsFromValues,
     taRunDateCount,
+    taRunDateCountFromValues,
     markNotificationRead,
     markAllNotificationsRead,
     createLeaveRequest,
@@ -1031,6 +1177,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     openFixedTaskForm,
     closeFixedTaskForm,
     saveFixedTask,
+    saveFixedTaskFromValues,
     toggleFixedTaskActive,
     deleteFixedTask,
     seedFixedTasksFromExcel,

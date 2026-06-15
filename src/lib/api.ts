@@ -477,6 +477,18 @@ export async function downloadBlob(
   URL.revokeObjectURL(url);
 }
 
+async function unwrapAxios<T>(
+  promise: Promise<{ data: T }>,
+  fallbackMessage = "درخواست ناموفق بود",
+) {
+  try {
+    const response = await promise;
+    return response.data;
+  } catch (error) {
+    throw new Error(await axiosErrorMessage(error, fallbackMessage));
+  }
+}
+
 function qs(params?: Record<string, string | number | boolean | undefined>) {
   if (!params) return "";
   const q = Object.entries(params)
@@ -505,177 +517,188 @@ function toFormData(body: Record<string, unknown>, file?: File) {
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (body: { mobile: string; password: string }) =>
-    request<AuthResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+    unwrapAxios(
+      apiClient.post<AuthResponse>("/auth/login", body),
+      "ورود ناموفق بود",
+    ),
   register: (body: Record<string, string>) =>
-    request<AuthResponse>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+    unwrapAxios(
+      apiClient.post<AuthResponse>("/auth/register", body),
+      "ثبت‌نام ناموفق بود",
+    ),
 };
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 export const userApi = {
   list: (token: string, page = 1, limit = 50) =>
-    request<User[] | { data?: User[] }>(
-      `/users${qs({ page, limit })}`,
-      {},
+    unwrapAxios(
+      apiClient.get<User[] | { data?: User[] }>(`/users${qs({ page, limit })}`),
     ),
-  get: (token: string, id: string) => request<User>(`/users/${id}`, {}),
+  get: (token: string, id: string) =>
+    unwrapAxios(apiClient.get<User>(`/users/${id}`)),
   create: (token: string, body: Record<string, unknown>) =>
-    request<User>(
-      "/users",
-      { method: "POST", body: JSON.stringify(body) },
-    ),
+    unwrapAxios(apiClient.post<User>("/users", body), "ساخت کاربر ناموفق بود"),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<User>(
-      `/users/${id}`,
-      { method: "PATCH", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.patch<User>(`/users/${id}`, body),
+      "بروزرسانی کاربر ناموفق بود",
     ),
   delete: (token: string, id: string) =>
-    request(`/users/${id}`, { method: "DELETE" }),
+    unwrapAxios(apiClient.delete(`/users/${id}`), "حذف کاربر ناموفق بود"),
   approve: (token: string, id: string) =>
-    request(`/users/${id}/approve`, { method: "PATCH" }),
+    unwrapAxios(
+      apiClient.patch(`/users/${id}/approve`),
+      "تایید کاربر ناموفق بود",
+    ),
   increaseScore: (token: string, body: { userId: string; score: number }) =>
-    request(
-      "/users/increase-score",
-      { method: "POST", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.post("/users/increase-score", body),
+      "افزایش امتیاز ناموفق بود",
     ),
 };
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
 export const taskApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<Task[] | { data?: Task[] }>(
-      `/tasks${qs({ page: 1, limit: 50, ...params })}`,
-      {},
+    unwrapAxios(
+      apiClient.get<Task[] | { data?: Task[] }>(
+        `/tasks${qs({ page: 1, limit: 50, ...params })}`,
+      ),
     ),
-  get: (token: string, id: string) => request<Task>(`/tasks/${id}`, {}),
+  get: (token: string, id: string) =>
+    unwrapAxios(apiClient.get<Task>(`/tasks/${id}`)),
   create: (token: string, body: Record<string, unknown>, file?: File) =>
-    request<Task>(
-      "/tasks",
-      { method: "POST", body: toFormData(body, file) },
+    unwrapAxios(
+      apiClient.post<Task>("/tasks", toFormData(body, file)),
+      "ساخت گزارش ناموفق بود",
     ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<Task>(
-      `/tasks/${id}`,
-      { method: "PATCH", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.patch<Task>(`/tasks/${id}`, body),
+      "بروزرسانی گزارش ناموفق بود",
     ),
   delete: (token: string, id: string) =>
-    request(`/tasks/${id}`, { method: "DELETE" }),
+    unwrapAxios(apiClient.delete(`/tasks/${id}`), "حذف گزارش ناموفق بود"),
   updateStatus: (token: string, id: string, status: string) =>
-    request(
-      `/tasks/${id}/status`,
-      { method: "PATCH", body: JSON.stringify({ status }) },
+    unwrapAxios(
+      apiClient.patch(`/tasks/${id}/status`, { status }),
+      "تغییر وضعیت ناموفق بود",
     ),
   completionStats: (token: string, body: Record<string, unknown>) =>
-    request<Record<string, unknown>>(
-      "/tasks/completion-stats",
-      { method: "POST", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.post<Record<string, unknown>>("/tasks/completion-stats", body),
+      "دریافت آمار ناموفق بود",
     ),
   dateCount: (token: string, body: Record<string, unknown>) =>
-    request<Record<string, unknown>>(
-      "/tasks/date-count",
-      { method: "POST", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.post<Record<string, unknown>>("/tasks/date-count", body),
+      "دریافت تعداد ناموفق بود",
     ),
   byUserName: (token: string, userName: string, lastName: string) =>
-    request<Task[] | { data?: Task[] }>(
-      `/tasks/user${qs({ userName, lastName })}`,
-      {},
+    unwrapAxios(
+      apiClient.get<Task[] | { data?: Task[] }>(
+        `/tasks/user${qs({ userName, lastName })}`,
+      ),
     ),
   bySpecialist: (
     token: string,
     userId: string,
     params?: Record<string, string | number | undefined>,
   ) =>
-    request<Task[] | { data?: Task[] }>(
-      `/tasks/specialist/${userId}${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<Task[] | { data?: Task[] }>(
+        `/tasks/specialist/${userId}${qs(params)}`,
+      ),
     ),
 };
 
 // ─── Manager ─────────────────────────────────────────────────────────────────
 export const managerApi = {
   statistics: (token: string) =>
-    request<ManagerStats>("/manager/statistics", {}),
+    unwrapAxios(apiClient.get<ManagerStats>("/manager/statistics")),
   users: (
     token: string,
     params?: Record<string, string | number | boolean | undefined>,
   ) =>
-    request<User[] | { data?: User[] }>(
-      `/manager/users${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<User[] | { data?: User[] }>(`/manager/users${qs(params)}`),
     ),
   updateUserRole: (token: string, userId: string, role: string) =>
-    request(
-      `/manager/users/${userId}/role`,
-      { method: "PATCH", body: JSON.stringify({ role }) },
+    unwrapAxios(
+      apiClient.patch(`/manager/users/${userId}/role`, { role }),
+      "تغییر نقش ناموفق بود",
     ),
   taskStatusOverview: (token: string) =>
-    request<TaskStatusOverview>("/manager/tasks/status", {}),
+    unwrapAxios(apiClient.get<TaskStatusOverview>("/manager/tasks/status")),
   taskCountsByUsers: (token: string) =>
-    request<UserTaskCount[] | { data?: UserTaskCount[] }>(
-      "/manager/tasks/users/counts",
-      {},
+    unwrapAxios(
+      apiClient.get<UserTaskCount[] | { data?: UserTaskCount[] }>(
+        "/manager/tasks/users/counts",
+      ),
     ),
   monthlyPerformance: (
     token: string,
     params?: Record<string, string | number | undefined>,
   ) =>
-    request<
+    unwrapAxios<
       | MonthlyPerformance[]
       | { data?: MonthlyPerformance[] }
       | MonthlyPerformanceResponse
-    >(`/manager/users/monthly-performance${qs(params)}`, {}),
+    >(apiClient.get(`/manager/users/monthly-performance${qs(params)}`)),
   allTasks: (token: string, recurrence?: string) =>
-    request<ManagerAllTasks>(
-      `/manager/tasks${qs(recurrence ? { recurrence } : {})}`,
-      {},
+    unwrapAxios(
+      apiClient.get<ManagerAllTasks>(
+        `/manager/tasks${qs(recurrence ? { recurrence } : {})}`,
+      ),
     ),
   findUserByName: (token: string, firstName: string, lastName: string) =>
-    request<User>(
-      `/manager/users/by-name${qs({ firstName, lastName })}`,
-      {},
+    unwrapAxios(
+      apiClient.get<User>(
+        `/manager/users/by-name${qs({ firstName, lastName })}`,
+      ),
     ),
   usersProgress: (token: string) =>
-    request<UserProgress[] | { data?: UserProgress[] }>(
-      "/manager/users/progress",
-      {},
+    unwrapAxios(
+      apiClient.get<UserProgress[] | { data?: UserProgress[] }>(
+        "/manager/users/progress",
+      ),
     ),
 };
 
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 export const supervisorApi = {
   statistics: (token: string, recurrence?: FixedTaskRecurrence) =>
-    request<SupervisorStats>(
-      `/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`,
-      {},
+    unwrapAxios(
+      apiClient.get<SupervisorStats>(
+        `/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`,
+      ),
     ),
   members: (
     token: string,
     params?: Record<string, string | number | undefined>,
   ) =>
-    request<SupervisorMember[] | { data?: SupervisorMember[] }>(
-      `/supervisor/members${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<SupervisorMember[] | { data?: SupervisorMember[] }>(
+        `/supervisor/members${qs(params)}`,
+      ),
     ),
   tasks: (
     token: string,
     params?: Record<string, string | number | undefined>,
   ) =>
-    request<Task[] | { data?: Task[] }>(
-      `/supervisor/tasks${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<Task[] | { data?: Task[] }>(
+        `/supervisor/tasks${qs(params)}`,
+      ),
     ),
   fixedTasks: (
     token: string,
     params?: Record<string, string | number | boolean | undefined>,
   ) =>
-    request<FixedTask[] | { data?: FixedTask[] }>(
-      `/supervisor/fixed-tasks${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<FixedTask[] | { data?: FixedTask[] }>(
+        `/supervisor/fixed-tasks${qs(params)}`,
+      ),
     ),
 };
 
@@ -685,28 +708,39 @@ export const notificationApi = {
     token: string,
     params?: Record<string, string | number | boolean | undefined>,
   ) =>
-    request<Notification[] | { data?: Notification[] }>(
-      `/notifications/me${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<Notification[] | { data?: Notification[] }>(
+        `/notifications/me${qs(params)}`,
+      ),
     ),
   unreadCount: (token: string) =>
-    request<{ unreadCount: number }>(
-      "/notifications/me/unread-count",
-      {},
+    unwrapAxios(
+      apiClient.get<{ unreadCount: number }>(
+        "/notifications/me/unread-count",
+      ),
     ),
   get: (token: string, id: string) =>
-    request<Notification>(`/notifications/${id}`, {}),
+    unwrapAxios(apiClient.get<Notification>(`/notifications/${id}`)),
   markRead: (token: string, id: string) =>
-    request(
-      `/notifications/${id}`,
-      { method: "PATCH", body: JSON.stringify({ isRead: true }) },
+    unwrapAxios(
+      apiClient.patch(`/notifications/${id}`, { isRead: true }),
+      "خواندن نوتیفیکیشن ناموفق بود",
     ),
   markAllRead: (token: string) =>
-    request("/notifications/me/read-all", { method: "PATCH" }),
+    unwrapAxios(
+      apiClient.patch("/notifications/me/read-all"),
+      "خواندن همه نوتیفیکیشن‌ها ناموفق بود",
+    ),
   delete: (token: string, id: string) =>
-    request(`/notifications/${id}`, { method: "DELETE" }),
+    unwrapAxios(
+      apiClient.delete(`/notifications/${id}`),
+      "حذف نوتیفیکیشن ناموفق بود",
+    ),
   deleteRead: (token: string) =>
-    request("/notifications/me/read", { method: "DELETE" }),
+    unwrapAxios(
+      apiClient.delete("/notifications/me/read"),
+      "حذف نوتیفیکیشن‌های خوانده‌شده ناموفق بود",
+    ),
 };
 
 // ─── Fixed Tasks ─────────────────────────────────────────────────────────────
@@ -715,16 +749,17 @@ export const fixedTaskApi = {
     token: string,
     params?: Record<string, string | number | boolean | undefined>,
   ) =>
-    request<FixedTask[] | { data?: FixedTask[] }>(
-      `/fixed-tasks${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<FixedTask[] | { data?: FixedTask[] }>(
+        `/fixed-tasks${qs(params)}`,
+      ),
     ),
   get: (token: string, id: string) =>
-    request<FixedTask>(`/fixed-tasks/${id}`, {}),
+    unwrapAxios(apiClient.get<FixedTask>(`/fixed-tasks/${id}`)),
   create: (token: string, body: Record<string, unknown>) =>
-    request<FixedTask>(
-      "/fixed-tasks",
-      { method: "POST", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.post<FixedTask>("/fixed-tasks", body),
+      "ساخت گزارش ثابت ناموفق بود",
     ),
   update: (
     token: string,
@@ -732,9 +767,9 @@ export const fixedTaskApi = {
     userId: string,
     body: Record<string, unknown>,
   ) =>
-    request<FixedTask>(
-      `/fixed-tasks/${id}${qs({ userId })}`,
-      { method: "PATCH", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.patch<FixedTask>(`/fixed-tasks/${id}${qs({ userId })}`, body),
+      "بروزرسانی گزارش ثابت ناموفق بود",
     ),
   // Assignee (specialist) may PATCH only the status field — board drag & drop.
   updateStatus: (
@@ -743,56 +778,70 @@ export const fixedTaskApi = {
     userId: string,
     status: FixedTaskStatus,
   ) =>
-    request<FixedTask>(
-      `/fixed-tasks/${id}${qs({ userId })}`,
-      { method: "PATCH", body: JSON.stringify({ status }) },
+    unwrapAxios(
+      apiClient.patch<FixedTask>(
+        `/fixed-tasks/${id}${qs({ userId })}`,
+        { status },
+      ),
+      "تغییر وضعیت گزارش ثابت ناموفق بود",
     ),
   delete: (token: string, id: string) =>
-    request(`/fixed-tasks/${id}`, { method: "DELETE" }),
+    unwrapAxios(
+      apiClient.delete(`/fixed-tasks/${id}`),
+      "حذف گزارش ثابت ناموفق بود",
+    ),
   seedFromExcel: (token: string) =>
-    request<{
+    unwrapAxios<{
       message?: string;
       usersCreated?: number;
       fixedTasksCreated?: number;
-    }>("/fixed-tasks/seed/excel", { method: "POST" }),
+    }>(
+      apiClient.post("/fixed-tasks/seed/excel"),
+      "ایمپورت از اکسل ناموفق بود",
+    ),
   bySpecialist: (
     token: string,
     userId: string,
     params?: Record<string, string | number | undefined>,
   ) =>
-    request<FixedTask[] | { data?: FixedTask[] }>(
-      `/fixed-tasks/specialist/${userId}${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<FixedTask[] | { data?: FixedTask[] }>(
+        `/fixed-tasks/specialist/${userId}${qs(params)}`,
+      ),
     ),
 };
 
 // ─── Leave Requests ──────────────────────────────────────────────────────────
 export const leaveApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<LeaveRequest[] | { data?: LeaveRequest[] }>(
-      `/leave-requests${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<LeaveRequest[] | { data?: LeaveRequest[] }>(
+        `/leave-requests${qs(params)}`,
+      ),
     ),
   byUser: (token: string, userId: string) =>
-    request<LeaveRequest[]>(`/leave-requests/user/${userId}`, {}),
+    unwrapAxios(apiClient.get<LeaveRequest[]>(`/leave-requests/user/${userId}`)),
   get: (token: string, id: string) =>
-    request<LeaveRequest>(`/leave-requests/${id}`, {}),
+    unwrapAxios(apiClient.get<LeaveRequest>(`/leave-requests/${id}`)),
   create: (token: string, body: Record<string, unknown>) =>
-    request<LeaveRequest>(
-      "/leave-requests",
-      { method: "POST", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.post<LeaveRequest>("/leave-requests", body),
+      "ثبت مرخصی ناموفق بود",
     ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<LeaveRequest>(
-      `/leave-requests/${id}`,
-      { method: "PATCH", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.patch<LeaveRequest>(`/leave-requests/${id}`, body),
+      "بروزرسانی مرخصی ناموفق بود",
     ),
   delete: (token: string, id: string) =>
-    request(`/leave-requests/${id}`, { method: "DELETE" }),
+    unwrapAxios(
+      apiClient.delete(`/leave-requests/${id}`),
+      "حذف مرخصی ناموفق بود",
+    ),
   approve: (token: string, id: string, approvedBy: string) =>
-    request(
-      `/leave-requests/${id}/approve`,
-      { method: "POST", body: JSON.stringify({ approvedBy }) },
+    unwrapAxios(
+      apiClient.post(`/leave-requests/${id}/approve`, { approvedBy }),
+      "تایید مرخصی ناموفق بود",
     ),
   reject: (
     token: string,
@@ -800,33 +849,35 @@ export const leaveApi = {
     approvedBy: string,
     rejectionReason: string,
   ) =>
-    request(
-      `/leave-requests/${id}/reject`,
-      { method: "POST", body: JSON.stringify({ approvedBy, rejectionReason }) },
+    unwrapAxios(
+      apiClient.post(`/leave-requests/${id}/reject`, {
+        approvedBy,
+        rejectionReason,
+      }),
+      "رد مرخصی ناموفق بود",
     ),
 };
 
 // ─── Excel ───────────────────────────────────────────────────────────────────
 export const excelApi = {
   list: (token: string, params?: Record<string, string | number | undefined>) =>
-    request<ExcelFile[] | { data?: ExcelFile[] }>(
-      `/excel${qs(params)}`,
-      {},
+    unwrapAxios(
+      apiClient.get<ExcelFile[] | { data?: ExcelFile[] }>(`/excel${qs(params)}`),
     ),
   get: (token: string, id: string) =>
-    request<ExcelFile>(`/excel/${id}`, {}),
+    unwrapAxios(apiClient.get<ExcelFile>(`/excel/${id}`)),
   create: (token: string, body: Record<string, unknown>) =>
-    request<ExcelFile>(
-      "/excel",
-      { method: "POST", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.post<ExcelFile>("/excel", body),
+      "ساخت فایل اکسل ناموفق بود",
     ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
-    request<ExcelFile>(
-      `/excel/${id}`,
-      { method: "PATCH", body: JSON.stringify(body) },
+    unwrapAxios(
+      apiClient.patch<ExcelFile>(`/excel/${id}`, body),
+      "بروزرسانی فایل اکسل ناموفق بود",
     ),
   delete: (token: string, id: string) =>
-    request(`/excel/${id}`, { method: "DELETE" }),
+    unwrapAxios(apiClient.delete(`/excel/${id}`), "حذف فایل اکسل ناموفق بود"),
   upload: async (
     token: string,
     file: File,
@@ -835,18 +886,25 @@ export const excelApi = {
   ) => {
     const form = new FormData();
     form.append("file", file);
-    return request<ExcelFile>(
-      `/excel/upload?createdBy=${encodeURIComponent(createdBy)}&type=${type}`,
-      { method: "POST", body: form },
+    return unwrapAxios<ExcelFile>(
+      apiClient.post(
+        `/excel/upload?createdBy=${encodeURIComponent(createdBy)}&type=${type}`,
+        form,
+      ),
       "آپلود ناموفق بود",
     );
   },
   download: (token: string, id: string, filename: string) =>
     downloadBlob(`/excel/${id}/download`, filename),
   process: (token: string, id: string) =>
-    request(`/excel/${id}/process`, { method: "POST" }),
+    unwrapAxios(
+      apiClient.post(`/excel/${id}/process`),
+      "پردازش فایل اکسل ناموفق بود",
+    ),
   statistics: (token: string, userId: string) =>
-    request<ExcelStatistics>(`/excel/statistics/${userId}`, {}),
+    unwrapAxios(
+      apiClient.get<ExcelStatistics>(`/excel/statistics/${userId}`),
+    ),
   generateExport: (
     token: string,
     body: Record<string, unknown>,
@@ -858,4 +916,3 @@ export const excelApi = {
       body: JSON.stringify(body),
     }),
 };
-
