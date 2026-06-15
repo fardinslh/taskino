@@ -89,7 +89,7 @@ function DashboardPageContent() {
     fixedTasks,
     onDragEnd,
     openFixedTaskForm,
-    deactivateFixedTask,
+    deleteFixedTask,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
   const specialistDoneCount =
@@ -873,7 +873,13 @@ function DashboardPageContent() {
                                             className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
                                             onClick={(event) => {
                                               event.stopPropagation();
-                                              void deactivateFixedTask(ft);
+                                              if (
+                                                window.confirm(
+                                                  "این گزارش ثابت حذف شود؟",
+                                                )
+                                              ) {
+                                                void deleteFixedTask(getId(ft));
+                                              }
                                             }}
                                             type="button"
                                           >

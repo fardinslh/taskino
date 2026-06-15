@@ -3,7 +3,7 @@
 import { Bell, Loader2, LogOut, Moon, RefreshCw, Search, Sparkles, Sun, X } from "lucide-react";
 import type { Notification, User } from "@/lib/api";
 import { getId } from "@/lib/api";
-import { initials, userName } from "../_lib/task-helpers";
+import { initials, notificationText, userName } from "../_lib/task-helpers";
 
 type TaskinoHeaderProps = {
   currentUser: User | null;
@@ -99,17 +99,20 @@ export function TaskinoHeader({
                   {notifications.length === 0 ? (
                     <p className="p-4 text-center text-xs text-[--text-3]">اعلان جدیدی نیست</p>
                   ) : (
-                    notifications.map((notification) => (
-                      <button
-                        key={getId(notification)}
-                        className="flex w-full flex-col gap-0.5 border-b border-[--border] px-4 py-3 text-right transition hover:bg-[--surface-2]"
-                        onClick={() => onMarkNotificationRead(getId(notification))}
-                        type="button"
-                      >
-                        <span className="text-sm font-semibold">{notification.title}</span>
-                        <span className="line-clamp-2 text-xs text-[--text-3]">{notification.message}</span>
-                      </button>
-                    ))
+                    notifications.map((notification) => {
+                      const localized = notificationText(notification);
+                      return (
+                        <button
+                          key={getId(notification)}
+                          className="flex w-full flex-col gap-0.5 border-b border-[--border] px-4 py-3 text-right transition hover:bg-[--surface-2]"
+                          onClick={() => onMarkNotificationRead(getId(notification))}
+                          type="button"
+                        >
+                          <span className="text-sm font-semibold">{localized.title}</span>
+                          <span className="line-clamp-2 text-xs text-[--text-3]">{localized.message}</span>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>

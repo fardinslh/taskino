@@ -33,6 +33,10 @@ export function Select({ label, value, onChange, options, placeholder, registrat
   label: string; value?: string; onChange?: (v: string) => void; options: Array<[string, string]>; placeholder?: string;
   registration?: UseFormRegisterReturn;
 }) {
+  const uniqueOptions = Array.from(
+    new Map(options.map(([id, optionLabel]) => [id, optionLabel])).entries(),
+  );
+
   return (
     <label className="block">
       {label && <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">{label}</span>}
@@ -45,7 +49,7 @@ export function Select({ label, value, onChange, options, placeholder, registrat
         value={value}
       >
         <option value="">{placeholder ?? "انتخاب نشده"}</option>
-        {options.map(([id, l]) => <option key={id} value={id}>{l}</option>)}
+        {uniqueOptions.map(([id, l]) => <option key={id} value={id}>{l}</option>)}
       </select>
     </label>
   );

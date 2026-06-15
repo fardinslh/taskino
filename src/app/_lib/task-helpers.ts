@@ -1,4 +1,11 @@
-import { getId, type FixedTask, type IncompleteFixedTask, type Task, type User } from "@/lib/api";
+import {
+  getId,
+  type FixedTask,
+  type IncompleteFixedTask,
+  type Notification,
+  type Task,
+  type User,
+} from "@/lib/api";
 import { TASK_PERIODS, WORK_FIELDS, type TaskPeriod } from "./task-constants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,7 +115,40 @@ export function isFixedTaskInPeriod(item: IncompleteFixedTask, period: TaskPerio
   return date >= start && date < end;
 }
 
+export function notificationText(notification: Notification) {
+  const title = notification.title?.trim() ?? "";
+  const message = notification.message?.trim() ?? "";
+  const titleMap: Record<string, string> = {
+    "Fixed Task Assigned": "گزارش ثابت جدید",
+    "Task Assigned": "گزارش جدید",
+    "Task Status Updated": "وضعیت گزارش تغییر کرد",
+    "Fixed Task Status Updated": "وضعیت گزارش ثابت تغییر کرد",
+  };
+
+  let localizedMessage = message;
+  const fixedTaskAssignment = message.match(
+    /^You have been assigned to the fixed task\s*:?\s*(.*)$/i,
+  );
+  const taskAssignment = message.match(
+    /^You have been assigned to the task\s*:?\s*(.*)$/i,
+  );
+
+  if (fixedTaskAssignment) {
+    localizedMessage = fixedTaskAssignment[1]
+      ? `گزارش ثابت «${fixedTaskAssignment[1]}» به شما اختصاص داده شد.`
+      : "یک گزارش ثابت به شما اختصاص داده شد.";
+  } else if (taskAssignment) {
+    localizedMessage = taskAssignment[1]
+      ? `گزارش «${taskAssignment[1]}» به شما اختصاص داده شد.`
+      : "یک گزارش به شما اختصاص داده شد.";
+  }
+
+  return {
+    title: (titleMap[title] ?? title) || "اعلان جدید",
+    message: localizedMessage,
+  };
+}
+
 export function recurrenceLabel(value?: FixedTask["recurrence"]) {
   return TASK_PERIODS.find(([period]) => period === value)?.[1] ?? "ثابت";
 }
-

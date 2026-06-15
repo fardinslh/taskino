@@ -3,6 +3,7 @@
 import { Bell, X } from "lucide-react";
 import type { Notification } from "@/lib/api";
 import { getId } from "@/lib/api";
+import { notificationText } from "../_lib/task-helpers";
 
 type RejectLeaveDialogProps = {
   onCancel: () => void;
@@ -52,14 +53,16 @@ type NotificationDialogProps = {
 };
 
 export function NotificationDialog({ notification, onClose, onRead }: NotificationDialogProps) {
+  const localized = notificationText(notification);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-sm rounded-2xl border border-[--border] bg-[--surface] p-6 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
           <Bell size={26} />
         </div>
-        <h3 className="mt-4 text-lg font-bold text-[--text]">{notification.title || "اعلان جدید"}</h3>
-        {notification.message && <p className="mt-2 text-sm leading-relaxed text-[--text-2]">{notification.message}</p>}
+        <h3 className="mt-4 text-lg font-bold text-[--text]">{localized.title}</h3>
+        {localized.message && <p className="mt-2 text-sm leading-relaxed text-[--text-2]">{localized.message}</p>}
         <div className="mt-5 flex gap-2">
           <button
             className="h-10 flex-1 rounded-lg bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b]"

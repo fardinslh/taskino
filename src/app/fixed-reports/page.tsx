@@ -396,6 +396,15 @@ function FixedReportsPageContent() {
                   if (activationRecurrence === "weekly") {
                     startDate.setHours(0, 0, 0, 0);
                     endDate.setHours(23, 59, 59, 999);
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (endDate < today) {
+                      activationForm.setError("startDate", {
+                        message: "امکان انتخاب هفته‌ای که تمام شده وجود ندارد.",
+                      });
+                      return;
+                    }
                   }
 
                   if (activationRecurrence === "monthly") {
@@ -511,7 +520,11 @@ function FixedReportsPageContent() {
                             }}
                             calendar={jalali}
                             locale={persianFa}
-                            minDate={new Date()}
+                            minDate={
+                              activationRecurrence === "weekly"
+                                ? undefined
+                                : new Date()
+                            }
                             range
                             weekPicker={activationRecurrence === "weekly"}
                             onlyMonthPicker={activationRecurrence === "monthly"}
