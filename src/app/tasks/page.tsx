@@ -56,6 +56,7 @@ function TasksPageContent() {
     fixedTasks,
     onDragEnd,
     openFixedTaskForm,
+    deactivateFixedTask,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
   const specialistMatches = specialistSearchQuery.trim()
@@ -251,9 +252,12 @@ function TasksPageContent() {
                     <ClipboardList size={17} />
                   </div>
                   <div>
-                    <h2 className="font-bold text-[--text]">برد گزارشات ثابت</h2>
+                    <h2 className="font-bold text-[--text]">
+                      برد گزارشات ثابت
+                    </h2>
                     <p className="text-[11px] text-[--text-3]">
-                      گزارشات ثابت بر اساس دوره · {activeFixedTaskCount} مورد · {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
+                      گزارشات ثابت بر اساس دوره · {activeFixedTaskCount} مورد ·{" "}
+                      {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
                       {(() => {
                         const od = fixedTasks.filter(
                           (f: any) =>
@@ -305,23 +309,24 @@ function TasksPageContent() {
                         setSelectedSpecialistId(resolveSpecialistId(value));
                       }}
                     />
-                    {specialistSearchQuery.trim() && specialistMatches.length > 0 && (
-                      <div className="absolute right-0 top-10 z-20 max-h-48 w-56 overflow-y-auto rounded-lg border border-[--border] bg-[--surface] p-1 shadow-lg">
-                        {specialistMatches.slice(0, 8).map((u: any) => (
-                          <button
-                            key={getId(u)}
-                            className="block w-full rounded-md px-3 py-2 text-right text-xs text-[--text] transition hover:bg-[--surface-2]"
-                            onClick={() => {
-                              setSpecialistSearchQuery(userName(u));
-                              setSelectedSpecialistId(getId(u));
-                            }}
-                            type="button"
-                          >
-                            {userName(u)}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {specialistSearchQuery.trim() &&
+                      specialistMatches.length > 0 && (
+                        <div className="absolute right-0 top-10 z-20 max-h-48 w-56 overflow-y-auto rounded-lg border border-[--border] bg-[--surface] p-1 shadow-lg">
+                          {specialistMatches.slice(0, 8).map((u: any) => (
+                            <button
+                              key={getId(u)}
+                              className="block w-full rounded-md px-3 py-2 text-right text-xs text-[--text] transition hover:bg-[--surface-2]"
+                              onClick={() => {
+                                setSpecialistSearchQuery(userName(u));
+                                setSelectedSpecialistId(getId(u));
+                              }}
+                              type="button"
+                            >
+                              {userName(u)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                   </div>
                   {isManager && (
                     <button
@@ -367,7 +372,7 @@ function TasksPageContent() {
                             </h3>
                           </div>
                           <span
-                            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${col.badge}`}
+                            className={`rounded-full max-w-2.5 text-xs max-h-2.5 p-2.5 flex items-center justify-center font-bold ${col.badge}`}
                           >
                             {allItems.length}
                           </span>
@@ -465,6 +470,18 @@ function TasksPageContent() {
                                             </div>
                                           )}
                                         </div>
+                                        {isManager && ft.isActive !== false && (
+                                          <button
+                                            className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              void deactivateFixedTask(ft);
+                                            }}
+                                            type="button"
+                                          >
+                                            حذف
+                                          </button>
+                                        )}
                                       </article>
                                     )}
                                   </Draggable>

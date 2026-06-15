@@ -1,6 +1,9 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import DatePicker from "react-multi-date-picker";
+import jalali from "react-date-object/calendars/jalali";
+import persianFa from "react-date-object/locales/persian_fa";
 import {
   ClipboardList,
   FileSpreadsheet,
@@ -135,6 +138,20 @@ function ProjectsPageContent() {
   const scopedUserOptions = scopedUsers.map(
     (user: any) => [getId(user), userName(user)] as [string, string],
   );
+
+  function formatLocalDateBoundary(value: string, endOfDay = false) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const normalized = new Date(date);
+    if (endOfDay) {
+      normalized.setHours(23, 59, 59, 999);
+    } else {
+      normalized.setHours(0, 0, 0, 0);
+    }
+
+    return normalized.toISOString();
+  }
 
   return (
     <>
@@ -497,7 +514,13 @@ function ProjectsPageContent() {
                 <h2 className="font-bold">تعداد پروژه در بازه تاریخی</h2>
                 <form
                   className="mt-4 grid gap-2 sm:grid-cols-2"
-                  onSubmit={dateCountForm.handleSubmit(taRunDateCountFromValues)}
+                  onSubmit={dateCountForm.handleSubmit((values) =>
+                    taRunDateCountFromValues({
+                      ...values,
+                      startDate: formatLocalDateBoundary(values.startDate),
+                      endDate: formatLocalDateBoundary(values.endDate, true),
+                    }),
+                  )}
                 >
                   <div className="sm:col-span-2">
                     <Select
@@ -509,22 +532,66 @@ function ProjectsPageContent() {
                       })}
                     />
                   </div>
-                  <Field
-                    label="از تاریخ"
-                    name="taCountStart"
-                    type="date"
-                    registration={dateCountForm.register("startDate", {
-                      required: true,
-                    })}
-                  />
-                  <Field
-                    label="تا تاریخ"
-                    name="taCountEnd"
-                    type="date"
-                    registration={dateCountForm.register("endDate", {
-                      required: true,
-                    })}
-                  />
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                      از تاریخ
+                    </span>
+                    <Controller
+                      control={dateCountForm.control}
+                      name="startDate"
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <DatePicker
+                          value={field.value ? new Date(field.value) : ""}
+                          onChange={(value) => {
+                            if (!value || Array.isArray(value)) {
+                              field.onChange("");
+                              return;
+                            }
+
+                            field.onChange(value.toDate().toISOString());
+                          }}
+                          calendar={jalali}
+                          locale={persianFa}
+                          format="YYYY/MM/DD"
+                          calendarPosition="bottom-right"
+                          inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                          containerClassName="w-full"
+                          placeholder="انتخاب تاریخ شروع"
+                        />
+                      )}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                      تا تاریخ
+                    </span>
+                    <Controller
+                      control={dateCountForm.control}
+                      name="endDate"
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <DatePicker
+                          value={field.value ? new Date(field.value) : ""}
+                          onChange={(value) => {
+                            if (!value || Array.isArray(value)) {
+                              field.onChange("");
+                              return;
+                            }
+
+                            field.onChange(value.toDate().toISOString());
+                          }}
+                          calendar={jalali}
+                          locale={persianFa}
+                          format="YYYY/MM/DD"
+                          calendarPosition="bottom-right"
+                          inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                          containerClassName="w-full"
+                          placeholder="انتخاب تاریخ پایان"
+                        />
+                      )}
+                    />
+                  </label>
                   <div className="sm:col-span-2">
                     <button
                       className="h-10 rounded-lg bg-[#1f7a8c] px-5 text-sm font-semibold text-white disabled:opacity-50"

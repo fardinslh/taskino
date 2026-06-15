@@ -822,14 +822,10 @@ export const fixedTaskApi = {
   updateStatus: (
     token: string,
     id: string,
-    userId: string,
     status: FixedTaskStatus,
   ) =>
     unwrapAxios(
-      apiClient.patch<FixedTask>(
-        `/fixed-tasks/${id}${qs({ userId })}`,
-        { status },
-      ),
+      apiClient.patch<FixedTask>(`/fixed-tasks/${id}`, { status }),
       "تغییر وضعیت گزارش ثابت ناموفق بود",
     ),
   delete: (token: string, id: string) =>

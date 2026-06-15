@@ -51,13 +51,19 @@ export function useFixedTaskActions({
   setMessage,
   token,
 }: FixedTaskActionsInput) {
-  const [editingFixedTask, setEditingFixedTask] = useState<FixedTask | null>(null);
-  const [fixedReportsTab, setFixedReportsTab] = useState<"templates" | "incomplete">("templates");
+  const [editingFixedTask, setEditingFixedTask] = useState<FixedTask | null>(
+    null,
+  );
+  const [fixedReportsTab, setFixedReportsTab] = useState<
+    "templates" | "incomplete"
+  >("templates");
   const [ftActive, setFtActive] = useState(false);
   const [ftAssignee, setFtAssignee] = useState("");
   const [ftDescription, setFtDescription] = useState("");
   const [ftNextRunAt, setFtNextRunAt] = useState("");
-  const [ftRecurrence, setFtRecurrence] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [ftRecurrence, setFtRecurrence] = useState<
+    "daily" | "weekly" | "monthly"
+  >("daily");
   const [ftTitle, setFtTitle] = useState("");
   const [showFixedTaskForm, setShowFixedTaskForm] = useState(false);
 
@@ -121,7 +127,9 @@ export function useFixedTaskActions({
       recurrence: ftRecurrence,
       description: ftDescription.trim() || undefined,
       isActive: ftActive,
-      ...(ftNextRunAt ? { nextRunAt: new Date(ftNextRunAt).toISOString() } : {}),
+      ...(ftNextRunAt
+        ? { nextRunAt: new Date(ftNextRunAt).toISOString() }
+        : {}),
     };
 
     try {
@@ -141,10 +149,14 @@ export function useFixedTaskActions({
         const created = await fixedTaskApi.create(token, body);
         setFixedTasks((current) => [created, ...current]);
       }
-      setMessage(editingFixedTask ? "الگوی ثابت بروزرسانی شد." : "الگوی ثابت ساخته شد.");
+      setMessage(
+        editingFixedTask ? "الگوی ثابت بروزرسانی شد." : "الگوی ثابت ساخته شد.",
+      );
       closeFixedTaskForm();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "ذخیره الگو ناموفق بود");
+      setError(
+        error instanceof Error ? error.message : "ذخیره الگو ناموفق بود",
+      );
     }
   }
 
@@ -224,7 +236,9 @@ export function useFixedTaskActions({
         created,
         ...current.filter((item) => getId(item) !== getId(fixedTask)),
       ]);
-      setMessage("\u0627\u0644\u06af\u0648 \u0641\u0639\u0627\u0644 \u0634\u062f.");
+      setMessage(
+        "\u0627\u0644\u06af\u0648 \u0641\u0639\u0627\u0644 \u0634\u062f.",
+      );
       return true;
     } catch (error) {
       setError(
@@ -243,11 +257,15 @@ export function useFixedTaskActions({
         isActive: false,
       });
       setFixedTasks((current) =>
-        current.map((item) => getId(item) === getId(fixedTask) ? updated : item),
+        current.map((item) =>
+          getId(item) === getId(fixedTask) ? updated : item,
+        ),
       );
       setMessage(updated.isActive ? "الگو فعال شد." : "الگو غیرفعال شد.");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "تغییر وضعیت الگو ناموفق بود");
+      setError(
+        error instanceof Error ? error.message : "تغییر وضعیت الگو ناموفق بود",
+      );
     }
   }
 
@@ -262,39 +280,64 @@ export function useFixedTaskActions({
   }
 
   async function seedFixedTasksFromExcel() {
-    if (!window.confirm("ایمپورت کاربران و الگوهای ثابت از فایل اکسل پیکربندی‌شده؟")) return;
+    if (
+      !window.confirm(
+        "ایمپورت کاربران و الگوهای ثابت از فایل اکسل پیکربندی‌شده؟",
+      )
+    )
+      return;
     try {
       const result = await fixedTaskApi.seedFromExcel(token);
       setMessage(result?.message ?? "ایمپورت از اکسل با موفقیت انجام شد.");
       await loadManagerAnalytics();
       await loadData();
     } catch (error) {
-      setError(error instanceof Error ? error.message : "ایمپورت از اکسل ناموفق بود");
+      setError(
+        error instanceof Error ? error.message : "ایمپورت از اکسل ناموفق بود",
+      );
     }
   }
 
   function onDragEnd({ destination, source, draggableId }: DropResult) {
     if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    )
+      return;
     if (destination.droppableId !== source.droppableId) {
-      void moveFixedTask(draggableId, destination.droppableId as FixedTaskStatus);
+      void moveFixedTask(
+        draggableId,
+        destination.droppableId as FixedTaskStatus,
+      );
     }
   }
 
   async function moveFixedTask(id: string, status: FixedTaskStatus) {
     if (!myId) return;
+    const target = fixedTasks.find((item) => getId(item) === id);
+    const assignedId = getId(target?.assignedTo);
+
+    if (assignedId && assignedId !== myId) {
+      setError("This fixed task is assigned to another user.");
+      return;
+    }
     const previous = fixedTasks;
     setFixedTasks((current) =>
-      current.map((item) => getId(item) === id ? { ...item, status } : item),
+      current.map((item) => (getId(item) === id ? { ...item, status } : item)),
     );
     try {
-      const updated = await fixedTaskApi.updateStatus(token, id, myId, status);
+      const updated = await fixedTaskApi.updateStatus(token, id, status);
       setFixedTasks((current) =>
-        current.map((item) => getId(item) === id ? { ...item, ...updated } : item),
+        current.map((item) =>
+          getId(item) === id ? { ...item, ...updated } : item,
+        ),
       );
     } catch (error) {
       setFixedTasks(previous);
-      setError(error instanceof Error ? error.message : "تغییر وضعیت گزارش ناموفق بود");
+      setError(
+        error instanceof Error ? error.message : "تغییر وضعیت گزارش ناموفق بود",
+      );
     }
   }
 
