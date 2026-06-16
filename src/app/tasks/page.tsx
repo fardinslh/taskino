@@ -101,13 +101,13 @@ function TasksPageContent() {
                   سلام، {userName(currentUser ?? undefined).split(" ")[0]}
                 </p>
                 <h1 className="mt-0.5 text-xl font-bold">
-                  {isManager ? "داشبورد مدیر" : "داشبورد پروژه‌ها"}
+                  {isManager ? "داشبورد مدیر" : "داشبورد گزارش ها"}
                 </h1>
                 <p className="mt-1 text-sm opacity-75">
                   {isManager
                     ? `${managerStats?.activeProjects ?? projects.length} پروژه فعال · ${managerStats?.activeUsers ?? users.length} کاربر`
                     : activeTasks === 0
-                      ? "همه پروژه‌ها تکمیل شده‌اند"
+                      ? "همه گزارش ها تکمیل شده‌اند"
                       : `${activeTasks} پروژه باز داری`}
                 </p>
               </div>

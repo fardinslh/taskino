@@ -348,10 +348,27 @@ function ActivationModal({
           onSubmit={form.handleSubmit(async (values) => {
             const startDate = new Date(values.startDate);
             const endDate = new Date(values.endDate);
+            const activationValues = { ...values };
+
+            if (Number.isNaN(startDate.getTime())) {
+              form.setError("startDate", {
+                message: "این فیلد الزامی است.",
+              });
+              return;
+            }
+
+            if (Number.isNaN(endDate.getTime())) {
+              form.setError("endDate", {
+                message: "این فیلد الزامی است.",
+              });
+              return;
+            }
 
             if (recurrence === "weekly") {
               startDate.setHours(0, 0, 0, 0);
               endDate.setHours(23, 59, 59, 999);
+              activationValues.startDate = startDate.toISOString();
+              activationValues.endDate = endDate.toISOString();
               if (endDate < todayStart) {
                 form.setError("startDate", {
                   message: "امکان انتخاب هفته‌ای که تمام شده وجود ندارد.",
@@ -365,6 +382,8 @@ function ActivationModal({
               startDate.setHours(0, 0, 0, 0);
               endDate.setMonth(endDate.getMonth() + 1, 0);
               endDate.setHours(23, 59, 59, 999);
+              activationValues.startDate = startDate.toISOString();
+              activationValues.endDate = endDate.toISOString();
             }
 
             if (recurrence === "daily" && startDate < new Date()) {
@@ -381,7 +400,7 @@ function ActivationModal({
               return;
             }
 
-            const ok = await onActivate(values);
+            const ok = await onActivate(activationValues);
             if (ok) onClose();
           })}
         >
@@ -428,10 +447,10 @@ function ActivationModal({
                 </label>
               ))}
             </div>
-          ) : (
+          ) : recurrence === "weekly" ? (
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                {recurrence === "weekly" ? "بازه هفتگی *" : "بازه ماهانه *"}
+                بازه هفتگی *
               </span>
               <Controller
                 control={form.control}
@@ -469,24 +488,17 @@ function ActivationModal({
                           if (!start) return;
                           field.onChange(start.toDate().toISOString());
                           form.setValue("endDate", "", { shouldValidate: true });
-                          return;
                         }
-                        field.onChange(value.toDate().toISOString());
-                        form.setValue("endDate", "", { shouldValidate: true });
                       }}
                       calendar={jalali}
                       locale={persianFa}
-                      minDate={recurrence === "weekly" ? undefined : new Date()}
                       range
-                      weekPicker={recurrence === "weekly"}
-                      onlyMonthPicker={recurrence === "monthly"}
-                      format={recurrence === "weekly" ? "YYYY/MM/DD" : "YYYY/MM"}
+                      weekPicker
+                      format="YYYY/MM/DD"
                       calendarPosition="bottom-right"
                       inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] dark:bg-[--surface] dark:text-[--text] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                       containerClassName="w-full"
-                      placeholder={
-                        recurrence === "weekly" ? "انتخاب بازه هفتگی" : "انتخاب بازه ماهانه"
-                      }
+                      placeholder="انتخاب بازه هفتگی"
                     />
                   );
                 }}
@@ -497,6 +509,53 @@ function ActivationModal({
                 </span>
               )}
             </label>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(["startDate", "endDate"] as const).map((name) => (
+                <label className="block" key={name}>
+                  <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                    {name === "startDate" ? "ماه شروع *" : "ماه پایان *"}
+                  </span>
+                  <Controller
+                    control={form.control}
+                    name={name}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value ? new Date(field.value) : ""}
+                        onChange={(value) => {
+                          if (!value || Array.isArray(value)) {
+                            field.onChange("");
+                            return;
+                          }
+                          field.onChange(value.toDate().toISOString());
+                        }}
+                        calendar={jalali}
+                        locale={persianFa}
+                        minDate={
+                          name === "endDate" && form.getValues("startDate")
+                            ? new Date(form.getValues("startDate"))
+                            : new Date()
+                        }
+                        onlyMonthPicker
+                        format="YYYY/MM"
+                        calendarPosition="bottom-right"
+                        inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] dark:bg-[--surface] dark:text-[--text] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                        containerClassName="w-full"
+                        placeholder={
+                          name === "startDate" ? "انتخاب ماه شروع" : "انتخاب ماه پایان"
+                        }
+                      />
+                    )}
+                  />
+                  {form.formState.errors[name] && (
+                    <span className="mt-1 block text-xs text-red-500">
+                      {form.formState.errors[name]?.message || "این فیلد الزامی است."}
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
           )}
 
           <button
