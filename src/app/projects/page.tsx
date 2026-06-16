@@ -24,7 +24,7 @@ import {
   useTaskContext,
 } from "../_components/taskino-context";
 import { COLUMNS } from "../_lib/task-constants";
-import { statusLabel, userName } from "../_lib/task-helpers";
+import { formatDate, statusLabel, userName } from "../_lib/task-helpers";
 
 type ProjectType = "specialist" | "general";
 
@@ -99,6 +99,7 @@ function ProjectsPageContent() {
   });
 
   const completionStats = taCompletionResult as Record<string, any> | null;
+  const dateCountStats = taCountResult as Record<string, any> | null;
   const completionManager = completionStats
     ? users.find((u: any) => getId(u) === String(completionStats.managerId))
     : null;
@@ -137,6 +138,15 @@ function ProjectsPageContent() {
 
   const scopedUserOptions = scopedUsers.map(
     (user: any) => [getId(user), userName(user)] as [string, string],
+  );
+  const dateCountUser = dateCountStats
+    ? users.find((user: any) => getId(user) === String(dateCountStats.userId))
+    : null;
+  const dateCountHasData = Math.max(
+    Number(dateCountStats?.totalTasks ?? 0),
+    Number(dateCountStats?.completedTasks ?? 0),
+    Number(dateCountStats?.pendingTasks ?? 0),
+    Number(dateCountStats?.todoTasks ?? 0),
   );
 
   function formatLocalDateBoundary(value: string, endOfDay = false) {
@@ -602,13 +612,81 @@ function ProjectsPageContent() {
                     </button>
                   </div>
                 </form>
-                {taCountResult && (
-                  <pre
-                    className="mt-4 overflow-x-auto rounded-xl bg-[--surface-2] p-3 text-xs text-[--text-2]"
-                    dir="ltr"
-                  >
-                    {JSON.stringify(taCountResult, null, 2)}
-                  </pre>
+                {dateCountStats && (
+                  <div className="mt-4 rounded-2xl border border-[#cbe8ef] bg-gradient-to-br from-[#f4fbfd] to-[#ffffff] p-4 shadow-sm dark:border-[#1f5060] dark:from-[#0f2535] dark:to-[#0b1220]">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d8ecf1] pb-3 dark:border-[#1f5060]">
+                      <div>
+                        <p className="text-xs font-semibold text-[--text-3]">
+                          نتیجه بازه تاریخی
+                        </p>
+                        <h3 className="mt-1 font-bold text-[--text]">
+                          {dateCountUser ? userName(dateCountUser) : "کاربر انتخاب‌شده"}
+                        </h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-[#1f7a8c]">
+                        <span className="rounded-full bg-[#e8f4f7] px-2.5 py-1 dark:bg-[#0f3040]">
+                          {dateCountStats.startDate
+                            ? formatDate(dateCountStats.startDate)
+                            : "—"}
+                        </span>
+                        <span className="rounded-full bg-[#e8f4f7] px-2.5 py-1 dark:bg-[#0f3040]">
+                          تا
+                        </span>
+                        <span className="rounded-full bg-[#e8f4f7] px-2.5 py-1 dark:bg-[#0f3040]">
+                          {dateCountStats.endDate
+                            ? formatDate(dateCountStats.endDate)
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {[
+                        {
+                          label: "کل پروژه‌ها",
+                          value: dateCountStats.totalTasks ?? 0,
+                          tone: "text-[#1f7a8c]",
+                          bg: "bg-[#e8f4f7] dark:bg-[#0f3040]",
+                        },
+                        {
+                          label: "تکمیل‌شده",
+                          value: dateCountStats.completedTasks ?? 0,
+                          tone: "text-emerald-600",
+                          bg: "bg-emerald-50 dark:bg-emerald-950/40",
+                        },
+                        {
+                          label: "در انتظار",
+                          value: dateCountStats.pendingTasks ?? 0,
+                          tone: "text-amber-600",
+                          bg: "bg-amber-50 dark:bg-amber-950/40",
+                        },
+                        {
+                          label: "باز / todo",
+                          value: dateCountStats.todoTasks ?? 0,
+                          tone: "text-slate-600",
+                          bg: "bg-slate-50 dark:bg-slate-900/40",
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className={`rounded-xl ${item.bg} p-4 ring-1 ring-black/5 dark:ring-white/5`}
+                        >
+                          <p className="text-[11px] font-semibold text-[--text-3]">
+                            {item.label}
+                          </p>
+                          <p className={`mt-1 text-2xl font-bold ${item.tone}`}>
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {dateCountHasData === 0 && (
+                      <div className="mt-4 rounded-xl border border-dashed border-[#cfe7ec] bg-white/70 px-4 py-3 text-sm text-[--text-2] dark:border-[#1f5060] dark:bg-white/5">
+                        در این بازه پروژه‌ای ثبت نشده است.
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

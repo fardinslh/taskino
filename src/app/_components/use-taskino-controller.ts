@@ -161,6 +161,28 @@ export function useTaskinoController(initialView: View = "dashboard") {
   const [specialistProgressStats, setSpecialistProgressStats] =
     useState<MyProgressStats | null>(null);
 
+  function dedupeFixedTasks(items: FixedTask[]) {
+    const seen = new Set<string>();
+    const result: FixedTask[] = [];
+
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const item = items[index];
+      const id = getId(item);
+
+      if (id && seen.has(id)) continue;
+      if (id) seen.add(id);
+      result.push(item);
+    }
+
+    return result.reverse();
+  }
+
+  const setFixedTasksDeduped: typeof setFixedTasks = (value) => {
+    setFixedTasks((current) =>
+      dedupeFixedTasks(typeof value === "function" ? value(current) : value),
+    );
+  };
+
   // UI state
   const [activeViewState, setActiveViewState] = useState<View>(initialView);
   const [selectedProjectFilter, setSelectedProjectFilter] = useState("");
@@ -335,7 +357,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     myId,
     users,
     setError,
-    setFixedTasks,
+    setFixedTasks: setFixedTasksDeduped,
     setMessage,
     token,
   });
@@ -424,12 +446,12 @@ export function useTaskinoController(initialView: View = "dashboard") {
       else if (role !== "supervisor" && uid) {
         // Specialist: public per-user endpoint (no role restriction).
         fetchAllSpecialistFixedTasks(authToken, uid, { status: "todo" })
-          .then((r) => setFixedTasks(r))
-          .catch(() => setFixedTasks([]));
+          .then((r) => setFixedTasksDeduped(r))
+          .catch(() => setFixedTasksDeduped([]));
       } else if (role === "supervisor") {
         void loadSupervisorData(authToken);
       } else {
-        setFixedTasks([]);
+        setFixedTasksDeduped([]);
       }
     } catch (err) {
       setError(
@@ -520,7 +542,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
                 | { data?: MonthlyPerformance[] },
             ),
       );
-      setFixedTasks(recurring as FixedTask[]);
+      setFixedTasksDeduped(recurring as FixedTask[]);
       setManagerUserProgress(
         normalizeList(progress as UserProgress[] | { data?: UserProgress[] }),
       );
@@ -577,7 +599,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       setSupervisorTasks(supervisedTasks);
       setSupervisorFixedTasks(supervisedFixedTasks);
       setTasks(supervisedTasks);
-      setFixedTasks(supervisedFixedTasks);
+      setFixedTasksDeduped(supervisedFixedTasks);
       setOverdueTasks(overdue);
       setManagerUserProgress(members as UserProgress[]);
       setUsers(
@@ -632,7 +654,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
 
     if (!selectedSpecialistId) {
       if (role === "supervisor") {
-        queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
+        queueMicrotask(() => setFixedTasksDeduped(supervisorFixedTasks));
       } else {
         void loadLatestManagerAnalytics(token);
       }
@@ -640,8 +662,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     }
 
     void loadLatestSpecialistFixedTasks(token, selectedSpecialistId)
-      .then((r) => setFixedTasks(r))
-      .catch(() => setFixedTasks([]));
+      .then((r) => setFixedTasksDeduped(r))
+      .catch(() => setFixedTasksDeduped([]));
   }, [
     authHydrated,
     currentUser?.roles,
