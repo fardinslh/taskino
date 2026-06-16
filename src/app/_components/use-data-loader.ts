@@ -19,6 +19,7 @@ import {
   type ManagerStats,
   type MonthlyPerformance,
   type MyProgressStats,
+  type MyWorkSummary,
   type Notification,
   type StatusCounts,
   type SupervisorMember,
@@ -43,6 +44,7 @@ type DataLoaderInput = {
   setSpecialistTaskCounts: Dispatch<SetStateAction<StatusCounts | null>>;
   setSpecialistFixedTaskCounts: Dispatch<SetStateAction<StatusCounts | null>>;
   setSpecialistProgressStats: Dispatch<SetStateAction<MyProgressStats | null>>;
+  setSpecialistWorkSummary: Dispatch<SetStateAction<MyWorkSummary | null>>;
   setManagerStats: Dispatch<SetStateAction<ManagerStats | null>>;
   setUnreadCount: Dispatch<SetStateAction<number>>;
   setNotifications: Dispatch<SetStateAction<Notification[]>>;
@@ -72,6 +74,7 @@ export function useDataLoader({
   setSpecialistTaskCounts,
   setSpecialistFixedTaskCounts,
   setSpecialistProgressStats,
+  setSpecialistWorkSummary,
   setManagerStats,
   setUnreadCount,
   setNotifications,
@@ -304,13 +307,15 @@ export function useDataLoader({
         specialistTaskCountsRes,
         specialistFixedTaskCountsRes,
         specialistProgressRes,
+        specialistWorkSummaryRes,
       ] = userIsSpecialist
         ? await Promise.all([
             taskApi.statusCounts(authToken).catch(() => null),
             fixedTaskApi.statusCounts(authToken).catch(() => null),
             userApi.meProgress(authToken).catch(() => null),
+            userApi.meWorkSummary(authToken).catch(() => null),
           ])
-        : [null, null, null];
+        : [null, null, null, null];
       const taskList = normalizeList(
         ((t as ManagerAllTasks)?.tasks ?? t) as Task[] | { data?: Task[] },
       );
@@ -321,6 +326,7 @@ export function useDataLoader({
       setSpecialistTaskCounts(specialistTaskCountsRes);
       setSpecialistFixedTaskCounts(specialistFixedTaskCountsRes);
       setSpecialistProgressStats(specialistProgressRes);
+      setSpecialistWorkSummary(specialistWorkSummaryRes);
       setManagerStats(statsRes);
       setUnreadCount(unreadRes.unreadCount);
       setNotifications(

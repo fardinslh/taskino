@@ -102,6 +102,7 @@ const taskKeys = [
   "specialistTaskCounts",
   "specialistFixedTaskCounts",
   "specialistProgressStats",
+  "specialistWorkSummary",
 ] as const;
 
 const managementKeys = [

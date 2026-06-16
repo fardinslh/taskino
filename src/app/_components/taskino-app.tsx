@@ -29,9 +29,7 @@ export function TaskinoApp({
     currentUser,
     darkMode,
     deleteTask,
-    doneTasks,
     error,
-    inProgressTasks,
     isManager,
     isSpecialist,
     isSupervisor,
@@ -46,7 +44,6 @@ export function TaskinoApp({
     notifications,
     overdueTasks,
     popupNotif,
-    progress,
     rejectLeaveId,
     rejectReason,
     selectedTask,
@@ -67,7 +64,6 @@ export function TaskinoApp({
     supervisorTasks,
     taskQuery,
     tasks,
-    todoCount,
     token,
     unreadCount,
     updateTask,
@@ -109,21 +105,17 @@ export function TaskinoApp({
           <TaskinoSidebar
             activeView={activeView}
             currentUser={currentUser}
-            doneTasks={doneTasks}
-            inProgressTasks={inProgressTasks}
             isManager={isManager}
             isSupervisor={isSupervisor}
             leaveRequests={leaveRequests}
             onSetActiveView={setActiveView}
             onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
             overdueTasks={overdueTasks}
-            progress={progress}
             sidebarCollapsed={sidebarCollapsed}
             statsUsers={statsUsers}
             supervisorFixedTasks={supervisorFixedTasks}
             supervisorTasks={supervisorTasks}
             tasks={tasks}
-            todoCount={todoCount}
           />
 
           <main

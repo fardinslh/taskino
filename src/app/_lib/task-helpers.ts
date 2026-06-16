@@ -131,6 +131,12 @@ export function isFixedTaskInPeriod(item: IncompleteFixedTask, period: TaskPerio
   return date >= start && date < end;
 }
 
+export function isFixedTaskOverdue(item: Pick<FixedTask, "endDate">) {
+  if (!item.endDate) return false;
+  const endDate = new Date(item.endDate);
+  return !Number.isNaN(endDate.getTime()) && endDate < new Date();
+}
+
 export function notificationText(notification: Notification) {
   const title = notification.title?.trim() ?? "";
   const message = notification.message?.trim() ?? "";

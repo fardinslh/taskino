@@ -297,6 +297,7 @@ export function useFixedTaskActions({
 
   function onDragEnd({ destination, source, draggableId }: DropResult) {
     if (!destination) return;
+    if (source.droppableId === "done") return;
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index

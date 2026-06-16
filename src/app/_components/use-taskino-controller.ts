@@ -11,6 +11,7 @@ import {
   type ManagerStats,
   type MonthlyPerformance,
   type MyProgressStats,
+  type MyWorkSummary,
   type Notification,
   type Project,
   type StatusCounts,
@@ -88,6 +89,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     useState<StatusCounts | null>(null);
   const [specialistProgressStats, setSpecialistProgressStats] =
     useState<MyProgressStats | null>(null);
+  const [specialistWorkSummary, setSpecialistWorkSummary] =
+    useState<MyWorkSummary | null>(null);
 
   // ─── UI / navigation state ─────────────────────────────────────────────────
   const [activeViewState, setActiveViewState] = useState<View>(initialView);
@@ -186,6 +189,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setSpecialistTaskCounts,
     setSpecialistFixedTaskCounts,
     setSpecialistProgressStats,
+    setSpecialistWorkSummary,
     setManagerStats,
     setUnreadCount,
     setNotifications,
@@ -505,6 +509,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     specialistTaskCounts,
     specialistFixedTaskCounts,
     specialistProgressStats,
+    specialistWorkSummary,
     setUsers,
     setTasks,
     setProjects,
@@ -524,6 +529,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setSpecialistTaskCounts,
     setSpecialistFixedTaskCounts,
     setSpecialistProgressStats,
+    setSpecialistWorkSummary,
 
     // Derived
     activeTasks,

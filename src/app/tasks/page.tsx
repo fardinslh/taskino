@@ -22,7 +22,12 @@ import {
   useTaskContext,
 } from "../_components/taskino-context";
 import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
-import { formatDate, recurrenceLabel, userName } from "../_lib/task-helpers";
+import {
+  formatDate,
+  isFixedTaskOverdue,
+  recurrenceLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 export default function TasksPage() {
   return <TasksPageContent />;
@@ -262,8 +267,7 @@ function TasksPageContent() {
                         const od = fixedTasks.filter(
                           (f: any) =>
                             f.isActive !== false &&
-                            f.nextRunAt &&
-                            new Date(f.nextRunAt) < new Date(),
+                            isFixedTaskOverdue(f),
                         ).length;
                         return od ? ` · ${od} مهلت‌گذشته` : "";
                       })()}
@@ -403,14 +407,16 @@ function TasksPageContent() {
                                     key={getId(ft)}
                                     draggableId={getId(ft)}
                                     index={idx}
-                                    isDragDisabled={!isSpecialist}
+                                    isDragDisabled={
+                                      !isSpecialist || (ft.status ?? "todo") === "done"
+                                    }
                                   >
                                     {(dragProvided: any, dragSnapshot: any) => (
                                       <article
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
-                                        className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist ? "cursor-grab active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                        className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" ? "cursor-grab active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                         onClick={
                                           isManager
                                             ? () => {
@@ -425,9 +431,7 @@ function TasksPageContent() {
                                             ثابت ·{" "}
                                             {recurrenceLabel(ft.recurrence)}
                                           </span>
-                                          {ft.nextRunAt &&
-                                          new Date(ft.nextRunAt) <
-                                            new Date() ? (
+                                          {isFixedTaskOverdue(ft) ? (
                                             <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
                                               مهلت گذشته
                                             </span>

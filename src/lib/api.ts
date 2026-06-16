@@ -266,6 +266,19 @@ export type MyProgressStats = {
   doneTasks?: number;
 };
 
+export type MyWorkSummary = {
+  totalProjects?: number;
+  totalProject?: number;
+  projectsCount?: number;
+  totalTasks?: number;
+  completedProjects?: number;
+  completedProject?: number;
+  completedTasks?: number;
+  doneProjects?: number;
+  doneTasks?: number;
+  score?: number;
+};
+
 export type UserTaskCount = {
   userId?: string;
   _id?: string;
@@ -597,6 +610,8 @@ export const userApi = {
     unwrapAxios(apiClient.post("/users/increase-score", body), "افزایش امتیاز ناموفق بود"),
   meProgress: (token: string) =>
     unwrapAxios(apiClient.get<MyProgressStats>("/users/me/progress")),
+  meWorkSummary: (token: string) =>
+    unwrapAxios(apiClient.get<MyWorkSummary>("/users/me/work-summary")),
 };
 
 // ─── Tasks ───────────────────────────────────────────────────────────────────
