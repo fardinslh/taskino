@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type UseFormReturn } from "react-hook-form";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
@@ -24,7 +24,7 @@ import {
   useNavigationContext,
   useSessionContext,
 } from "../_components/taskino-context";
-import { formatDate, userName } from "../_lib/task-helpers";
+import { formatDate, recurrenceLabel, userName } from "../_lib/task-helpers";
 
 type FixedTaskFormValues = {
   title: string;
@@ -38,6 +38,481 @@ type ActivationFormValues = {
   endDate: string;
 };
 
+// ─── Template Row ─────────────────────────────────────────────────────────────
+function TemplateRow({
+  task,
+  onActivate,
+  onDeactivate,
+  onEdit,
+  onDelete,
+}: {
+  task: any;
+  onActivate: () => void;
+  onDeactivate: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const active = task.isActive !== false;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="font-semibold">{task.title}</p>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              active
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            }`}
+          >
+            {active ? "فعال" : "غیرفعال"}
+          </span>
+          <span className="rounded-full bg-[--surface-2] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">
+            {recurrenceLabel(task.recurrence ?? "daily")}
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs text-[--text-3]">
+          {task.assignedTo ? `مسئول: ${userName(task.assignedTo)}` : ""}
+          {task.description ? ` · ${task.description}` : ""}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            active
+              ? "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+              : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400"
+          }`}
+          onClick={active ? onDeactivate : onActivate}
+          type="button"
+        >
+          {active ? "غیرفعال کن" : "فعال کن"}
+        </button>
+        <button
+          className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface-2]"
+          onClick={onEdit}
+          type="button"
+        >
+          ویرایش
+        </button>
+        <button
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40"
+          onClick={onDelete}
+          type="button"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Incomplete Row ───────────────────────────────────────────────────────────
+function IncompleteRow({ item }: { item: any }) {
+  const overdue = item.deadlineStatus === "overdue";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <div>
+        <p className="font-semibold">{item.title}</p>
+        <p className="mt-1 text-xs text-[--text-3]">
+          {recurrenceLabel(item.recurrence ?? "daily")}
+          {item.assignedTo ? ` · مسئول: ${userName(item.assignedTo)}` : ""}
+          {item.deadline ? ` · مهلت: ${formatDate(item.deadline)}` : ""}
+        </p>
+      </div>
+      <span
+        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+          overdue
+            ? "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
+            : "bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]"
+        }`}
+      >
+        {overdue ? "مهلت گذشته" : "در مهلت"}
+      </span>
+    </div>
+  );
+}
+
+// ─── Fixed Task Form Panel ────────────────────────────────────────────────────
+function FixedTaskFormPanel({
+  form,
+  editingFixedTask,
+  users,
+  currentUser,
+  onClose,
+  onSubmit,
+}: {
+  form: UseFormReturn<FixedTaskFormValues>;
+  editingFixedTask: any;
+  users: any[];
+  currentUser: any;
+  onClose: () => void;
+  onSubmit: (values: FixedTaskFormValues) => Promise<void>;
+}) {
+  return (
+    <div className="border-b border-[--border] bg-[--surface-2]/70 p-4">
+      <p className="mb-3 text-sm font-bold">
+        {editingFixedTask ? "ویرایش الگو" : "الگوی ثابت جدید"}
+      </p>
+      <form
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_180px_220px_auto]"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
+        <Field
+          label="عنوان *"
+          name="ftTitle"
+          required
+          placeholder="مثلاً: گزارش روزانه"
+          registration={form.register("title", { required: true })}
+        />
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+            توالی *
+          </span>
+          <select
+            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+            {...form.register("recurrence", { required: true })}
+          >
+            <option value="daily">روزانه</option>
+            <option value="weekly">هفتگی</option>
+            <option value="monthly">ماهانه</option>
+          </select>
+        </label>
+        <Select
+          label="مسئول * (هم‌حوزه)"
+          options={users
+            .filter(
+              (user: any) =>
+                (user.roles === "specialist" || user.roles === "supervisor") &&
+                (!currentUser?.workField || user.workField === currentUser.workField),
+            )
+            .map((user: any) => [getId(user), userName(user)])}
+          placeholder="انتخاب مسئول هم‌حوزه"
+          registration={form.register("assignedTo", { required: true })}
+        />
+        <div className="flex items-end gap-2">
+          <button
+            className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white transition hover:bg-[#196b7b] disabled:opacity-50"
+            disabled={form.formState.isSubmitting}
+            type="submit"
+          >
+            {editingFixedTask ? "ذخیره" : "ایجاد"}
+          </button>
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[--border] bg-[--surface] text-[--text-2] transition hover:bg-[--surface-2]"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      </form>
+      <div className="mt-3">
+        <Field
+          label="توضیحات"
+          name="ftDescription"
+          placeholder="اختیاری"
+          registration={form.register("description")}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Filter Bar ───────────────────────────────────────────────────────────────
+function FilterBar({
+  filterRecurrence,
+  filterSpecialist,
+  filterTitle,
+  onRecurrenceChange,
+  onSpecialistChange,
+  onTitleChange,
+  onClear,
+  filteredCount,
+  totalCount,
+}: {
+  filterRecurrence: string;
+  filterSpecialist: string;
+  filterTitle: string;
+  onRecurrenceChange: (v: string) => void;
+  onSpecialistChange: (v: string) => void;
+  onTitleChange: (v: string) => void;
+  onClear: () => void;
+  filteredCount: number;
+  totalCount: number;
+}) {
+  return (
+    <div className="border-b border-[--border] bg-[--surface-2]/40 px-5 py-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+            فیلتر بر اساس تکرار
+          </span>
+          <select
+            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+            value={filterRecurrence}
+            onChange={(e) => onRecurrenceChange(e.target.value)}
+          >
+            <option value="">همه</option>
+            <option value="daily">روزانه</option>
+            <option value="weekly">هفتگی</option>
+            <option value="monthly">ماهانه</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+            فیلتر بر اساس نام متخصص
+          </span>
+          <input
+            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+            placeholder="نام یا نام خانوادگی متخصص"
+            value={filterSpecialist}
+            onChange={(e) => onSpecialistChange(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+            فیلتر بر اساس عنوان گزارش
+          </span>
+          <input
+            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+            placeholder="عنوان گزارش"
+            value={filterTitle}
+            onChange={(e) => onTitleChange(e.target.value)}
+          />
+        </label>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-xs text-[--text-3]">
+          {filteredCount} مورد از {totalCount} مورد
+        </p>
+        <button
+          className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface] focus:outline-none"
+          onClick={onClear}
+          type="button"
+        >
+          پاک کردن فیلترها
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Activation Modal ─────────────────────────────────────────────────────────
+function ActivationModal({
+  task,
+  onClose,
+  onActivate,
+}: {
+  task: any;
+  onClose: () => void;
+  onActivate: (values: ActivationFormValues) => Promise<boolean>;
+}) {
+  const form = useForm<ActivationFormValues>({
+    defaultValues: { startDate: "", endDate: "" },
+  });
+  const recurrence: string = task.recurrence ?? "daily";
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl border border-[--border] bg-[--surface] p-5 shadow-2xl"
+        dir="rtl"
+      >
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold">فعال‌سازی الگوی ثابت</h3>
+            <p className="mt-1 text-xs text-[--text-3]">{task.title}</p>
+          </div>
+          <button
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[--border] text-[--text-2]"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form
+          className="space-y-4"
+          onSubmit={form.handleSubmit(async (values) => {
+            const startDate = new Date(values.startDate);
+            const endDate = new Date(values.endDate);
+
+            if (recurrence === "weekly") {
+              startDate.setHours(0, 0, 0, 0);
+              endDate.setHours(23, 59, 59, 999);
+              if (endDate < todayStart) {
+                form.setError("startDate", {
+                  message: "امکان انتخاب هفته‌ای که تمام شده وجود ندارد.",
+                });
+                return;
+              }
+            }
+
+            if (recurrence === "monthly") {
+              startDate.setDate(1);
+              startDate.setHours(0, 0, 0, 0);
+              endDate.setMonth(endDate.getMonth() + 1, 0);
+              endDate.setHours(23, 59, 59, 999);
+            }
+
+            if (recurrence === "daily" && startDate < new Date()) {
+              form.setError("startDate", {
+                message: "زمان شروع نمی‌تواند در گذشته باشد.",
+              });
+              return;
+            }
+
+            if (endDate <= startDate) {
+              form.setError("endDate", {
+                message: "زمان پایان باید بعد از زمان شروع باشد.",
+              });
+              return;
+            }
+
+            const ok = await onActivate(values);
+            if (ok) onClose();
+          })}
+        >
+          {recurrence === "daily" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(["startDate", "endDate"] as const).map((name) => (
+                <label className="block" key={name}>
+                  <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                    {name === "startDate" ? "تاریخ و ساعت شروع *" : "تاریخ و ساعت پایان *"}
+                  </span>
+                  <Controller
+                    control={form.control}
+                    name={name}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value ? new Date(field.value) : ""}
+                        onChange={(value) => {
+                          if (!value || Array.isArray(value)) {
+                            field.onChange("");
+                            return;
+                          }
+                          field.onChange(value.toDate().toISOString());
+                        }}
+                        calendar={jalali}
+                        locale={persianFa}
+                        minDate={name === "startDate" ? todayStart : undefined}
+                        format="YYYY/MM/DD HH:mm"
+                        calendarPosition="bottom-right"
+                        inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface-2] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                        containerClassName="w-full"
+                        placeholder={name === "startDate" ? "انتخاب زمان شروع" : "انتخاب زمان پایان"}
+                        plugins={[
+                          <TimePicker key="time-picker" position="bottom" hideSeconds />,
+                        ]}
+                      />
+                    )}
+                  />
+                  {form.formState.errors[name] && (
+                    <span className="mt-1 block text-xs text-red-500">
+                      {form.formState.errors[name]?.message || "این فیلد الزامی است."}
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+          ) : (
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                {recurrence === "weekly" ? "بازه هفتگی *" : "بازه ماهانه *"}
+              </span>
+              <Controller
+                control={form.control}
+                name="startDate"
+                rules={{ required: true }}
+                render={({ field }) => {
+                  const startValue = field.value ? new Date(field.value) : "";
+                  const endDateValue = form.getValues("endDate");
+                  const endValue = endDateValue ? new Date(endDateValue) : "";
+                  return (
+                    <DatePicker
+                      value={
+                        startValue && endValue
+                          ? [startValue, endValue]
+                          : startValue
+                            ? [startValue]
+                            : undefined
+                      }
+                      onChange={(value) => {
+                        if (!value) {
+                          field.onChange("");
+                          form.setValue("endDate", "", { shouldValidate: true });
+                          return;
+                        }
+                        if (Array.isArray(value) && value.length >= 2) {
+                          const [start, end] = value;
+                          field.onChange(start.toDate().toISOString());
+                          form.setValue("endDate", end.toDate().toISOString(), {
+                            shouldValidate: true,
+                          });
+                          return;
+                        }
+                        if (Array.isArray(value)) {
+                          const [start] = value;
+                          if (!start) return;
+                          field.onChange(start.toDate().toISOString());
+                          form.setValue("endDate", "", { shouldValidate: true });
+                          return;
+                        }
+                        field.onChange(value.toDate().toISOString());
+                        form.setValue("endDate", "", { shouldValidate: true });
+                      }}
+                      calendar={jalali}
+                      locale={persianFa}
+                      minDate={recurrence === "weekly" ? undefined : new Date()}
+                      range
+                      weekPicker={recurrence === "weekly"}
+                      onlyMonthPicker={recurrence === "monthly"}
+                      format={recurrence === "weekly" ? "YYYY/MM/DD" : "YYYY/MM"}
+                      calendarPosition="bottom-right"
+                      inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] dark:bg-[--surface] dark:text-[--text] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                      containerClassName="w-full"
+                      placeholder={
+                        recurrence === "weekly" ? "انتخاب بازه هفتگی" : "انتخاب بازه ماهانه"
+                      }
+                    />
+                  );
+                }}
+              />
+              {form.formState.errors.startDate && (
+                <span className="mt-1 block text-xs text-red-500">
+                  {form.formState.errors.startDate.message || "این فیلد الزامی است."}
+                </span>
+              )}
+            </label>
+          )}
+
+          <button
+            className="h-11 w-full rounded-lg bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] disabled:opacity-50"
+            disabled={form.formState.isSubmitting}
+            type="submit"
+          >
+            فعال کن
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function FixedReportsPage() {
   return <FixedReportsPageContent />;
 }
@@ -63,28 +538,18 @@ function FixedReportsPageContent() {
   } = useFixedTaskContext();
 
   const form = useForm<FixedTaskFormValues>({
-    defaultValues: {
-      title: "",
-      recurrence: "daily",
-      assignedTo: "",
-      description: "",
-    },
-  });
-  const activationForm = useForm<ActivationFormValues>({
-    defaultValues: { startDate: "", endDate: "" },
+    defaultValues: { title: "", recurrence: "daily", assignedTo: "", description: "" },
   });
   const [activatingTask, setActivatingTask] = useState<any>(null);
   const [filterRecurrence, setFilterRecurrence] = useState("");
   const [filterSpecialist, setFilterSpecialist] = useState("");
   const [filterTitle, setFilterTitle] = useState("");
-  const activationRecurrence = activatingTask?.recurrence ?? "daily";
-  const visibleFixedTasks = fixedTasks.filter(
-    (item: any) => item.isActive !== true,
-  );
+
+  const visibleFixedTasks = fixedTasks.filter((item: any) => item.isActive !== true);
+
   const filteredFixedTasks = useMemo(() => {
     const specialistQuery = filterSpecialist.trim().toLowerCase();
     const titleQuery = filterTitle.trim().toLowerCase();
-
     return visibleFixedTasks.filter((task: any) => {
       const recurrenceMatch =
         !filterRecurrence || (task.recurrence ?? "daily") === filterRecurrence;
@@ -93,7 +558,6 @@ function FixedReportsPageContent() {
         userName(task.assignedTo).toLowerCase().includes(specialistQuery);
       const titleMatch =
         !titleQuery || String(task.title ?? "").toLowerCase().includes(titleQuery);
-
       return recurrenceMatch && specialistMatch && titleMatch;
     });
   }, [filterRecurrence, filterSpecialist, filterTitle, visibleFixedTasks]);
@@ -108,26 +572,29 @@ function FixedReportsPageContent() {
     });
   }, [editingFixedTask, form, showFixedTaskForm]);
 
+  const clearFilters = () => {
+    setFilterRecurrence("");
+    setFilterSpecialist("");
+    setFilterTitle("");
+  };
+
   if (!isManager || activeView !== "fixed-reports") return null;
+
+  const stats = [
+    { label: "الگوهای ثابت", value: visibleFixedTasks.length },
+    { label: "انجام‌نشده", value: incompleteFixedTasks.length },
+    { label: "فعال", value: fixedTasks.filter((item: any) => item.isActive !== false).length },
+    {
+      label: "مهلت‌گذشته",
+      value: incompleteFixedTasks.filter((item: any) => item.deadlineStatus === "overdue").length,
+    },
+  ];
 
   return (
     <section className="space-y-4">
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {[
-          { label: "الگوهای ثابت", value: visibleFixedTasks.length },
-          { label: "انجام‌نشده", value: incompleteFixedTasks.length },
-          {
-            label: "فعال",
-            value: fixedTasks.filter((item: any) => item.isActive !== false)
-              .length,
-          },
-          {
-            label: "مهلت‌گذشته",
-            value: incompleteFixedTasks.filter(
-              (item: any) => item.deadlineStatus === "overdue",
-            ).length,
-          },
-        ].map((stat: any) => (
+        {stats.map((stat) => (
           <div
             key={stat.label}
             className="rounded-xl border border-[--border] bg-[--surface] p-4"
@@ -138,31 +605,30 @@ function FixedReportsPageContent() {
         ))}
       </div>
 
+      {/* Tabs */}
       <div className="flex w-fit rounded-xl border border-[--border] bg-[--surface-2] p-1">
-        <button
-          className={`rounded-lg px-5 py-2 text-sm font-semibold transition-all ${
-            fixedReportsTab === "templates"
-              ? "bg-[--surface] text-[#1f7a8c] shadow-sm"
-              : "text-[--text-2] hover:text-[--text]"
-          }`}
-          onClick={() => setFixedReportsTab("templates")}
-          type="button"
-        >
-          الگوهای ثابت ({visibleFixedTasks.length})
-        </button>
-        <button
-          className={`rounded-lg px-5 py-2 text-sm font-semibold transition-all ${
-            fixedReportsTab === "incomplete"
-              ? "bg-[--surface] text-[#1f7a8c] shadow-sm"
-              : "text-[--text-2] hover:text-[--text]"
-          }`}
-          onClick={() => setFixedReportsTab("incomplete")}
-          type="button"
-        >
-          انجام‌نشده ({incompleteFixedTasks.length})
-        </button>
+        {(
+          [
+            { key: "templates", label: `الگوهای ثابت (${visibleFixedTasks.length})` },
+            { key: "incomplete", label: `انجام‌نشده (${incompleteFixedTasks.length})` },
+          ] as const
+        ).map(({ key, label }) => (
+          <button
+            key={key}
+            className={`rounded-lg px-5 py-2 text-sm font-semibold transition-all ${
+              fixedReportsTab === key
+                ? "bg-[--surface] text-[#1f7a8c] shadow-sm"
+                : "text-[--text-2] hover:text-[--text]"
+            }`}
+            onClick={() => setFixedReportsTab(key)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
+      {/* Templates Tab */}
       {fixedReportsTab === "templates" && (
         <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
           <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
@@ -205,148 +671,33 @@ function FixedReportsPageContent() {
           </div>
 
           {showFixedTaskForm && (
-            <div className="border-b border-[--border] bg-[--surface-2]/70 p-4">
-              <p className="mb-3 text-sm font-bold">
-                {editingFixedTask ? "ویرایش الگو" : "الگوی ثابت جدید"}
-              </p>
-              <form
-                className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_180px_220px_auto]"
-                onSubmit={form.handleSubmit(async (values) => {
-                  await saveFixedTaskFromValues(values);
-                  form.reset();
-                })}
-              >
-                <Field
-                  label="عنوان *"
-                  name="ftTitle"
-                  required
-                  placeholder="مثلاً: گزارش روزانه"
-                  registration={form.register("title", { required: true })}
-                />
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                    توالی *
-                  </span>
-                  <select
-                    className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                    {...form.register("recurrence", { required: true })}
-                  >
-                    <option value="daily">روزانه</option>
-                    <option value="weekly">هفتگی</option>
-                    <option value="monthly">ماهانه</option>
-                  </select>
-                </label>
-                <Select
-                  label="مسئول * (هم‌حوزه)"
-                  options={users
-                    .filter(
-                      (user: any) =>
-                        (user.roles === "specialist" ||
-                          user.roles === "supervisor") &&
-                        (!currentUser?.workField ||
-                          user.workField === currentUser.workField),
-                    )
-                    .map((user: any) => [getId(user), userName(user)])}
-                  placeholder="انتخاب مسئول هم‌حوزه"
-                  registration={form.register("assignedTo", { required: true })}
-                />
-                <div className="flex items-end gap-2">
-                  <button
-                    className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white transition hover:bg-[#196b7b] disabled:opacity-50"
-                    disabled={form.formState.isSubmitting}
-                    type="submit"
-                  >
-                    {editingFixedTask ? "ذخیره" : "ایجاد"}
-                  </button>
-                  <button
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-[--border] bg-[--surface] text-[--text-2] transition hover:bg-[--surface-2]"
-                    onClick={() => {
-                      closeFixedTaskForm();
-                      form.reset();
-                    }}
-                    type="button"
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-              </form>
-              <div className="mt-3">
-                <Field
-                  label="توضیحات"
-                  name="ftDescription"
-                  placeholder="اختیاری"
-                  registration={form.register("description")}
-                />
-              </div>
-              <label className="hidden">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-[#1f7a8c]"
-                  checked={false}
-                  readOnly
-                />
-                همین حالا فعال باشد
-              </label>
-            </div>
+            <FixedTaskFormPanel
+              form={form}
+              editingFixedTask={editingFixedTask}
+              users={users}
+              currentUser={currentUser}
+              onClose={() => {
+                closeFixedTaskForm();
+                form.reset();
+              }}
+              onSubmit={async (values) => {
+                await saveFixedTaskFromValues(values);
+                form.reset();
+              }}
+            />
           )}
 
-          <div className="border-b border-[--border] bg-[--surface-2]/40 px-5 py-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                  فیلتر بر اساس تکرار
-                </span>
-                <select
-                  className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  value={filterRecurrence}
-                  onChange={(event) => setFilterRecurrence(event.target.value)}
-                >
-                  <option value="">همه</option>
-                  <option value="daily">روزانه</option>
-                  <option value="weekly">هفتگی</option>
-                  <option value="monthly">ماهانه</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                  فیلتر بر اساس نام متخصص
-                </span>
-                <input
-                  className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  placeholder="نام یا نام خانوادگی متخصص"
-                  value={filterSpecialist}
-                  onChange={(event) => setFilterSpecialist(event.target.value)}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                  فیلتر بر اساس عنوان گزارش
-                </span>
-                <input
-                  className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  placeholder="عنوان گزارش"
-                  value={filterTitle}
-                  onChange={(event) => setFilterTitle(event.target.value)}
-                />
-              </label>
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-[--text-3]">
-                {filteredFixedTasks.length} مورد از {visibleFixedTasks.length} مورد
-              </p>
-              <button
-                className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface] focus:outline-none"
-                onClick={() => {
-                  setFilterRecurrence("");
-                  setFilterSpecialist("");
-                  setFilterTitle("");
-                }}
-                type="button"
-              >
-                پاک کردن فیلترها
-              </button>
-            </div>
-          </div>
+          <FilterBar
+            filterRecurrence={filterRecurrence}
+            filterSpecialist={filterSpecialist}
+            filterTitle={filterTitle}
+            onRecurrenceChange={setFilterRecurrence}
+            onSpecialistChange={setFilterSpecialist}
+            onTitleChange={setFilterTitle}
+            onClear={clearFilters}
+            filteredCount={filteredFixedTasks.length}
+            totalCount={visibleFixedTasks.length}
+          />
 
           <div className="divide-y divide-[--border]">
             {filteredFixedTasks.length === 0 ? (
@@ -357,11 +708,7 @@ function FixedReportsPageContent() {
                 </p>
                 <button
                   className="mt-4 flex h-9 items-center gap-2 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white"
-                  onClick={() => {
-                    setFilterRecurrence("");
-                    setFilterSpecialist("");
-                    setFilterTitle("");
-                  }}
+                  onClick={clearFilters}
                   type="button"
                 >
                   <Plus size={15} />
@@ -369,316 +716,22 @@ function FixedReportsPageContent() {
                 </button>
               </div>
             ) : (
-              filteredFixedTasks.map((task: any) => {
-                return (
-                  <div
-                    key={getId(task)}
-                    className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold">{task.title}</p>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            task.isActive !== false
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                          }`}
-                        >
-                          {task.isActive !== false ? "فعال" : "غیرفعال"}
-                        </span>
-                        <span className="rounded-full bg-[--surface-2] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">
-                          {task.recurrence === "daily"
-                            ? "روزانه"
-                            : task.recurrence === "weekly"
-                              ? "هفتگی"
-                              : "ماهانه"}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-[--text-3]">
-                        {task.assignedTo
-                          ? `مسئول: ${userName(task.assignedTo)}`
-                          : ""}
-                        {task.description ? ` · ${task.description}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                          task.isActive !== false
-                            ? "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-                            : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        }`}
-                        onClick={() => {
-                          if (task.isActive !== false) {
-                            void deactivateFixedTask(task);
-                            return;
-                          }
-                          activationForm.reset({ startDate: "", endDate: "" });
-                          setActivatingTask(task);
-                        }}
-                        type="button"
-                      >
-                        {task.isActive !== false ? "غیرفعال کن" : "فعال کن"}
-                      </button>
-                      <button
-                        className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface-2]"
-                        onClick={() => openFixedTaskForm(task)}
-                        type="button"
-                      >
-                        ویرایش
-                      </button>
-                      <button
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40"
-                        onClick={() => void deleteFixedTask(getId(task))}
-                        type="button"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
+              filteredFixedTasks.map((task: any) => (
+                <TemplateRow
+                  key={getId(task)}
+                  task={task}
+                  onActivate={() => setActivatingTask(task)}
+                  onDeactivate={() => void deactivateFixedTask(task)}
+                  onEdit={() => openFixedTaskForm(task)}
+                  onDelete={() => void deleteFixedTask(getId(task))}
+                />
+              ))
             )}
           </div>
         </div>
       )}
 
-      {activatingTask && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setActivatingTask(null);
-          }}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-[--border] bg-[--surface] p-5 shadow-2xl"
-            dir="rtl"
-          >
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-bold">
-                  {
-                    "\u0641\u0639\u0627\u0644\u200c\u0633\u0627\u0632\u06cc \u0627\u0644\u06af\u0648\u06cc \u062b\u0627\u0628\u062a"
-                  }
-                </h3>
-                <p className="mt-1 text-xs text-[--text-3]">
-                  {activatingTask.title}
-                </p>
-              </div>
-              <button
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[--border] text-[--text-2]"
-                onClick={() => setActivatingTask(null)}
-                type="button"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <form
-              className="space-y-4"
-              onSubmit={activationForm.handleSubmit(async (values) => {
-                const startDate = new Date(values.startDate);
-                const endDate = new Date(values.endDate);
-
-                if (activationRecurrence === "weekly") {
-                  startDate.setHours(0, 0, 0, 0);
-                  endDate.setHours(23, 59, 59, 999);
-
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  if (endDate < today) {
-                    activationForm.setError("startDate", {
-                      message: "امکان انتخاب هفته‌ای که تمام شده وجود ندارد.",
-                    });
-                    return;
-                  }
-                }
-
-                if (activationRecurrence === "monthly") {
-                  startDate.setDate(1);
-                  startDate.setHours(0, 0, 0, 0);
-                  endDate.setMonth(endDate.getMonth() + 1, 0);
-                  endDate.setHours(23, 59, 59, 999);
-                }
-
-                if (endDate <= startDate) {
-                  activationForm.setError("endDate", {
-                    message:
-                      "\u0632\u0645\u0627\u0646 \u067e\u0627\u06cc\u0627\u0646 \u0628\u0627\u06cc\u062f \u0628\u0639\u062f \u0627\u0632 \u0632\u0645\u0627\u0646 \u0634\u0631\u0648\u0639 \u0628\u0627\u0634\u062f.",
-                  });
-                  return;
-                }
-
-                const activated = await activateFixedTask(
-                  activatingTask,
-                  values,
-                );
-                if (activated) setActivatingTask(null);
-              })}
-            >
-              {activationRecurrence === "daily" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {(["startDate", "endDate"] as const).map((name) => (
-                    <label className="block" key={name}>
-                      <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                        {name === "startDate"
-                          ? "\u062a\u0627\u0631\u06cc\u062e \u0648 \u0633\u0627\u0639\u062a \u0634\u0631\u0648\u0639 *"
-                          : "\u062a\u0627\u0631\u06cc\u062e \u0648 \u0633\u0627\u0639\u062a \u067e\u0627\u06cc\u0627\u0646 *"}
-                      </span>
-                      <Controller
-                        control={activationForm.control}
-                        name={name}
-                        rules={{ required: true }}
-                        render={({ field }) => (
-                          <DatePicker
-                            value={field.value ? new Date(field.value) : ""}
-                            onChange={(value) => {
-                              if (!value || Array.isArray(value)) {
-                                field.onChange("");
-                                return;
-                              }
-
-                              field.onChange(value.toDate().toISOString());
-                            }}
-                            calendar={jalali}
-                            locale={persianFa}
-                            minDate={
-                              name === "startDate" ? new Date() : undefined
-                            }
-                            format="YYYY/MM/DD HH:mm"
-                            calendarPosition="bottom-right"
-                            inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface-2] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                            containerClassName="w-full"
-                            placeholder={
-                              name === "startDate"
-                                ? "\u0627\u0646\u062a\u062e\u0627\u0628 \u0632\u0645\u0627\u0646 \u0634\u0631\u0648\u0639"
-                                : "\u0627\u0646\u062a\u062e\u0627\u0628 \u0632\u0645\u0627\u0646 \u067e\u0627\u06cc\u0627\u0646"
-                            }
-                            plugins={[
-                              <TimePicker
-                                key="time-picker"
-                                position="bottom"
-                                hideSeconds
-                              />,
-                            ]}
-                          />
-                        )}
-                      />
-                      {activationForm.formState.errors[name] && (
-                        <span className="mt-1 block text-xs text-red-500">
-                          {activationForm.formState.errors[name]?.message ||
-                            "\u0627\u06cc\u0646 \u0641\u06cc\u0644\u062f \u0627\u0644\u0632\u0627\u0645\u06cc \u0627\u0633\u062a."}
-                        </span>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                    {activationRecurrence === "weekly"
-                      ? "\u0628\u0627\u0632\u0647 \u0647\u0641\u062a\u06af\u06cc *"
-                      : "\u0628\u0627\u0632\u0647 \u0645\u0627\u0647\u0627\u0646\u0647 *"}
-                  </span>
-                  <Controller
-                    control={activationForm.control}
-                    name="startDate"
-                    rules={{ required: true }}
-                    render={({ field }) => {
-                      const startValue = field.value
-                        ? new Date(field.value)
-                        : "";
-                      const endDateValue = activationForm.getValues("endDate");
-                      const endValue = endDateValue
-                        ? new Date(endDateValue)
-                        : "";
-
-                      return (
-                        <DatePicker
-                          value={
-                            activationRecurrence !== "daily" &&
-                            startValue &&
-                            endValue
-                              ? [startValue, endValue]
-                              : undefined
-                          }
-                          onChange={(value) => {
-                            if (!value) {
-                              field.onChange("");
-                              activationForm.setValue("endDate", "", {
-                                shouldValidate: true,
-                              });
-                              return;
-                            }
-
-                            if (Array.isArray(value) && value.length >= 2) {
-                              const [start, end] = value;
-                              field.onChange(start.toDate().toISOString());
-                              activationForm.setValue(
-                                "endDate",
-                                end.toDate().toISOString(),
-                                { shouldValidate: true },
-                              );
-                              return;
-                            }
-
-                            if (activationRecurrence === "weekly") {
-                              if (!Array.isArray(value) || value.length < 2) {
-                                field.onChange("");
-                                activationForm.setValue("endDate", "", {
-                                  shouldValidate: true,
-                                });
-                                return;
-                              }
-                            }
-                          }}
-                          calendar={jalali}
-                          locale={persianFa}
-                          minDate={
-                            activationRecurrence === "weekly"
-                              ? undefined
-                              : new Date()
-                          }
-                          range={activationRecurrence !== "daily"}
-                          weekPicker={activationRecurrence === "weekly"}
-                          onlyMonthPicker={activationRecurrence === "monthly"}
-                          format={
-                            activationRecurrence === "weekly"
-                              ? "YYYY/MM/DD"
-                              : "YYYY/MM"
-                          }
-                          calendarPosition="bottom-right"
-                          inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface-2] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                          containerClassName="w-full"
-                          placeholder={
-                            activationRecurrence === "weekly"
-                              ? "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u0627\u0632\u0647 \u0647\u0641\u062a\u06af\u06cc"
-                              : "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u0627\u0632\u0647 \u0645\u0627\u0647\u0627\u0646\u0647"
-                          }
-                        />
-                      );
-                    }}
-                  />
-                  {activationForm.formState.errors.startDate && (
-                    <span className="mt-1 block text-xs text-red-500">
-                      {activationForm.formState.errors.startDate.message ||
-                        "\u0627\u06cc\u0646 \u0641\u06cc\u0644\u062f \u0627\u0644\u0632\u0627\u0645\u06cc \u0627\u0633\u062a."}
-                    </span>
-                  )}
-                </label>
-              )}
-              <button
-                className="h-11 w-full rounded-lg bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] disabled:opacity-50"
-                disabled={activationForm.formState.isSubmitting}
-                type="submit"
-              >
-                {"\u0641\u0639\u0627\u0644 \u06a9\u0646"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
+      {/* Incomplete Tab */}
       {fixedReportsTab === "incomplete" && (
         <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
           <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
@@ -709,42 +762,20 @@ function FixedReportsPageContent() {
               </p>
             ) : (
               incompleteFixedTasks.map((item: any) => (
-                <div
-                  key={getId(item)}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-                >
-                  <div>
-                    <p className="font-semibold">{item.title}</p>
-                    <p className="mt-1 text-xs text-[--text-3]">
-                      {item.recurrence === "daily"
-                        ? "روزانه"
-                        : item.recurrence === "weekly"
-                          ? "هفتگی"
-                          : "ماهانه"}
-                      {item.assignedTo
-                        ? ` · مسئول: ${userName(item.assignedTo)}`
-                        : ""}
-                      {item.deadline
-                        ? ` · مهلت: ${formatDate(item.deadline)}`
-                        : ""}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                      item.deadlineStatus === "overdue"
-                        ? "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
-                        : "bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]"
-                    }`}
-                  >
-                    {item.deadlineStatus === "overdue"
-                      ? "مهلت گذشته"
-                      : "در مهلت"}
-                  </span>
-                </div>
+                <IncompleteRow key={getId(item)} item={item} />
               ))
             )}
           </div>
         </div>
+      )}
+
+      {/* Activation Modal */}
+      {activatingTask && (
+        <ActivationModal
+          task={activatingTask}
+          onClose={() => setActivatingTask(null)}
+          onActivate={(values) => activateFixedTask(activatingTask, values)}
+        />
       )}
     </section>
   );

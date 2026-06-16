@@ -232,10 +232,7 @@ export function useFixedTaskActions({
         endTime: formatTime(endDate),
         nextRunAt: startDate.toISOString(),
       });
-      setFixedTasks((current) => [
-        created,
-        ...current.filter((item) => getId(item) !== getId(fixedTask)),
-      ]);
+      setFixedTasks((current) => [created, ...current]);
       setMessage(
         "\u0627\u0644\u06af\u0648 \u0641\u0639\u0627\u0644 \u0634\u062f.",
       );

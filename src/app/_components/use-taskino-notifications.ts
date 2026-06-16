@@ -83,7 +83,11 @@ export function useTaskinoNotifications({
       setNotifications((current) =>
         current.filter((notification) => getId(notification) !== id),
       );
-      setUnreadCount((count) => Math.max(0, count - 1));
+      setUnreadCount((count) => {
+        const next = Math.max(0, count - 1);
+        if (next === 0) setShowNotifications(false);
+        return next;
+      });
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "خطا در خواندن اعلان",
@@ -96,6 +100,7 @@ export function useTaskinoNotifications({
       await notificationApi.markAllRead(token);
       setNotifications([]);
       setUnreadCount(0);
+      setShowNotifications(false);
       setMessage("همه اعلان‌ها خوانده شد.");
     } catch (error) {
       setError(
