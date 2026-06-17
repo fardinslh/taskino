@@ -72,6 +72,7 @@ const taskKeys = [
   "createTask",
   "createTaskFromValues",
   "deleteTask",
+  "moveTask",
   "taLookupFirst",
   "taLookupLast",
   "taLookupResult",

@@ -14,7 +14,10 @@ export type View =
   | "analytics"
   | "fixed-reports"
   | "supervisor-projects"
-  | "supervisor-team";
+  | "supervisor-team"
+  | "supervisor-create-project"
+  | "supervisor-my-projects"
+  | "supervisor-watched-projects";
 
 export const VIEW_PATHS: Record<View, string> = {
   dashboard: "/dashboard",
@@ -28,6 +31,9 @@ export const VIEW_PATHS: Record<View, string> = {
   "fixed-reports": "/fixed-reports",
   "supervisor-projects": "/supervisor/projects",
   "supervisor-team": "/supervisor/team",
+  "supervisor-create-project": "/supervisor/projects/create",
+  "supervisor-my-projects": "/supervisor/projects/mine",
+  "supervisor-watched-projects": "/supervisor/projects/watched",
 };
 
 export const TASK_PERIODS: Array<[TaskPeriod, string]> = [

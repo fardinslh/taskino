@@ -163,8 +163,25 @@ export function useTaskActions({
         setSelectedTask((prev) =>
           prev ? { ...prev, status: newStatus } : prev,
         );
+      await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "تغییر وضعیت ناموفق بود");
+      const message = err instanceof Error ? err.message : "";
+      // MongoDB "retryable writes not supported" error fires even when the write
+      // already succeeded on the first attempt. Reload and continue silently.
+      if (message.toLowerCase().includes("retrywrites")) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            getId(t) === taskId ? { ...t, status: newStatus } : t,
+          ),
+        );
+        if (selectedTask && getId(selectedTask) === taskId)
+          setSelectedTask((prev) =>
+            prev ? { ...prev, status: newStatus } : prev,
+          );
+        await loadData();
+        return;
+      }
+      setError(message || "تغییر وضعیت ناموفق بود");
     }
   }
 

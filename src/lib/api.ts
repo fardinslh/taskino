@@ -672,7 +672,7 @@ export const taskApi = {
       ),
     ),
   statusCounts: (token: string) =>
-    unwrapAxios(apiClient.get<StatusCounts>("/tasks/status-counts")),
+    unwrapAxios(apiClient.get<StatusCounts>("/tasks/me/status-counts")),
 };
 
 // ─── Manager ─────────────────────────────────────────────────────────────────

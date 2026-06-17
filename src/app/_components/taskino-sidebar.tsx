@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Eye,
   FolderKanban,
   LayoutDashboard,
   Plus,

@@ -155,6 +155,12 @@ export function notificationText(notification: Notification) {
   const taskAssignment = message.match(
     /^You have been assigned to the task\s*:?\s*(.*)$/i,
   );
+  const taskStatusChanged = message.match(
+    /^The task\s*:?\s*["«]?(.*?)["»]?\s+status changed to\s+(.+?)\.?$/i,
+  );
+  const fixedTaskStatusChanged = message.match(
+    /^The fixed task\s*:?\s*["«]?(.*?)["»]?\s+status changed to\s+(.+?)\.?$/i,
+  );
   const fixedTaskCompleted =
     message.match(/^The fixed task\s*:?\s*["«]?(.*?)["»]?\s+has been completed(?:\s+by\s+(.+?))?\.?$/i) ??
     message.match(/^(.+?)\s+has been completed(?:\s+by\s+(.+?))?\.?$/i);
@@ -167,6 +173,18 @@ export function notificationText(notification: Notification) {
     localizedMessage = taskAssignment[1]
       ? `گزارش «${taskAssignment[1]}» به شما اختصاص داده شد.`
       : "یک گزارش به شما اختصاص داده شد.";
+  } else if (fixedTaskStatusChanged) {
+    const taskName = fixedTaskStatusChanged[1]?.trim();
+    const status = statusLabel(fixedTaskStatusChanged[2]?.trim());
+    localizedMessage = taskName
+      ? `وضعیت گزارش ثابت «${taskName}» به «${status}» تغییر کرد.`
+      : `وضعیت یک گزارش ثابت به «${status}» تغییر کرد.`;
+  } else if (taskStatusChanged) {
+    const taskName = taskStatusChanged[1]?.trim();
+    const status = statusLabel(taskStatusChanged[2]?.trim());
+    localizedMessage = taskName
+      ? `وضعیت گزارش «${taskName}» به «${status}» تغییر کرد.`
+      : `وضعیت یک گزارش به «${status}» تغییر کرد.`;
   } else if (fixedTaskCompleted) {
     const taskName = fixedTaskCompleted[1]?.trim();
     const actor = fixedTaskCompleted[2]?.trim();
