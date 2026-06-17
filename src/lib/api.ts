@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig } from "axios";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+const serverUrl = apiUrl.replace(/\/api$/, "");
 const apiClient = axios.create({ baseURL: apiUrl });
 export const UNAUTHORIZED_EVENT = "taskino:unauthorized";
 
@@ -267,15 +268,10 @@ export type MyProgressStats = {
 };
 
 export type MyWorkSummary = {
-  totalProjects?: number;
-  totalProject?: number;
-  projectsCount?: number;
   totalTasks?: number;
-  completedProjects?: number;
-  completedProject?: number;
   completedTasks?: number;
-  doneProjects?: number;
-  doneTasks?: number;
+  totalFixedTasks?: number;
+  completedFixedTasks?: number;
   score?: number;
 };
 
@@ -664,10 +660,22 @@ export const managerApi = {
     unwrapAxios(apiClient.get<ListResponse<UserProgress>>("/manager/users/progress")),
 };
 
+export type SupervisorTaskStatistics = {
+  total?: number;
+  inProgress?: number;
+  in_progress?: number;
+  done?: number;
+  completed?: number;
+  todo?: number;
+  pending?: number;
+};
+
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 export const supervisorApi = {
   statistics: (token: string, recurrence?: FixedTaskRecurrence) =>
     unwrapAxios(apiClient.get<SupervisorStats>(`/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`)),
+  taskStatistics: (token: string) =>
+    unwrapAxios(axios.get<SupervisorTaskStatistics>(`${serverUrl}/supervisor/tasks/statistics`)),
   members: (token: string, params?: Params) =>
     unwrapAxios(apiClient.get<ListResponse<SupervisorMember>>(`/supervisor/members${qs(params)}`)),
   tasks: (token: string, params?: Params) =>

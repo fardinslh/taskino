@@ -12,6 +12,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  TrendingUp,
   X,
 } from "lucide-react";
 
@@ -76,7 +77,16 @@ function ProjectsPageContent() {
     deleteTask,
     taRunCompletionStatsFromValues,
     taRunDateCountFromValues,
+    specialistTaskCounts,
+    specialistProgressStats,
   } = useTaskContext();
+
+  const specialistTotalCount = specialistTaskCounts?.total ?? 0;
+  const specialistInProgressCount = specialistTaskCounts?.inProgress ?? specialistTaskCounts?.in_progress ?? 0;
+  const specialistDoneCount = specialistTaskCounts?.done ?? specialistTaskCounts?.completed ?? 0;
+  const specialistProgress =
+    specialistProgressStats?.progressPercentage ??
+    (specialistTotalCount ? Math.round((specialistDoneCount / specialistTotalCount) * 100) : 0);
 
   const projectForm = useForm<ProjectFormValues>({
     defaultValues: {
@@ -167,6 +177,48 @@ function ProjectsPageContent() {
     <>
       {!isManager && activeView === "tasks-admin" && (
         <section className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              {
+                label: "پروژه‌ها",
+                value: specialistTotalCount,
+                sub: "واگذارشده",
+                icon: FolderKanban,
+                a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
+              },
+              {
+                label: "پروژه‌های باز",
+                value: specialistInProgressCount,
+                sub: "در حال انجام",
+                icon: ClipboardList,
+                a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
+              },
+              {
+                label: "تکمیل شده",
+                value: specialistDoneCount,
+                sub: `${specialistProgress}% پیشرفت`,
+                icon: TrendingUp,
+                a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
+              },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-xl border border-[--border] bg-[--surface] p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-medium text-[--text-2]">{s.label}</p>
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-4 ${s.a}`}
+                  >
+                    <s.icon size={15} />
+                  </span>
+                </div>
+                <p className="mt-3 text-2xl font-extrabold text-[--text]">{s.value}</p>
+                <p className="mt-0.5 text-[11px] text-[--text-3]">{s.sub}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
             <div className="flex items-center gap-3 border-b border-[--border] px-5 py-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">

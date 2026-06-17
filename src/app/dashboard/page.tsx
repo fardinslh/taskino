@@ -78,6 +78,7 @@ function DashboardPageContent() {
     supervisorOwnDoneReports,
     supervisorProjectDoneReports,
     supervisorStats,
+    supervisorTaskStatistics,
     teamAssigneeCount,
     teamAssignees,
     teamPerformance,
@@ -169,7 +170,7 @@ function DashboardPageContent() {
                     l: "تحت نظر",
                   },
                   { n: supervisorInProgressReports, l: "در حال انجام" },
-                  { n: supervisorOwnDoneReports, l: "تکمیل شده" },
+                  { n: supervisorOwnDoneReports, l: "انجام شده" },
                 ].map((s: any, i: number) => (
                   <div key={i} className="text-center">
                     <p className="text-2xl font-extrabold">{s.n}</p>
@@ -181,37 +182,34 @@ function DashboardPageContent() {
           </div>
 
           {/* Stats cards */}
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="grid grid-cols-3 gap-3">
             {[
               {
                 label: "گزارش‌های تحت نظر",
-                value:
-                  (supervisorStats?.supervisedTasks ?? 0) +
-                  (supervisorStats?.supervisedFixedTasks ?? 0),
-                sub: "عادی و ثابت",
+                value: supervisorTaskStatistics?.total ?? 0,
+                sub: "کل گزارش‌ها",
                 icon: FolderKanban,
                 a: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900",
               },
               {
                 label: "گزارش‌های جاری",
-                value: supervisorInProgressReports,
+                value:
+                  supervisorTaskStatistics?.inProgress ??
+                  supervisorTaskStatistics?.in_progress ??
+                  0,
                 sub: "در حال انجام",
                 icon: Activity,
                 a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
               },
               {
-                label: "تکمیل به‌موقع",
-                value: supervisorProjectDoneReports,
-                sub: "موفق",
+                label: "گزارش های انجام شده",
+                value:
+                  supervisorTaskStatistics?.done ??
+                  supervisorTaskStatistics?.completed ??
+                  0,
+                sub: "انجام‌شده",
                 icon: CheckCircle2,
                 a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
-              },
-              {
-                label: "گزارش‌های معوق",
-                value: overdueTasks.length,
-                sub: "نیاز به بررسی",
-                icon: AlertTriangle,
-                a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
               },
             ].map((s: any) => (
               <div
@@ -416,100 +414,66 @@ function DashboardPageContent() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {(isManager
-              ? [
-                  {
-                    label: "پروژه‌ها",
-                    value: tasks.length,
-                    sub: "پروژه",
-                    icon: FolderKanban,
-                    a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
-                    onClick: () => setActiveView("tasks-admin"),
-                  },
-                  {
-                    label: "گزارش‌های باز",
-                    value: managerStats?.openTasks ?? activeTasks,
-                    sub: `${inProgressTasks} جاری`,
-                    icon: ClipboardList,
-                    a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-                    onClick: () => setActiveView("tasks"),
-                  },
-                  {
-                    label: "کاربران فعال",
-                    value: managerStats?.activeUsers ?? statsUsers,
-                    sub: "کاربر",
-                    icon: UsersRound,
-                    a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
-                    onClick: () => setActiveView("team"),
-                  },
-                  {
-                    label: "آنالیتیکس",
-                    value:
-                      managerTaskStatus?.doneTasks ??
-                      managerTaskStatus?.done ??
-                      doneTasks,
-                    sub: "گزارش تکمیل",
-                    icon: BarChart2,
-                    a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
-                    onClick: () => setActiveView("analytics"),
-                  },
-                ]
-              : [
-                  {
-                    label: "پروژه‌ها",
-                    value: specialistTotalCount,
-                    sub: "واگذارشده",
-                    icon: FolderKanban,
-                    a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
-                    onClick: () => setActiveView("tasks-admin"),
-                  },
-                  {
-                    label: "پروژه‌های باز",
-                    value: specialistOpenCount,
-                    sub: `${specialistDoneCount} تکمیل شده`,
-                    icon: ClipboardList,
-                    a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-                    onClick: undefined,
-                  },
-                  {
-                    label: "اعضای تیم",
-                    value: specialistProgressStats?.totalTasks ?? statsUsers,
-                    sub: "کاربر",
-                    icon: UsersRound,
-                    a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
-                    onClick: undefined,
-                  },
-                  {
-                    label: "تکمیل شده",
-                    value: specialistDoneCount,
-                    sub: `${specialistProgress}% پیشرفت`,
-                    icon: TrendingUp,
-                    a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
-                    onClick: undefined,
-                  },
-                ]
-            ).map((s: any) => (
-              <div
-                key={s.label}
-                className={`group rounded-xl border border-[--border] bg-[--surface] p-4 transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/5 ${s.onClick ? "cursor-pointer" : ""}`}
-                onClick={s.onClick}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium text-[--text-2]">
-                    {s.label}
-                  </p>
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-4 ${s.a}`}
-                  >
-                    <s.icon size={15} />
-                  </span>
+          {isManager && (
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              {[
+                {
+                  label: "پروژه‌ها",
+                  value: tasks.length,
+                  sub: "پروژه",
+                  icon: FolderKanban,
+                  a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
+                  onClick: () => setActiveView("tasks-admin"),
+                },
+                {
+                  label: "گزارش‌های باز",
+                  value: managerStats?.openTasks ?? activeTasks,
+                  sub: `${inProgressTasks} جاری`,
+                  icon: ClipboardList,
+                  a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
+                  onClick: () => setActiveView("tasks"),
+                },
+                {
+                  label: "کاربران فعال",
+                  value: managerStats?.activeUsers ?? statsUsers,
+                  sub: "کاربر",
+                  icon: UsersRound,
+                  a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
+                  onClick: () => setActiveView("team"),
+                },
+                {
+                  label: "آنالیتیکس",
+                  value:
+                    managerTaskStatus?.doneTasks ??
+                    managerTaskStatus?.done ??
+                    doneTasks,
+                  sub: "گزارش تکمیل",
+                  icon: BarChart2,
+                  a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
+                  onClick: () => setActiveView("analytics"),
+                },
+              ].map((s: any) => (
+                <div
+                  key={s.label}
+                  className={`group rounded-xl border border-[--border] bg-[--surface] p-4 transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/5 ${s.onClick ? "cursor-pointer" : ""}`}
+                  onClick={s.onClick}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-medium text-[--text-2]">
+                      {s.label}
+                    </p>
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-4 ${s.a}`}
+                    >
+                      <s.icon size={15} />
+                    </span>
+                  </div>
+                  <p className="mt-2.5 text-3xl font-bold">{s.value}</p>
+                  <p className="mt-0.5 text-xs text-[--text-3]">{s.sub}</p>
                 </div>
-                <p className="mt-2.5 text-3xl font-bold">{s.value}</p>
-                <p className="mt-0.5 text-xs text-[--text-3]">{s.sub}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Manager: Pending leave requests on dashboard */}
 
@@ -594,9 +558,7 @@ function DashboardPageContent() {
             activeView === "dashboard" &&
             (() => {
               const overdueReports = fixedTasks.filter(
-                (f: any) =>
-                  f.isActive !== false &&
-                  isFixedTaskOverdue(f),
+                (f: any) => f.isActive !== false && isFixedTaskOverdue(f),
               ).length;
               const fixedOpenReports = fixedOpenTasks;
               const fixedCompletedReports = fixedDoneTasks;
@@ -660,8 +622,7 @@ function DashboardPageContent() {
                       {(() => {
                         const od = fixedTasks.filter(
                           (f: any) =>
-                            f.isActive !== false &&
-                            isFixedTaskOverdue(f),
+                            f.isActive !== false && isFixedTaskOverdue(f),
                         ).length;
                         return od ? ` · ${od} مهلت‌گذشته` : "";
                       })()}
@@ -802,7 +763,8 @@ function DashboardPageContent() {
                                     draggableId={getId(ft)}
                                     index={idx}
                                     isDragDisabled={
-                                      !isSpecialist || (ft.status ?? "todo") === "done"
+                                      !isSpecialist ||
+                                      (ft.status ?? "todo") === "done"
                                     }
                                   >
                                     {(dragProvided: any, dragSnapshot: any) => (
@@ -924,21 +886,14 @@ function DashboardPageContent() {
               const rate =
                 specialistProgressStats?.progressPercentage ??
                 specialistProgress;
-              const summaryTotalProjects =
-                specialistWorkSummary?.totalProjects ??
-                specialistWorkSummary?.totalProject ??
-                specialistWorkSummary?.projectsCount ??
-                specialistWorkSummary?.totalTasks ??
-                specialistTotalCount;
-              const summaryCompleted =
-                specialistWorkSummary?.completedProjects ??
-                specialistWorkSummary?.completedProject ??
-                specialistWorkSummary?.completedTasks ??
-                specialistWorkSummary?.doneProjects ??
-                specialistWorkSummary?.doneTasks ??
-                specialistDoneCount;
-              const summaryScore =
-                specialistWorkSummary?.score ?? specialistScore;
+              const summaryScore = specialistWorkSummary?.score ?? 0;
+              const summaryTotalTasks = specialistWorkSummary?.totalTasks ?? 0;
+              const summaryCompletedTasks =
+                specialistWorkSummary?.completedTasks ?? 0;
+              const summaryTotalFixedTasks =
+                specialistWorkSummary?.totalFixedTasks ?? 0;
+              const summaryCompletedFixedTasks =
+                specialistWorkSummary?.completedFixedTasks ?? 0;
               const ps = specialistProgressStats?.score
                 ? specialistProgressStats.score > 80
                   ? "good"
@@ -984,18 +939,28 @@ function DashboardPageContent() {
                       {rate}%
                     </span>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  <div className="mt-4 grid grid-cols-3 xl:grid-cols-5 gap-2 text-center">
                     {[
                       { l: "امتیاز", v: summaryScore, c: "text-amber-600" },
                       {
-                        l: "تکمیل‌شده",
-                        v: summaryCompleted,
+                        l: "کل وظایف",
+                        v: summaryTotalTasks,
+                        c: "text-indigo-600",
+                      },
+                      {
+                        l: "وظایف انجام‌شده",
+                        v: summaryCompletedTasks,
                         c: "text-emerald-600",
                       },
                       {
-                        l: "کل پروژه",
-                        v: summaryTotalProjects,
+                        l: "کل گزارش‌ها",
+                        v: summaryTotalFixedTasks,
                         c: "text-[--text]",
+                      },
+                      {
+                        l: "گزارش‌های انجام‌شده",
+                        v: summaryCompletedFixedTasks,
+                        c: "text-[#1f7a8c]",
                       },
                     ].map((s: any) => (
                       <div

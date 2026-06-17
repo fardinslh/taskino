@@ -17,6 +17,7 @@ import {
   type StatusCounts,
   type SupervisorMember,
   type SupervisorStats,
+  type SupervisorTaskStatistics,
   type Task,
   type TaskStatusOverview,
   type User,
@@ -74,6 +75,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
   >([]);
   const [supervisorStats, setSupervisorStats] =
     useState<SupervisorStats | null>(null);
+  const [supervisorTaskStatistics, setSupervisorTaskStatistics] =
+    useState<SupervisorTaskStatistics | null>(null);
   const [supervisorTasks, setSupervisorTasks] = useState<Task[]>([]);
   const [supervisorFixedTasks, setSupervisorFixedTasks] = useState<FixedTask[]>(
     [],
@@ -409,6 +412,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setManagerStats(null);
     resetExcelData();
     setSupervisorStats(null);
+    setSupervisorTaskStatistics(null);
     setSupervisorTasks([]);
     setSupervisorFixedTasks([]);
     setSupervisorMembers([]);
@@ -501,6 +505,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     managerMonthlyPerf,
     managerUserProgress,
     supervisorStats,
+    supervisorTaskStatistics,
     supervisorTasks,
     supervisorFixedTasks,
     supervisorMembers,
@@ -521,6 +526,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setManagerMonthlyPerf,
     setManagerUserProgress,
     setSupervisorStats,
+    setSupervisorTaskStatistics,
     setSupervisorTasks,
     setSupervisorFixedTasks,
     setSupervisorMembers,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClipboardList, RefreshCw } from "lucide-react";
+import { ClipboardList, FolderKanban, RefreshCw, ScrollText } from "lucide-react";
 
 import { getId, type FixedTask } from "@/lib/api";
 import {
@@ -11,7 +11,11 @@ import {
   useSessionContext,
   useTaskContext,
 } from "../../_components/taskino-context";
-import { recurrenceLabel, statusLabel, userName } from "../../_lib/task-helpers";
+import {
+  recurrenceLabel,
+  statusLabel,
+  userName,
+} from "../../_lib/task-helpers";
 
 type FixedTaskStatusFilter = "in_progress" | "done";
 
@@ -71,6 +75,36 @@ function SupervisorWorkPageContent() {
 
   return (
     <section className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          {
+            label: "پروژه‌ها",
+            value: supervisorTasks.length,
+            icon: FolderKanban,
+            a: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900",
+          },
+          {
+            label: "گزارش‌های ثابت",
+            value: supervisorFixedTasks.length,
+            icon: ScrollText,
+            a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl border border-[--border] bg-[--surface] p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-medium text-[--text-2]">{s.label}</p>
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-4 ${s.a}`}>
+                <s.icon size={15} />
+              </span>
+            </div>
+            <p className="mt-3 text-2xl font-extrabold text-[--text]">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="overflow-hidden rounded-2xl border border-violet-200 bg-[--surface] dark:border-violet-900">
         <div className="flex items-center justify-between gap-3 border-b border-violet-100 bg-gradient-to-l from-violet-50 to-white px-5 py-4 dark:border-violet-900/50 dark:from-violet-950/30 dark:to-transparent">
           <div className="flex items-center gap-3">
@@ -80,7 +114,8 @@ function SupervisorWorkPageContent() {
             <div>
               <h2 className="font-bold">گزارش‌های تحت نظر</h2>
               <p className="text-[11px] text-[--text-3]">
-                {supervisorTasks.length} گزارش عادی · {supervisorFixedTasks.length} گزارش ثابت
+                {supervisorTasks.length} گزارش عادی ·{" "}
+                {supervisorFixedTasks.length} گزارش ثابت
               </p>
             </div>
           </div>
@@ -101,7 +136,7 @@ function SupervisorWorkPageContent() {
             items={supervisorTasks}
             onSelect={setSelectedTask}
             statusLabel={statusLabel}
-            title="گزارش‌های عادی"
+            title="پروژه ها"
             userName={userName}
           />
           <WorkList
@@ -186,14 +221,17 @@ function WorkList({
               ? item.assignedTo[0]
               : item.assignedTo;
             const specialistLabel =
-              item.specialistName || (assignee ? userName(assignee) : "بدون مسئول");
+              item.specialistName ||
+              (assignee ? userName(assignee) : "بدون مسئول");
             const content = (
               <>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{item.title}</p>
                   <p className="mt-1 text-xs text-[--text-3]">
                     {`مسئول: ${specialistLabel}`}
-                    {item.recurrence ? ` · ${recurrenceLabel(item.recurrence)}` : ""}
+                    {item.recurrence
+                      ? ` · ${recurrenceLabel(item.recurrence)}`
+                      : ""}
                   </p>
                 </div>
                 <span className="shrink-0 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] font-bold text-[--text-2]">

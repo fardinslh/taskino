@@ -24,6 +24,7 @@ import {
   type StatusCounts,
   type SupervisorMember,
   type SupervisorStats,
+  type SupervisorTaskStatistics,
   type Task,
   type TaskStatusOverview,
   type User,
@@ -54,6 +55,7 @@ type DataLoaderInput = {
   setManagerMonthlyPerf: Dispatch<SetStateAction<MonthlyPerformance[]>>;
   setManagerUserProgress: Dispatch<SetStateAction<UserProgress[]>>;
   setSupervisorStats: Dispatch<SetStateAction<SupervisorStats | null>>;
+  setSupervisorTaskStatistics: Dispatch<SetStateAction<SupervisorTaskStatistics | null>>;
   setSupervisorMembers: Dispatch<SetStateAction<SupervisorMember[]>>;
   setSupervisorTasks: Dispatch<SetStateAction<Task[]>>;
   setSupervisorFixedTasks: Dispatch<SetStateAction<FixedTask[]>>;
@@ -84,6 +86,7 @@ export function useDataLoader({
   setManagerMonthlyPerf,
   setManagerUserProgress,
   setSupervisorStats,
+  setSupervisorTaskStatistics,
   setSupervisorMembers,
   setSupervisorTasks,
   setSupervisorFixedTasks,
@@ -182,9 +185,10 @@ export function useDataLoader({
   async function loadSupervisorData(authToken = token) {
     if (!authToken) return;
     try {
-      const [stats, membersResponse, tasksResponse, fixedTasksResponse] =
+      const [stats, taskStats, membersResponse, tasksResponse, fixedTasksResponse] =
         await Promise.all([
           supervisorApi.statistics(authToken).catch(() => null),
+          supervisorApi.taskStatistics(authToken).catch(() => null),
           supervisorApi
             .members(authToken, { page: 1, limit: 100 })
             .catch(() => []),
@@ -195,6 +199,7 @@ export function useDataLoader({
             .fixedTasks(authToken, { page: 1, limit: 100 })
             .catch(() => []),
         ]);
+      setSupervisorTaskStatistics(taskStats);
       const members = normalizeList(
         membersResponse as SupervisorMember[] | { data?: SupervisorMember[] },
       );

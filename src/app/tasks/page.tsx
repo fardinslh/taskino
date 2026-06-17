@@ -49,7 +49,7 @@ function TasksPageContent() {
   } = useNavigationContext();
   const { currentUser, isManager, isSpecialist, isSupervisor } =
     useSessionContext();
-  const { activeTasks, doneTasks, inProgressTasks, progress, projects, tasks } =
+  const { activeTasks, doneTasks, inProgressTasks, progress, projects, tasks, specialistWorkSummary } =
     useTaskContext();
   const { managerStats, managerTaskStatus, statsUsers, users } =
     useManagementContext();
@@ -57,6 +57,7 @@ function TasksPageContent() {
     filteredFixedTemplates,
     fixedDoneTasks,
     fixedOpenTasks,
+    fixedInProgressTasks,
     activeFixedTaskCount,
     fixedTasks,
     onDragEnd,
@@ -193,32 +194,32 @@ function TasksPageContent() {
                 ]
               : [
                   {
-                    label: "پروژه‌ها",
-                    value: tasks.length,
+                    label: "همه گزارشات",
+                    value: specialistWorkSummary?.totalFixedTasks ?? activeFixedTaskCount,
                     sub: "واگذارشده",
                     icon: FolderKanban,
                     a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
                     onClick: () => setActiveView("tasks-admin"),
                   },
                   {
-                    label: "گزارش‌های باز",
-                    value: activeTasks,
-                    sub: `${inProgressTasks} جاری`,
+                    label: "گزارش در حال انجام",
+                    value: fixedInProgressTasks,
+                    sub: "در حال انجام",
                     icon: ClipboardList,
                     a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
                     onClick: undefined,
                   },
                   {
-                    label: "گزارشات ثابت",
-                    value: activeFixedTaskCount,
-                    sub: `${fixedOpenTasks} در انتظار`,
+                    label: "گزارش در حال انتظار",
+                    value: fixedOpenTasks,
+                    sub: "در انتظار شروع",
                     icon: ClipboardList,
                     a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
                     onClick: undefined,
                   },
                   {
                     label: "تکمیل شده",
-                    value: doneTasks,
+                    value: specialistWorkSummary?.completedFixedTasks ?? fixedDoneTasks,
                     sub: `${progress}% پیشرفت`,
                     icon: TrendingUp,
                     a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
