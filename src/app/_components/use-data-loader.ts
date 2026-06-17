@@ -233,8 +233,6 @@ export function useDataLoader({
       setSupervisorMembers(members);
       setSupervisorTasks(supervisedTasks);
       setSupervisorFixedTasks(supervisedFixedTasks);
-      setTasks(supervisedTasks);
-      setFixedTasks(supervisedFixedTasks);
       setOverdueTasks(overdue);
       setManagerUserProgress(members as UserProgress[]);
       setUsers(
@@ -274,10 +272,9 @@ export function useDataLoader({
       const userIsManager = currentRole === "manager";
       const userIsSupervisor = currentRole === "supervisor";
       const userIsSpecialist = currentRole === "specialist";
-      const shouldLoadLeaveStats =
-        currentRole === "manager" || currentRole === "supervisor";
+      const shouldLoadLeaveStats = currentRole === "manager";
       const reportParams =
-        !userIsManager && !userIsSupervisor && uid
+        !userIsManager && uid
           ? { assignedTo: uid }
           : undefined;
       const [u, t, leaves, statsRes, unreadRes, notifRes, leaveStatsRes] =
@@ -289,9 +286,7 @@ export function useDataLoader({
             ? managerApi
                 .allTasks(authToken)
                 .catch(() => ({ tasks: [] as Task[] }))
-            : userIsSupervisor
-              ? Promise.resolve([] as Task[])
-              : taskApi.list(authToken, reportParams).catch(() => []),
+            : taskApi.list(authToken, reportParams).catch(() => []),
           uid && !userIsManager && !userIsSupervisor
             ? leaveApi.list(authToken, { limit: 50, user: uid })
             : leaveApi.list(authToken, { limit: 50 }),
@@ -339,12 +334,15 @@ export function useDataLoader({
       );
       const role = (currentUser ?? storedUser)?.roles;
       if (role === "manager") void loadManagerAnalytics(authToken);
-      else if (role !== "supervisor" && uid) {
+      else if (role === "supervisor" && uid) {
+        void loadSupervisorData(authToken);
+        fetchAllFixedTasks(authToken, { status: "todo", startDate: "", endDate: "" })
+          .then((r) => setFixedTasks(r))
+          .catch(() => setFixedTasks([]));
+      } else if (uid) {
         fetchAllSpecialistFixedTasks(authToken, uid, { status: "todo" })
           .then((r) => setFixedTasks(r))
           .catch(() => setFixedTasks([]));
-      } else if (role === "supervisor") {
-        void loadSupervisorData(authToken);
       } else {
         setFixedTasks([]);
       }

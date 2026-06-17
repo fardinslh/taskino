@@ -142,6 +142,12 @@ function DashboardPageContent() {
     return partialMatches.length === 1 ? getId(partialMatches[0]) : "";
   };
 
+  const supervisedTasksCount = supervisorStats?.supervisedTasks ?? 0;
+  const supervisedInProgressTasksCount =
+    supervisorStats?.supervisedInProgressTasks ?? 0;
+  const activeCompletedSupervisedTasksCount =
+    supervisorStats?.activeCompletedSupervisedTasks ?? 0;
+
   return (
     <>
       {isSupervisor && activeView === "dashboard" && (
@@ -163,14 +169,9 @@ function DashboardPageContent() {
               </div>
               <div className="flex shrink-0 items-center gap-5">
                 {[
-                  {
-                    n:
-                      (supervisorStats?.supervisedTasks ?? 0) +
-                      (supervisorStats?.supervisedFixedTasks ?? 0),
-                    l: "تحت نظر",
-                  },
-                  { n: supervisorInProgressReports, l: "در حال انجام" },
-                  { n: supervisorOwnDoneReports, l: "انجام شده" },
+                  { n: supervisedTasksCount, l: "تحت نظر" },
+                  { n: supervisedInProgressTasksCount, l: "در حال انجام" },
+                  { n: activeCompletedSupervisedTasksCount, l: "انجام شده" },
                 ].map((s: any, i: number) => (
                   <div key={i} className="text-center">
                     <p className="text-2xl font-extrabold">{s.n}</p>
@@ -186,27 +187,21 @@ function DashboardPageContent() {
             {[
               {
                 label: "گزارش‌های تحت نظر",
-                value: supervisorTaskStatistics?.total ?? 0,
+                value: supervisedTasksCount,
                 sub: "کل گزارش‌ها",
                 icon: FolderKanban,
                 a: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900",
               },
               {
-                label: "گزارش‌های جاری",
-                value:
-                  supervisorTaskStatistics?.inProgress ??
-                  supervisorTaskStatistics?.in_progress ??
-                  0,
+                label: "گزارش‌های در حال انجام",
+                value: supervisedInProgressTasksCount,
                 sub: "در حال انجام",
                 icon: Activity,
                 a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
               },
               {
                 label: "گزارش های انجام شده",
-                value:
-                  supervisorTaskStatistics?.done ??
-                  supervisorTaskStatistics?.completed ??
-                  0,
+                value: activeCompletedSupervisedTasksCount,
                 sub: "انجام‌شده",
                 icon: CheckCircle2,
                 a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
@@ -276,77 +271,6 @@ function DashboardPageContent() {
             </div>
           )}
 
-          {/* Team performance summary */}
-          {teamAssignees.length > 0 && (
-            <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
-              <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white">
-                    <UsersRound size={17} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold">عملکرد تیم</h2>
-                    <p className="text-[11px] text-[--text-3]">
-                      {teamAssigneeCount} عضو ·{" "}
-                      {teamPerformance.completionRate ?? 0}% نرخ تکمیل
-                    </p>
-                  </div>
-                </div>
-                <button
-                  className="text-xs font-semibold text-[#1f7a8c] hover:underline"
-                  onClick={() => setActiveView("supervisor-team")}
-                  type="button"
-                >
-                  مشاهده کامل
-                </button>
-              </div>
-              <div className="divide-y divide-[--border]">
-                {teamAssignees.slice(0, 5).map((m: any) => {
-                  const total = m.totalTasks ?? 0;
-                  const done = m.doneTasks ?? m.completedTasks ?? 0;
-                  const rate = total ? Math.round((done / total) * 100) : 0;
-                  return (
-                    <div
-                      key={m.userId ?? m._id}
-                      className="flex items-center gap-4 px-5 py-3"
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-violet-600 text-xs font-bold text-white">
-                        {(
-                          m.firstName?.[0] ??
-                          m.fullName?.[0] ??
-                          "؟"
-                        ).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold truncate">
-                          {(m.fullName ??
-                            `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim()) ||
-                            "نامشخص"}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[--border]">
-                            <div
-                              className="h-full rounded-full bg-violet-500"
-                              style={{ width: `${rate}%` }}
-                            />
-                          </div>
-                          <span className="shrink-0 text-[11px] text-[--text-3]">
-                            {rate}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold">
-                          {done}/{total}
-                        </p>
-                        <p className="text-[10px] text-[--text-3]">گزارش</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </section>
       )}
 

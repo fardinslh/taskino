@@ -1,24 +1,38 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
+import TimePicker from "react-multi-date-picker/plugins/time_picker";
 import {
+  AlertTriangle,
   ClipboardList,
   FileSpreadsheet,
   FolderKanban,
   Layers3,
   Plus,
+  RefreshCw,
   Sparkles,
   Trash2,
   TrendingUp,
+  Upload,
   X,
 } from "lucide-react";
 
 import { getId } from "@/lib/api";
+import {
+  ActivationModal,
+  FilterBar,
+  FixedTaskFormPanel,
+  IncompleteRow,
+  TemplateRow,
+  type FixedTaskFormValues,
+} from "../_components/fixed-task-ui";
 import { Field, Select } from "../_components/shared";
 import {
+  useFixedTaskContext,
   useManagementContext,
   useNavigationContext,
   useSessionContext,
@@ -67,8 +81,27 @@ function ProjectsPageContent() {
     setShowNewProjectForm,
     showNewProjectForm,
   } = useNavigationContext();
-  const { currentUser, isManager } = useSessionContext();
-  const { users } = useManagementContext();
+  const { currentUser, isManager, isSupervisor } = useSessionContext();
+  const { users, supervisorStats, loadSupervisorData } = useManagementContext();
+  const {
+    fixedTasks,
+    incompleteFixedTasks,
+    fixedReportsTab,
+    setFixedReportsTab,
+    showFixedTaskForm,
+    editingFixedTask,
+    openFixedTaskForm,
+    closeFixedTaskForm,
+    saveFixedTaskFromValues,
+    activateFixedTask,
+    deactivateFixedTask,
+    deleteFixedTask,
+    seedFixedTasksFromExcel,
+  } = useFixedTaskContext();
+  const [activatingTask, setActivatingTask] = useState<any>(null);
+  const [filterRecurrence, setFilterRecurrence] = useState("");
+  const [filterSpecialist, setFilterSpecialist] = useState("");
+  const [filterTitle, setFilterTitle] = useState("");
   const {
     tasks,
     taCompletionResult,
@@ -107,6 +140,34 @@ function ProjectsPageContent() {
   const dateCountForm = useForm<DateCountFormValues>({
     defaultValues: { userId: "", startDate: "", endDate: "" },
   });
+  const fixedTaskForm = useForm<FixedTaskFormValues>({
+    defaultValues: { title: "", recurrence: "daily", assignedTo: "", description: "" },
+  });
+
+  const visibleFixedTasks = fixedTasks.filter((item: any) => item.isActive !== true);
+  const supervisedFixedTasksCount = supervisorStats?.supervisedFixedTasks ?? 0;
+  const filteredFixedTasks = useMemo(() => {
+    const specialistQuery = filterSpecialist.trim().toLowerCase();
+    const titleQuery = filterTitle.trim().toLowerCase();
+    return visibleFixedTasks.filter((task: any) => {
+      const recurrenceMatch = !filterRecurrence || (task.recurrence ?? "daily") === filterRecurrence;
+      const specialistMatch = !specialistQuery || userName(task.assignedTo).toLowerCase().includes(specialistQuery);
+      const titleMatch = !titleQuery || String(task.title ?? "").toLowerCase().includes(titleQuery);
+      return recurrenceMatch && specialistMatch && titleMatch;
+    });
+  }, [filterRecurrence, filterSpecialist, filterTitle, visibleFixedTasks]);
+
+  useEffect(() => {
+    if (!showFixedTaskForm) return;
+    fixedTaskForm.reset({
+      title: editingFixedTask?.title ?? "",
+      recurrence: editingFixedTask?.recurrence ?? "daily",
+      assignedTo: getId(editingFixedTask?.assignedTo),
+      description: editingFixedTask?.description ?? "",
+    });
+  }, [editingFixedTask, fixedTaskForm, showFixedTaskForm]);
+
+  const clearFilters = () => { setFilterRecurrence(""); setFilterSpecialist(""); setFilterTitle(""); };
 
   const completionStats = taCompletionResult as Record<string, any> | null;
   const dateCountStats = taCountResult as Record<string, any> | null;
@@ -127,6 +188,15 @@ function ProjectsPageContent() {
       control: projectForm.control,
       name: "projectType",
     }) ?? "specialist";
+  const projectStartDate = useWatch({
+    control: projectForm.control,
+    name: "startDate",
+  });
+  const todayStart = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
   const scopedUsers = users.filter((user: any) => {
     if (!currentUser?.workField) return true;
@@ -158,7 +228,16 @@ function ProjectsPageContent() {
     Number(dateCountStats?.pendingTasks ?? 0),
     Number(dateCountStats?.todoTasks ?? 0),
   );
-
+  const createTitle = isSupervisor ? "گزارش جدید" : "پروژه جدید";
+  const createButtonLabel = isSupervisor ? "گزارش جدید" : "پروژه جدید";
+  const titleFieldLabel = isSupervisor ? "عنوان گزارش *" : "عنوان پروژه *";
+  const titlePlaceholder = isSupervisor
+    ? "مثلاً: تکمیل اکسل فروش"
+    : "مثلاً: تکمیل اکسل فروش";
+  const descriptionPlaceholder = isSupervisor
+    ? "شرح کوتاه گزارش"
+    : "شرح کوتاه پروژه";
+  const assigneeLabel = isSupervisor ? "مسئول گزارش" : "مسئول پروژه";
   function formatLocalDateBoundary(value: string, endOfDay = false) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
@@ -173,9 +252,22 @@ function ProjectsPageContent() {
     return normalized.toISOString();
   }
 
+  function timeValueToDate(value?: string) {
+    if (!value) return "";
+    const [hours, minutes] = value.split(":").map(Number);
+    const date = new Date();
+    date.setHours(
+      Number.isFinite(hours) ? hours : 0,
+      Number.isFinite(minutes) ? minutes : 0,
+      0,
+      0,
+    );
+    return date;
+  }
+
   return (
     <>
-      {!isManager && activeView === "tasks-admin" && (
+      {!isManager && !isSupervisor && activeView === "tasks-admin" && (
         <section className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             {[
@@ -288,9 +380,9 @@ function ProjectsPageContent() {
                     <Sparkles size={18} />
                   </div>
                   <div className="space-y-1">
-                    <h2 className="font-bold">پروژه جدید</h2>
+                    <h2 className="font-bold">{createTitle}</h2>
                     <p className="text-[12px] text-[--text-3]">
-                      نوع پروژه را مشخص کن، بعد مسئول مناسب همان حوزه را انتخاب کن.
+                      نوع {isSupervisor ? "گزارش" : "پروژه"} را مشخص کن، بعد مسئول مناسب همان حوزه را انتخاب کن.
                     </p>
                   </div>
                 </div>
@@ -305,7 +397,7 @@ function ProjectsPageContent() {
                   type="button"
                 >
                   {showNewProjectForm ? <X size={15} /> : <Plus size={15} />}
-                  {showNewProjectForm ? "بستن فرم" : "پروژه جدید"}
+                  {showNewProjectForm ? "بستن فرم" : createButtonLabel}
                 </button>
               </div>
             </div>
@@ -314,6 +406,29 @@ function ProjectsPageContent() {
               <form
                 className="grid gap-4 bg-[--surface-2]/40 p-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
                 onSubmit={projectForm.handleSubmit(async (values) => {
+                  const now = new Date();
+                  if (values.startDate && new Date(values.startDate) < now) {
+                    projectForm.setError("startDate", {
+                      message: "تاریخ شروع نمی‌تواند در گذشته باشد.",
+                    });
+                    return;
+                  }
+                  if (values.dueDate && new Date(values.dueDate) < now) {
+                    projectForm.setError("dueDate", {
+                      message: "ددلاین نمی‌تواند در گذشته باشد.",
+                    });
+                    return;
+                  }
+                  if (
+                    values.startDate &&
+                    values.dueDate &&
+                    new Date(values.dueDate) < new Date(values.startDate)
+                  ) {
+                    projectForm.setError("dueDate", {
+                      message: "ددلاین باید بعد از تاریخ شروع باشد.",
+                    });
+                    return;
+                  }
                   await createTaskFromValues({
                     title: values.title,
                     assignee: values.assignee,
@@ -334,10 +449,10 @@ function ProjectsPageContent() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field
-                      label="عنوان پروژه *"
+                      label={titleFieldLabel}
                       name="projTitle"
                       required
-                      placeholder="مثلاً: تکمیل اکسل فروش"
+                      placeholder={titlePlaceholder}
                       registration={projectForm.register("title", {
                         required: true,
                       })}
@@ -354,7 +469,7 @@ function ProjectsPageContent() {
                   <Field
                     label="توضیحات"
                     name="projDescription"
-                    placeholder="شرح کوتاه پروژه"
+                    placeholder={descriptionPlaceholder}
                     registration={projectForm.register("description")}
                   />
                   <label className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[--border] bg-[--surface-2] px-3 text-sm font-medium text-[--text-2] transition hover:bg-[--surface]">
@@ -378,11 +493,11 @@ function ProjectsPageContent() {
                   </div>
                   <div className="rounded-xl bg-[--surface-2] p-3 text-xs text-[--text-2]">
                     {projectType === "general"
-                      ? "پروژه عمومی است؛ می‌توانی از بین متخصص یا سرپرست همان حوزه انتخاب کنی."
-                      : "پروژه تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند."}
+                      ? `${isSupervisor ? "گزارش" : "پروژه"} عمومی است؛ می‌توانی از بین متخصص یا سرپرست همان حوزه انتخاب کنی.`
+                      : `${isSupervisor ? "گزارش" : "پروژه"} تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند.`}
                   </div>
                   <Select
-                    label="مسئول پروژه"
+                    label={assigneeLabel}
                     options={scopedAssigneeOptions}
                     placeholder={
                       projectType === "general"
@@ -392,30 +507,104 @@ function ProjectsPageContent() {
                     registration={projectForm.register("assignee")}
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Field
-                      label="شروع"
-                      name="projStartDate"
-                      type="datetime-local"
-                      registration={projectForm.register("startDate")}
-                    />
-                    <Field
-                      label="ددلاین"
-                      name="projDueDate"
-                      type="datetime-local"
-                      registration={projectForm.register("dueDate")}
-                    />
-                    <Field
-                      label="ساعت شروع روزانه"
-                      name="projStartTime"
-                      type="time"
-                      registration={projectForm.register("startTime")}
-                    />
-                    <Field
-                      label="ساعت پایان روزانه"
-                      name="projEndTime"
-                      type="time"
-                      registration={projectForm.register("endTime")}
-                    />
+                    {(["startDate", "dueDate"] as const).map((name) => (
+                      <label className="block" key={name}>
+                        <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                          {name === "startDate" ? "شروع" : "ددلاین"}
+                        </span>
+                        <Controller
+                          control={projectForm.control}
+                          name={name}
+                          render={({ field }) => (
+                            <DatePicker
+                              value={field.value ? new Date(field.value) : ""}
+                              onChange={(value) => {
+                                if (!value || Array.isArray(value)) {
+                                  field.onChange("");
+                                  return;
+                                }
+                                field.onChange(value.toDate().toISOString());
+                              }}
+                              calendar={jalali}
+                              locale={persianFa}
+                              minDate={
+                                name === "dueDate" && projectStartDate
+                                  ? new Date(projectStartDate)
+                                  : todayStart
+                              }
+                              format="YYYY/MM/DD HH:mm"
+                              calendarPosition="bottom-right"
+                              inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                              containerClassName="w-full"
+                              placeholder={
+                                name === "startDate"
+                                  ? "انتخاب تاریخ شروع"
+                                  : "انتخاب ددلاین"
+                              }
+                              plugins={[
+                                <TimePicker
+                                  key="time-picker"
+                                  position="bottom"
+                                  hideSeconds
+                                />,
+                              ]}
+                            />
+                          )}
+                        />
+                        {projectForm.formState.errors[name] && (
+                          <span className="mt-1 block text-xs text-red-500">
+                            {projectForm.formState.errors[name]?.message}
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                    {(["startTime", "endTime"] as const).map((name) => (
+                      <label className="block" key={name}>
+                        <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+                          {name === "startTime"
+                            ? "ساعت شروع روزانه"
+                            : "ساعت پایان روزانه"}
+                        </span>
+                        <Controller
+                          control={projectForm.control}
+                          name={name}
+                          render={({ field }) => (
+                            <DatePicker
+                              disableDayPicker
+                              format="HH:mm"
+                              value={timeValueToDate(field.value)}
+                              onChange={(value) => {
+                                if (!value || Array.isArray(value)) {
+                                  field.onChange("");
+                                  return;
+                                }
+                                const date = value.toDate();
+                                field.onChange(
+                                  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+                                );
+                              }}
+                              calendar={jalali}
+                              locale={persianFa}
+                              calendarPosition="bottom-right"
+                              inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                              containerClassName="w-full"
+                              placeholder={
+                                name === "startTime"
+                                  ? "انتخاب ساعت شروع"
+                                  : "انتخاب ساعت پایان"
+                              }
+                              plugins={[
+                                <TimePicker
+                                  key="time-picker"
+                                  position="bottom"
+                                  hideSeconds
+                                />,
+                              ]}
+                            />
+                          )}
+                        />
+                      </label>
+                    ))}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -423,7 +612,7 @@ function ProjectsPageContent() {
                       disabled={projectForm.formState.isSubmitting}
                       type="submit"
                     >
-                      ایجاد پروژه
+                      ایجاد {isSupervisor ? "گزارش" : "پروژه"}
                     </button>
                     {selectedFile && (
                       <button
@@ -743,6 +932,194 @@ function ProjectsPageContent() {
               </div>
             </div>
           </div>
+        </section>
+      )}
+
+      {isSupervisor && activeView === "tasks-admin" && (
+        <section className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {[
+              { label: "الگوهای ثابت", value: visibleFixedTasks.length },
+              { label: "انجام‌نشده", value: incompleteFixedTasks.length },
+              { label: "فعال", value: supervisedFixedTasksCount },
+              { label: "مهلت‌گذشته", value: incompleteFixedTasks.filter((item: any) => item.deadlineStatus === "overdue").length },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-xl border border-[--border] bg-[--surface] p-4">
+                <p className="text-xs text-[--text-3]">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex w-fit rounded-xl border border-[--border] bg-[--surface-2] p-1">
+            {(
+              [
+                { key: "templates", label: `الگوهای ثابت (${visibleFixedTasks.length})` },
+                { key: "incomplete", label: `انجام‌نشده (${incompleteFixedTasks.length})` },
+              ] as const
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                className={`rounded-lg px-5 py-2 text-sm font-semibold transition-all ${
+                  fixedReportsTab === key
+                    ? "bg-[--surface] text-[#1f7a8c] shadow-sm"
+                    : "text-[--text-2] hover:text-[--text]"
+                }`}
+                onClick={() => setFixedReportsTab(key)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Templates Tab */}
+          {fixedReportsTab === "templates" && (
+            <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
+              <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-white">
+                    <ClipboardList size={17} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold">مدیریت الگوهای ثابت</h2>
+                    <p className="text-[11px] text-[--text-3]">{visibleFixedTasks.length} الگو تعریف شده</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="flex h-9 items-center gap-2 rounded-lg border border-[--border] bg-[--surface-2] px-4 text-sm font-semibold transition hover:bg-[--surface]"
+                    onClick={() => void loadSupervisorData()}
+                    type="button"
+                  >
+                    <RefreshCw size={15} />
+                  </button>
+                  <button
+                    className="flex h-9 items-center gap-1.5 rounded-lg border border-[--border] bg-[--surface-2] px-4 text-sm font-semibold transition hover:bg-[--surface]"
+                    onClick={() => void seedFixedTasksFromExcel()}
+                    type="button"
+                  >
+                    <Upload size={15} />
+                    ایمپورت از اکسل
+                  </button>
+                  <button
+                    className="flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-l from-[#1f7a8c] to-[#2491a5] px-4 text-sm font-semibold text-white shadow-sm transition hover:shadow-md active:scale-[0.98]"
+                    onClick={() => openFixedTaskForm()}
+                    type="button"
+                  >
+                    <Plus size={15} />
+                    الگوی جدید
+                  </button>
+                </div>
+              </div>
+
+              {showFixedTaskForm && (
+                <FixedTaskFormPanel
+                  form={fixedTaskForm}
+                  editingFixedTask={editingFixedTask}
+                  users={users}
+                  currentUser={currentUser}
+                  onClose={() => { closeFixedTaskForm(); fixedTaskForm.reset(); }}
+                  onSubmit={async (values) => {
+                    await saveFixedTaskFromValues(values);
+                    await loadSupervisorData();
+                    fixedTaskForm.reset();
+                  }}
+                />
+              )}
+
+              <FilterBar
+                filterRecurrence={filterRecurrence}
+                filterSpecialist={filterSpecialist}
+                filterTitle={filterTitle}
+                onRecurrenceChange={setFilterRecurrence}
+                onSpecialistChange={setFilterSpecialist}
+                onTitleChange={setFilterTitle}
+                onClear={clearFilters}
+                filteredCount={filteredFixedTasks.length}
+                totalCount={visibleFixedTasks.length}
+              />
+
+              <div className="divide-y divide-[--border]">
+                {filteredFixedTasks.length === 0 ? (
+                  <div className="flex flex-col items-center py-12 text-center">
+                    <ClipboardList size={32} className="text-[--text-3]" />
+                    <p className="mt-3 font-semibold text-[--text]">موردی با این فیلترها پیدا نشد</p>
+                    <button
+                      className="mt-4 flex h-9 items-center gap-2 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white"
+                      onClick={clearFilters}
+                      type="button"
+                    >
+                      <Plus size={15} />
+                      پاک کردن فیلترها
+                    </button>
+                  </div>
+                ) : (
+                  filteredFixedTasks.map((task: any) => (
+                    <TemplateRow
+                      key={getId(task)}
+                      task={task}
+                      onActivate={() => setActivatingTask(task)}
+                      onDeactivate={() => void deactivateFixedTask(task)}
+                      onEdit={() => openFixedTaskForm(task)}
+                      onDelete={() => void deleteFixedTask(getId(task))}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Incomplete Tab */}
+          {fixedReportsTab === "incomplete" && (
+            <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
+              <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+                    <AlertTriangle size={17} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold">گزارش‌های ثابت انجام‌نشده</h2>
+                    <p className="text-[11px] text-[--text-3]">{incompleteFixedTasks.length} مورد نیاز به بررسی</p>
+                  </div>
+                </div>
+                <button
+                  className="flex h-9 items-center gap-2 rounded-lg border border-[--border] bg-[--surface-2] px-4 text-sm font-semibold transition hover:bg-[--surface]"
+                  onClick={() => void loadSupervisorData()}
+                  type="button"
+                >
+                  <RefreshCw size={15} />
+                  بروزرسانی
+                </button>
+              </div>
+              <div className="divide-y divide-[--border]">
+                {incompleteFixedTasks.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-[--text-3]">
+                    گزارش ثابت انجام‌نشده‌ای یافت نشد
+                  </p>
+                ) : (
+                  incompleteFixedTasks.map((item: any) => (
+                    <IncompleteRow key={getId(item)} item={item} />
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Activation Modal */}
+          {activatingTask && (
+            <ActivationModal
+              task={activatingTask}
+              onClose={() => setActivatingTask(null)}
+              onActivate={async (values) => {
+                const activated = await activateFixedTask(activatingTask, values);
+                if (activated) await loadSupervisorData();
+                return activated;
+              }}
+            />
+          )}
         </section>
       )}
     </>

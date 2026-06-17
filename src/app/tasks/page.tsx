@@ -65,6 +65,7 @@ function TasksPageContent() {
     deleteFixedTask,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
+  const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
   const specialistMatches = specialistSearchQuery.trim()
     ? specialistUsers.filter((u: any) =>
         userName(u)
@@ -303,36 +304,6 @@ function TasksPageContent() {
                     value={taskQuery}
                     onChange={(e) => setTaskQuery(e.target.value)}
                   />
-                  <div className="relative">
-                    <input
-                      className="h-8 w-56 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c]"
-                      placeholder="جستجوی متخصص…"
-                      value={specialistSearchQuery}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setSpecialistSearchQuery(value);
-                        setSelectedSpecialistId(resolveSpecialistId(value));
-                      }}
-                    />
-                    {specialistSearchQuery.trim() &&
-                      specialistMatches.length > 0 && (
-                        <div className="absolute right-0 top-10 z-20 max-h-48 w-56 overflow-y-auto rounded-lg border border-[--border] bg-[--surface] p-1 shadow-lg">
-                          {specialistMatches.slice(0, 8).map((u: any) => (
-                            <button
-                              key={getId(u)}
-                              className="block w-full rounded-md px-3 py-2 text-right text-xs text-[--text] transition hover:bg-[--surface-2]"
-                              onClick={() => {
-                                setSpecialistSearchQuery(userName(u));
-                                setSelectedSpecialistId(getId(u));
-                              }}
-                              type="button"
-                            >
-                              {userName(u)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                  </div>
                   {isManager && (
                     <button
                       className="flex h-8 items-center gap-1.5 rounded-lg bg-[#1f7a8c] px-3 text-xs font-semibold text-white transition hover:bg-[#196b7b]"
@@ -384,7 +355,7 @@ function TasksPageContent() {
                         </div>
                         <Droppable
                           droppableId={col.status}
-                          isDropDisabled={!isSpecialist}
+                          isDropDisabled={!canMoveOwnFixedTasks}
                         >
                           {(dropProvided: any, dropSnapshot: any) => (
                             <div
@@ -409,7 +380,7 @@ function TasksPageContent() {
                                     draggableId={getId(ft)}
                                     index={idx}
                                     isDragDisabled={
-                                      !isSpecialist || (ft.status ?? "todo") === "done"
+                                      !canMoveOwnFixedTasks || (ft.status ?? "todo") === "done"
                                     }
                                   >
                                     {(dragProvided: any, dragSnapshot: any) => (
@@ -417,7 +388,7 @@ function TasksPageContent() {
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
-                                        className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" ? "cursor-grab active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                        className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" ? "cursor-grab active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                         onClick={
                                           isManager
                                             ? () => {

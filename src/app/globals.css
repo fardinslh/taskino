@@ -70,3 +70,26 @@ button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
 /* Scrollbar hide */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Keep react-multi-date-picker time values readable in dark mode. */
+.dark .rmdp-container input {
+  color: var(--text);
+}
+
+.dark .rmdp-wrapper,
+.dark .rmdp-calendar,
+.dark .rmdp-time-picker {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.dark .rmdp-time-picker input,
+.dark .rmdp-time-picker div,
+.dark .rmdp-time-picker span,
+.dark .rmdp-time-picker button {
+  color: #0f172a;
+}
+
+.dark .rmdp-time-picker input {
+  background: #ffffff;
+}

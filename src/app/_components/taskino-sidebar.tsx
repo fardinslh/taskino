@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FolderKanban,
   LayoutDashboard,
+  Plus,
   Settings,
   ShieldCheck,
   UsersRound,
@@ -84,21 +85,6 @@ export function TaskinoSidebar({
               onClick={() => onSetActiveView("dashboard")}
             />
             <SideItem
-              active={activeView === "supervisor-projects"}
-              icon={FolderKanban}
-              label="گزارش‌های تحت نظر"
-              meta={supervisorTasks.length + supervisorFixedTasks.length}
-              collapsed={sidebarCollapsed}
-              onClick={() => onSetActiveView("supervisor-projects")}
-            />
-            <SideItem
-              active={activeView === "supervisor-team"}
-              icon={UsersRound}
-              label="عملکرد تیم"
-              collapsed={sidebarCollapsed}
-              onClick={() => onSetActiveView("supervisor-team")}
-            />
-            <SideItem
               active={activeView === "leave"}
               icon={CalendarDays}
               label="مرخصی"
@@ -107,13 +93,38 @@ export function TaskinoSidebar({
               onClick={() => onSetActiveView("leave")}
             />
             <SideItem
-              active={activeView === "tasks"}
+              active={activeView === "tasks" || activeView === "tasks-admin" || activeView === "supervisor-projects"}
               icon={ClipboardList}
               label="گزارش‌ها"
               meta={tasks.length || overdueTasks.length || undefined}
               collapsed={sidebarCollapsed}
-              onClick={() => onSetActiveView("tasks")}
+              onClick={() => onSetActiveView("tasks-admin")}
             />
+            <div className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}>
+              <SideItem
+                active={activeView === "tasks-admin"}
+                icon={Plus}
+                label="ایجاد گزارش"
+                collapsed={sidebarCollapsed}
+                onClick={() => onSetActiveView("tasks-admin")}
+              />
+              <SideItem
+                active={activeView === "tasks"}
+                icon={ClipboardList}
+                label="گزارش‌های من"
+                meta={tasks.length || undefined}
+                collapsed={sidebarCollapsed}
+                onClick={() => onSetActiveView("tasks")}
+              />
+              <SideItem
+                active={activeView === "supervisor-projects"}
+                icon={FolderKanban}
+                label="گزارش‌های تحت نظر"
+                meta={supervisorFixedTasks.length || undefined}
+                collapsed={sidebarCollapsed}
+                onClick={() => onSetActiveView("supervisor-projects")}
+              />
+            </div>
             <div className="my-1.5 border-t border-[--border]" />
             <SideItem
               active={activeView === "settings"}

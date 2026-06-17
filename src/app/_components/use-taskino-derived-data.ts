@@ -82,7 +82,9 @@ export function useTaskinoDerivedData({
     ? Math.round((doneTasks / tasks.length) * 100)
     : 0;
   const activeFixedTasks = fixedTasks.filter(
-    (item) => item.isActive !== false,
+    (item) =>
+      item.isActive !== false &&
+      (isManager || !myId || getId(item.assignedTo) === myId),
   );
   const fixedDoneTasks = activeFixedTasks.filter(
     (item) => item.status === "done",

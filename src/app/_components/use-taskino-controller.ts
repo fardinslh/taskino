@@ -202,6 +202,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setManagerMonthlyPerf,
     setManagerUserProgress,
     setSupervisorStats,
+    setSupervisorTaskStatistics,
     setSupervisorMembers,
     setSupervisorTasks,
     setSupervisorFixedTasks,
