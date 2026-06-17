@@ -145,6 +145,7 @@ export function notificationText(notification: Notification) {
     "Task Assigned": "گزارش جدید",
     "Task Status Updated": "وضعیت گزارش تغییر کرد",
     "Fixed Task Status Updated": "وضعیت گزارش ثابت تغییر کرد",
+    "Task Completed": "گزارش تکمیل شد",
     "Fixed Task Completed": "گزارش ثابت تکمیل شد",
   };
 
@@ -161,9 +162,16 @@ export function notificationText(notification: Notification) {
   const fixedTaskStatusChanged = message.match(
     /^The fixed task\s*:?\s*["«]?(.*?)["»]?\s+status changed to\s+(.+?)\.?$/i,
   );
+  const genericCompleted = message.match(
+    /^(.+?)\s+has been completed(?:\s+by\s+(.+?))?\.?$/i,
+  );
+  const taskCompleted =
+    message.match(
+      /^The task\s*:?\s*["Â«]?(.*?)["Â»]?\s+has been completed(?:\s+by\s+(.+?))?\.?$/i,
+    ) ?? (title === "Task Completed" ? genericCompleted : null);
   const fixedTaskCompleted =
     message.match(/^The fixed task\s*:?\s*["«]?(.*?)["»]?\s+has been completed(?:\s+by\s+(.+?))?\.?$/i) ??
-    message.match(/^(.+?)\s+has been completed(?:\s+by\s+(.+?))?\.?$/i);
+    (title === "Fixed Task Completed" ? genericCompleted : null);
 
   if (fixedTaskAssignment) {
     localizedMessage = fixedTaskAssignment[1]
@@ -185,6 +193,14 @@ export function notificationText(notification: Notification) {
     localizedMessage = taskName
       ? `وضعیت گزارش «${taskName}» به «${status}» تغییر کرد.`
       : `وضعیت یک گزارش به «${status}» تغییر کرد.`;
+  } else if (taskCompleted) {
+    const taskName = taskCompleted[1]?.trim();
+    const actor = taskCompleted[2]?.trim();
+    localizedMessage = taskName
+      ? actor
+        ? `گزارش «${taskName}» توسط ${actor} تکمیل شد.`
+        : `گزارش «${taskName}» تکمیل شد.`
+      : "یک گزارش تکمیل شد.";
   } else if (fixedTaskCompleted) {
     const taskName = fixedTaskCompleted[1]?.trim();
     const actor = fixedTaskCompleted[2]?.trim();

@@ -14,7 +14,13 @@ import {
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
-import type { FixedTask, LeaveRequest, Task, User } from "@/lib/api";
+import type {
+  FixedTask,
+  LeaveRequest,
+  SupervisorStats,
+  Task,
+  User,
+} from "@/lib/api";
 import { type View } from "../_lib/task-constants";
 import { initials, roleLabel, userName } from "../_lib/task-helpers";
 import { SideItem } from "./shared";
@@ -31,6 +37,7 @@ type TaskinoSidebarProps = {
   sidebarCollapsed: boolean;
   statsUsers: number;
   supervisorFixedTasks: FixedTask[];
+  supervisorStats: SupervisorStats | null;
   supervisorTasks: Task[];
   tasks: Task[];
 };
@@ -47,11 +54,15 @@ export function TaskinoSidebar({
   sidebarCollapsed,
   statsUsers,
   supervisorFixedTasks,
+  supervisorStats,
   supervisorTasks,
   tasks,
 }: TaskinoSidebarProps) {
-  const pendingLeaves =
-    leaveRequests.filter((request) => request.status === "pending").length;
+  const pendingLeaves = leaveRequests.filter(
+    (request) => request.status === "pending",
+  ).length;
+  const supervisedFixedTaskCount =
+    supervisorStats?.supervisedFixedTasks ?? undefined;
 
   return (
     <aside
@@ -94,14 +105,20 @@ export function TaskinoSidebar({
               onClick={() => onSetActiveView("leave")}
             />
             <SideItem
-              active={activeView === "tasks" || activeView === "tasks-admin" || activeView === "supervisor-projects"}
+              active={
+                activeView === "tasks" ||
+                activeView === "tasks-admin" ||
+                activeView === "supervisor-projects"
+              }
               icon={ClipboardList}
               label="گزارش‌ها"
-              meta={tasks.length || overdueTasks.length || undefined}
+              meta={supervisedFixedTaskCount}
               collapsed={sidebarCollapsed}
               onClick={() => onSetActiveView("tasks-admin")}
             />
-            <div className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}>
+            <div
+              className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}
+            >
               <SideItem
                 active={activeView === "tasks-admin"}
                 icon={Plus}
@@ -113,7 +130,7 @@ export function TaskinoSidebar({
                 active={activeView === "tasks"}
                 icon={ClipboardList}
                 label="گزارش‌های من"
-                meta={tasks.length || undefined}
+                meta={supervisedFixedTaskCount}
                 collapsed={sidebarCollapsed}
                 onClick={() => onSetActiveView("tasks")}
               />
@@ -124,6 +141,42 @@ export function TaskinoSidebar({
                 meta={supervisorFixedTasks.length || undefined}
                 collapsed={sidebarCollapsed}
                 onClick={() => onSetActiveView("supervisor-projects")}
+              />
+            </div>
+            <SideItem
+              active={
+                activeView === "supervisor-create-project" ||
+                activeView === "supervisor-my-projects" ||
+                activeView === "supervisor-watched-projects"
+              }
+              icon={FolderKanban}
+              label="پروژه‌ها"
+              collapsed={sidebarCollapsed}
+              onClick={() => onSetActiveView("supervisor-create-project")}
+            />
+            <div
+              className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}
+            >
+              <SideItem
+                active={activeView === "supervisor-create-project"}
+                icon={Plus}
+                label="ایجاد پروژه"
+                collapsed={sidebarCollapsed}
+                onClick={() => onSetActiveView("supervisor-create-project")}
+              />
+              <SideItem
+                active={activeView === "supervisor-my-projects"}
+                icon={ClipboardList}
+                label="پروژه‌های من"
+                collapsed={sidebarCollapsed}
+                onClick={() => onSetActiveView("supervisor-my-projects")}
+              />
+              <SideItem
+                active={activeView === "supervisor-watched-projects"}
+                icon={Eye}
+                label="پروژه‌های تحت نظر"
+                collapsed={sidebarCollapsed}
+                onClick={() => onSetActiveView("supervisor-watched-projects")}
               />
             </div>
             <div className="my-1.5 border-t border-[--border]" />

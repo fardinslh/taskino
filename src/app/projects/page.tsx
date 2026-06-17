@@ -1,41 +1,27 @@
 "use client";
 
-import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
 import TimePicker from "react-multi-date-picker/plugins/time_picker";
 import {
-  AlertTriangle,
-  CalendarDays,
-  CircleDashed,
   ClipboardList,
   FileSpreadsheet,
   FolderKanban,
   Layers3,
   Plus,
-  RefreshCw,
   Sparkles,
   Trash2,
-  TrendingUp,
-  Upload,
   X,
 } from "lucide-react";
 
-import { getId } from "@/lib/api";
+import { getId, normalizeList, supervisorApi } from "@/lib/api";
+import { ProjectBoardSection } from "../_components/project-board-section";
+import { Field, Select } from "../_components/shared";
 import {
-  ActivationModal,
-  FilterBar,
-  FixedTaskFormPanel,
-  IncompleteRow,
-  TemplateRow,
-  type FixedTaskFormValues,
-} from "../_components/fixed-task-ui";
-import { AssigneeStack, Field, Select } from "../_components/shared";
-import {
-  useFixedTaskContext,
+  useFeedbackContext,
   useManagementContext,
   useNavigationContext,
   useSessionContext,
@@ -84,27 +70,9 @@ function ProjectsPageContent() {
     setTaskQuery,
     taskQuery,
   } = useNavigationContext();
-  const { currentUser, isManager, isSupervisor } = useSessionContext();
-  const { users, supervisorStats, loadSupervisorData } = useManagementContext();
-  const {
-    fixedTasks,
-    incompleteFixedTasks,
-    fixedReportsTab,
-    setFixedReportsTab,
-    showFixedTaskForm,
-    editingFixedTask,
-    openFixedTaskForm,
-    closeFixedTaskForm,
-    saveFixedTaskFromValues,
-    activateFixedTask,
-    deactivateFixedTask,
-    deleteFixedTask,
-    seedFixedTasksFromExcel,
-  } = useFixedTaskContext();
-  const [activatingTask, setActivatingTask] = useState<any>(null);
-  const [filterRecurrence, setFilterRecurrence] = useState("");
-  const [filterSpecialist, setFilterSpecialist] = useState("");
-  const [filterTitle, setFilterTitle] = useState("");
+  const { currentUser, isManager, isSupervisor, token } = useSessionContext();
+  const { setError } = useFeedbackContext();
+  const { users } = useManagementContext();
   const {
     tasks,
     taCompletionResult,
@@ -118,29 +86,40 @@ function ProjectsPageContent() {
   } = useTaskContext();
 
   const specialistTotalCount = specialistTaskCounts?.total ?? 0;
-  const specialistTodoCount = specialistTaskCounts?.todo ?? specialistTaskCounts?.pending ?? 0;
-  const specialistInProgressCount = specialistTaskCounts?.inProgress ?? specialistTaskCounts?.in_progress ?? 0;
+  const specialistTodoCount =
+    specialistTaskCounts?.todo ?? specialistTaskCounts?.pending ?? 0;
+  const specialistInProgressCount =
+    specialistTaskCounts?.inProgress ?? specialistTaskCounts?.in_progress ?? 0;
   const specialistOpenCount = specialistTodoCount + specialistInProgressCount;
-  const specialistDoneCount = specialistTaskCounts?.done ?? specialistTaskCounts?.completed ?? 0;
-  const specialistProgress =
-    specialistTotalCount ? Math.round((specialistDoneCount / specialistTotalCount) * 100) : 0;
-  const projectBoardTasks = useMemo(() => {
-    const query = taskQuery.trim().toLowerCase();
-    if (!query) return tasks;
+  const specialistDoneCount =
+    specialistTaskCounts?.done ?? specialistTaskCounts?.completed ?? 0;
+  const specialistProgress = specialistTotalCount
+    ? Math.round((specialistDoneCount / specialistTotalCount) * 100)
+    : 0;
+  const [supervisorWorkFieldUsers, setSupervisorWorkFieldUsers] = useState<
+    any[]
+  >([]);
+  const isSupervisorCreateView =
+    isSupervisor && activeView === "supervisor-create-project";
+  const loadSupervisorWorkFieldUsers = useEffectEvent(async () => {
+    if (!token) return;
 
-    return tasks.filter((task: any) => {
-      const haystack = [
-        task.title,
-        task.description,
-        statusLabel(task.status),
-        userName(task.assignedTo),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [taskQuery, tasks]);
+    try {
+      const response = await supervisorApi.workFieldSpecialists(token);
+      queueMicrotask(() =>
+        setSupervisorWorkFieldUsers(normalizeList(response as any)),
+      );
+    } catch (error) {
+      queueMicrotask(() => {
+        setSupervisorWorkFieldUsers([]);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "دریافت کاربران حوزه ناموفق بود",
+        );
+      });
+    }
+  });
 
   const projectForm = useForm<ProjectFormValues>({
     defaultValues: {
@@ -159,42 +138,39 @@ function ProjectsPageContent() {
   const dateCountForm = useForm<DateCountFormValues>({
     defaultValues: { userId: "", startDate: "", endDate: "" },
   });
-  const fixedTaskForm = useForm<FixedTaskFormValues>({
-    defaultValues: { title: "", recurrence: "daily", assignedTo: "", description: "" },
-  });
-
-  const visibleFixedTasks = fixedTasks.filter((item: any) => item.isActive !== true);
-  const supervisedFixedTasksCount = supervisorStats?.supervisedFixedTasks ?? 0;
-  const filteredFixedTasks = useMemo(() => {
-    const specialistQuery = filterSpecialist.trim().toLowerCase();
-    const titleQuery = filterTitle.trim().toLowerCase();
-    return visibleFixedTasks.filter((task: any) => {
-      const recurrenceMatch = !filterRecurrence || (task.recurrence ?? "daily") === filterRecurrence;
-      const specialistMatch = !specialistQuery || userName(task.assignedTo).toLowerCase().includes(specialistQuery);
-      const titleMatch = !titleQuery || String(task.title ?? "").toLowerCase().includes(titleQuery);
-      return recurrenceMatch && specialistMatch && titleMatch;
-    });
-  }, [filterRecurrence, filterSpecialist, filterTitle, visibleFixedTasks]);
-
-  useEffect(() => {
-    if (!showFixedTaskForm) return;
-    fixedTaskForm.reset({
-      title: editingFixedTask?.title ?? "",
-      recurrence: editingFixedTask?.recurrence ?? "daily",
-      assignedTo: getId(editingFixedTask?.assignedTo),
-      description: editingFixedTask?.description ?? "",
-    });
-  }, [editingFixedTask, fixedTaskForm, showFixedTaskForm]);
-
-  const clearFilters = () => { setFilterRecurrence(""); setFilterSpecialist(""); setFilterTitle(""); };
-
   const completionStats = taCompletionResult as Record<string, any> | null;
   const dateCountStats = taCountResult as Record<string, any> | null;
+  useEffect(() => {
+    if (!isSupervisorCreateView || !token) return;
+    queueMicrotask(() => void loadSupervisorWorkFieldUsers());
+  }, [isSupervisorCreateView, token]);
+
+  const selectableUsers = isSupervisorCreateView
+    ? supervisorWorkFieldUsers
+    : users;
+  const lookupUsers = useMemo(() => {
+    const mergedUsers = [currentUser, ...selectableUsers, ...users].filter(
+      Boolean,
+    );
+    const seen = new Set<string>();
+
+    return mergedUsers.filter((user: any) => {
+      const id = getId(user);
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [currentUser, selectableUsers, users]);
+
   const completionManager = completionStats
-    ? users.find((u: any) => getId(u) === String(completionStats.managerId))
+    ? lookupUsers.find(
+        (u: any) => getId(u) === String(completionStats.managerId),
+      )
     : null;
   const completionExpert = completionStats
-    ? users.find((u: any) => getId(u) === String(completionStats.expertId))
+    ? lookupUsers.find(
+        (u: any) => getId(u) === String(completionStats.expertId),
+      )
     : null;
 
   const selectedFile =
@@ -216,30 +192,34 @@ function ProjectsPageContent() {
     date.setHours(0, 0, 0, 0);
     return date;
   }, []);
+  const resolveUserRole = (user: any) => user?.roles ?? user?.role ?? "";
 
-  const scopedUsers = users.filter((user: any) => {
-    if (!currentUser?.workField) return true;
+  const scopedUsers = selectableUsers.filter((user: any) => {
+    if (!currentUser?.workField || !user?.workField) return true;
     return user.workField === currentUser.workField;
   });
 
   const scopedAssigneeOptions = scopedUsers
     .filter((user: any) => {
-      if (projectType === "general") {
-        return user.roles === "specialist" || user.roles === "supervisor";
-      }
-      return user.roles === "specialist";
+      const role = resolveUserRole(user);
+      return role === "specialist" || role === "supervisor";
     })
     .map((user: any) => [getId(user), userName(user)] as [string, string]);
 
   const scopedSpecialistOptions = scopedUsers
-    .filter((user: any) => user.roles === "specialist")
+    .filter((user: any) => {
+      const role = resolveUserRole(user);
+      return role === "specialist" || role === "supervisor";
+    })
     .map((user: any) => [getId(user), userName(user)] as [string, string]);
 
   const scopedUserOptions = scopedUsers.map(
     (user: any) => [getId(user), userName(user)] as [string, string],
   );
   const dateCountUser = dateCountStats
-    ? users.find((user: any) => getId(user) === String(dateCountStats.userId))
+    ? lookupUsers.find(
+        (user: any) => getId(user) === String(dateCountStats.userId),
+      )
     : null;
   const dateCountHasData = Math.max(
     Number(dateCountStats?.totalTasks ?? 0),
@@ -274,185 +254,24 @@ function ProjectsPageContent() {
   return (
     <>
       {!isManager && !isSupervisor && activeView === "tasks-admin" && (
-        <section className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              {
-                label: "پروژه‌ها",
-                value: specialistTotalCount,
-                sub: "واگذارشده",
-                icon: FolderKanban,
-                a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
-              },
-              {
-                label: "پروژه‌های باز",
-                value: specialistOpenCount,
-                sub: `${specialistInProgressCount} در حال انجام`,
-                icon: ClipboardList,
-                a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-              },
-              {
-                label: "تکمیل شده",
-                value: specialistDoneCount,
-                sub: `${specialistProgress}% پیشرفت`,
-                icon: TrendingUp,
-                a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
-              },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="rounded-xl border border-[--border] bg-[--surface] p-4"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-medium text-[--text-2]">{s.label}</p>
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-4 ${s.a}`}
-                  >
-                    <s.icon size={15} />
-                  </span>
-                </div>
-                <p className="mt-3 text-2xl font-extrabold text-[--text]">{s.value}</p>
-                <p className="mt-0.5 text-[11px] text-[--text-3]">{s.sub}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-[#b8dfe8] bg-[--surface] shadow-md shadow-[#1f7a8c]/8 dark:border-[#1f5060]">
-            <div className="flex flex-col gap-3 border-b border-[#cce8ef] bg-gradient-to-l from-[#e0f4f8] to-[#f0fafb] px-5 py-4 dark:border-[#1f5060] dark:from-[#0f2535] dark:to-[#0f172a] sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
-                <FolderKanban size={17} />
-              </div>
-              <div>
-                <h2 className="font-bold">برد پروژه‌ها</h2>
-                <p className="text-[11px] text-[--text-3]">
-                  {tasks.length} پروژه واگذارشده · {specialistInProgressCount} در حال انجام · {specialistDoneCount} تکمیل شده
-                </p>
-              </div>
-              <input
-                className="h-8 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] sm:mr-auto sm:w-52"
-                onChange={(event) => setTaskQuery(event.target.value)}
-                placeholder="جستجوی پروژه..."
-                value={taskQuery}
-              />
-            </div>
-
-            <DragDropContext
-              onDragEnd={(result: any) => {
-                if (!result.destination) return;
-                if (result.source.droppableId === result.destination.droppableId) return;
-                void moveTask(result.draggableId, result.destination.droppableId);
-              }}
-            >
-              <div className="grid gap-4 bg-[--surface-2]/40 p-4 lg:grid-cols-3">
-                {COLUMNS.map((column: any) => {
-                  const columnTasks = projectBoardTasks.filter(
-                    (task: any) => (task.status ?? "todo") === column.status,
-                  );
-
-                  return (
-                    <div
-                      className={`overflow-hidden rounded-2xl border ${column.border} ${column.colBg}`}
-                      key={column.status}
-                    >
-                      <div className={`bg-gradient-to-l ${column.headerGrad} px-4 py-3`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2.5 w-2.5 rounded-full ${column.dot}`} />
-                            <h3 className={`text-sm font-bold ${column.headerText}`}>
-                              {column.title}
-                            </h3>
-                          </div>
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${column.badge}`}>
-                            {columnTasks.length}
-                          </span>
-                        </div>
-                      </div>
-
-                      <Droppable droppableId={column.status}>
-                        {(dropProvided: any, dropSnapshot: any) => (
-                          <div
-                            ref={dropProvided.innerRef}
-                            {...dropProvided.droppableProps}
-                            className={`min-h-72 space-y-3 p-3 transition ${
-                              dropSnapshot.isDraggingOver ? "bg-white/45 dark:bg-white/5" : ""
-                            }`}
-                          >
-                            {columnTasks.length === 0 ? (
-                              <div className={`flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed ${column.emptyBorder} bg-white/45 text-center dark:bg-slate-900/20`}>
-                                <CircleDashed size={20} className="text-[--text-3]" />
-                                <p className="mt-2 text-xs text-[--text-3]">پروژه‌ای نیست</p>
-                              </div>
-                            ) : (
-                              columnTasks.map((task: any, index: number) => {
-                                const taskId = getId(task);
-                                const isDone = (task.status ?? "todo") === "done";
-
-                                return (
-                                  <Draggable
-                                    draggableId={taskId}
-                                    index={index}
-                                    isDragDisabled={isDone}
-                                    key={taskId}
-                                  >
-                                    {(dragProvided: any, dragSnapshot: any) => (
-                                      <article
-                                        ref={dragProvided.innerRef}
-                                        {...dragProvided.draggableProps}
-                                        {...dragProvided.dragHandleProps}
-                                        className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-all ${isDone ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} hover:-translate-y-0.5 hover:shadow-md ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
-                                        onClick={() => setSelectedTask(task)}
-                                      >
-                                        <div className="flex items-start justify-between gap-2">
-                                          <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${column.badge}`}>
-                                            {statusLabel(task.status)}
-                                          </span>
-                                          {task.excelFile && (
-                                            <span className="flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                                              <FileSpreadsheet size={10} />
-                                              اکسل
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="mt-2.5 flex items-start gap-2">
-                                          <ClipboardList size={15} className="mt-0.5 shrink-0 text-[#1f7a8c]" />
-                                          <h4 className="line-clamp-2 text-sm font-semibold leading-snug">
-                                            {task.title}
-                                          </h4>
-                                        </div>
-                                        {task.description && (
-                                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
-                                            {task.description}
-                                          </p>
-                                        )}
-                                        <div className="mt-3 flex items-center justify-between gap-2">
-                                          <AssigneeStack fallback={task.assignedTo} />
-                                          {task.dueDate && (
-                                            <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
-                                              <CalendarDays size={10} />
-                                              {formatDate(task.dueDate)}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </article>
-                                    )}
-                                  </Draggable>
-                                );
-                              })
-                            )}
-                            {dropProvided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </div>
-                  );
-                })}
-              </div>
-            </DragDropContext>
-          </div>
-        </section>
+        <ProjectBoardSection
+          doneCount={specialistDoneCount}
+          inProgressCount={specialistInProgressCount}
+          onMoveTask={moveTask}
+          onSearchChange={setTaskQuery}
+          onSelectTask={setSelectedTask}
+          openCount={specialistOpenCount}
+          progress={specialistProgress}
+          taskQuery={taskQuery}
+          tasks={tasks}
+          totalCount={specialistTotalCount}
+        />
       )}
 
-      {isManager && activeView === "tasks-admin" && (
+      {((isManager && activeView === "tasks-admin") ||
+        (isSupervisor &&
+          (activeView === "tasks-admin" ||
+            activeView === "supervisor-create-project"))) && (
         <section className="space-y-4">
           <div className="overflow-hidden rounded-[28px] border border-[--border] bg-[--surface] shadow-sm">
             <div className="border-b border-[--border] bg-[radial-gradient(circle_at_top_left,_rgba(31,122,140,0.16),_transparent_42%),linear-gradient(135deg,rgba(31,122,140,0.10),transparent_50%)] px-5 py-5">
@@ -464,7 +283,8 @@ function ProjectsPageContent() {
                   <div className="space-y-1">
                     <h2 className="font-bold">{createTitle}</h2>
                     <p className="text-[12px] text-[--text-3]">
-                      نوع {isSupervisor ? "گزارش" : "پروژه"} را مشخص کن، بعد مسئول مناسب همان حوزه را انتخاب کن.
+                      نوع {isSupervisor ? "گزارش" : "پروژه"} را مشخص کن، بعد
+                      مسئول مناسب همان حوزه را انتخاب کن.
                     </p>
                   </div>
                 </div>
@@ -670,7 +490,9 @@ function ProjectsPageContent() {
                 </div>
                 <div>
                   <h2 className="font-bold">همه پروژه‌ها</h2>
-                  <p className="text-[11px] text-[--text-3]">{tasks.length} پروژه</p>
+                  <p className="text-[11px] text-[--text-3]">
+                    {tasks.length} پروژه
+                  </p>
                 </div>
               </div>
               <div className="max-h-[420px] divide-y divide-[--border] overflow-y-auto">
@@ -696,8 +518,9 @@ function ProjectsPageContent() {
                       <div className="flex shrink-0 items-center gap-2">
                         <span
                           className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                            COLUMNS.find((column: any) => column.status === task.status)
-                              ?.badge ?? "bg-slate-100 text-slate-600"
+                            COLUMNS.find(
+                              (column: any) => column.status === task.status,
+                            )?.badge ?? "bg-slate-100 text-slate-600"
                           }`}
                         >
                           {statusLabel(task.status)}
@@ -720,7 +543,7 @@ function ProjectsPageContent() {
               <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
                 <h2 className="font-bold">آمار تکمیل پروژه</h2>
                 <p className="mt-1 text-xs text-[--text-3]">
-                  پروژه‌های ساخته‌شده توسط شما و واگذارشده به یک متخصص
+                  پروژه‌های ساخته‌شده توسط شما و واگذارشده به یک متخصص یا سرپرست
                 </p>
                 <form
                   className="mt-4 flex flex-wrap items-end gap-2"
@@ -730,9 +553,9 @@ function ProjectsPageContent() {
                 >
                   <div className="min-w-[200px] flex-1">
                     <Select
-                      label="متخصص"
+                      label="متخصص یا سرپرست"
                       options={scopedSpecialistOptions}
-                      placeholder="انتخاب متخصص"
+                      placeholder="انتخاب متخصص یا سرپرست"
                       registration={completionForm.register("expertId", {
                         required: true,
                       })}
@@ -766,7 +589,9 @@ function ProjectsPageContent() {
                         </p>
                       </div>
                       <div className="rounded-lg bg-[--surface] p-3">
-                        <p className="text-[11px] text-[--text-3]">کل پروژه‌ها</p>
+                        <p className="text-[11px] text-[--text-3]">
+                          کل پروژه‌ها
+                        </p>
                         <p className="mt-1 text-sm font-semibold">
                           {completionStats?.totalTasks}
                         </p>
@@ -894,7 +719,9 @@ function ProjectsPageContent() {
                           نتیجه بازه تاریخی
                         </p>
                         <h3 className="mt-1 font-bold text-[--text]">
-                          {dateCountUser ? userName(dateCountUser) : "کاربر انتخاب‌شده"}
+                          {dateCountUser
+                            ? userName(dateCountUser)
+                            : "کاربر انتخاب‌شده"}
                         </h3>
                       </div>
                       <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-[#1f7a8c]">
@@ -965,194 +792,6 @@ function ProjectsPageContent() {
               </div>
             </div>
           </div>
-        </section>
-      )}
-
-      {isSupervisor && activeView === "tasks-admin" && (
-        <section className="space-y-4">
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {[
-              { label: "الگوهای ثابت", value: visibleFixedTasks.length },
-              { label: "انجام‌نشده", value: incompleteFixedTasks.length },
-              { label: "فعال", value: supervisedFixedTasksCount },
-              { label: "مهلت‌گذشته", value: incompleteFixedTasks.filter((item: any) => item.deadlineStatus === "overdue").length },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-xl border border-[--border] bg-[--surface] p-4">
-                <p className="text-xs text-[--text-3]">{stat.label}</p>
-                <p className="mt-1 text-2xl font-bold">{stat.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex w-fit rounded-xl border border-[--border] bg-[--surface-2] p-1">
-            {(
-              [
-                { key: "templates", label: `الگوهای ثابت (${visibleFixedTasks.length})` },
-                { key: "incomplete", label: `انجام‌نشده (${incompleteFixedTasks.length})` },
-              ] as const
-            ).map(({ key, label }) => (
-              <button
-                key={key}
-                className={`rounded-lg px-5 py-2 text-sm font-semibold transition-all ${
-                  fixedReportsTab === key
-                    ? "bg-[--surface] text-[#1f7a8c] shadow-sm"
-                    : "text-[--text-2] hover:text-[--text]"
-                }`}
-                onClick={() => setFixedReportsTab(key)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Templates Tab */}
-          {fixedReportsTab === "templates" && (
-            <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
-              <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-white">
-                    <ClipboardList size={17} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold">مدیریت الگوهای ثابت</h2>
-                    <p className="text-[11px] text-[--text-3]">{visibleFixedTasks.length} الگو تعریف شده</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="flex h-9 items-center gap-2 rounded-lg border border-[--border] bg-[--surface-2] px-4 text-sm font-semibold transition hover:bg-[--surface]"
-                    onClick={() => void loadSupervisorData()}
-                    type="button"
-                  >
-                    <RefreshCw size={15} />
-                  </button>
-                  <button
-                    className="flex h-9 items-center gap-1.5 rounded-lg border border-[--border] bg-[--surface-2] px-4 text-sm font-semibold transition hover:bg-[--surface]"
-                    onClick={() => void seedFixedTasksFromExcel()}
-                    type="button"
-                  >
-                    <Upload size={15} />
-                    ایمپورت از اکسل
-                  </button>
-                  <button
-                    className="flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-l from-[#1f7a8c] to-[#2491a5] px-4 text-sm font-semibold text-white shadow-sm transition hover:shadow-md active:scale-[0.98]"
-                    onClick={() => openFixedTaskForm()}
-                    type="button"
-                  >
-                    <Plus size={15} />
-                    الگوی جدید
-                  </button>
-                </div>
-              </div>
-
-              {showFixedTaskForm && (
-                <FixedTaskFormPanel
-                  form={fixedTaskForm}
-                  editingFixedTask={editingFixedTask}
-                  users={users}
-                  currentUser={currentUser}
-                  onClose={() => { closeFixedTaskForm(); fixedTaskForm.reset(); }}
-                  onSubmit={async (values) => {
-                    await saveFixedTaskFromValues(values);
-                    await loadSupervisorData();
-                    fixedTaskForm.reset();
-                  }}
-                />
-              )}
-
-              <FilterBar
-                filterRecurrence={filterRecurrence}
-                filterSpecialist={filterSpecialist}
-                filterTitle={filterTitle}
-                onRecurrenceChange={setFilterRecurrence}
-                onSpecialistChange={setFilterSpecialist}
-                onTitleChange={setFilterTitle}
-                onClear={clearFilters}
-                filteredCount={filteredFixedTasks.length}
-                totalCount={visibleFixedTasks.length}
-              />
-
-              <div className="divide-y divide-[--border]">
-                {filteredFixedTasks.length === 0 ? (
-                  <div className="flex flex-col items-center py-12 text-center">
-                    <ClipboardList size={32} className="text-[--text-3]" />
-                    <p className="mt-3 font-semibold text-[--text]">موردی با این فیلترها پیدا نشد</p>
-                    <button
-                      className="mt-4 flex h-9 items-center gap-2 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white"
-                      onClick={clearFilters}
-                      type="button"
-                    >
-                      <Plus size={15} />
-                      پاک کردن فیلترها
-                    </button>
-                  </div>
-                ) : (
-                  filteredFixedTasks.map((task: any) => (
-                    <TemplateRow
-                      key={getId(task)}
-                      task={task}
-                      onActivate={() => setActivatingTask(task)}
-                      onDeactivate={() => void deactivateFixedTask(task)}
-                      onEdit={() => openFixedTaskForm(task)}
-                      onDelete={() => void deleteFixedTask(getId(task))}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Incomplete Tab */}
-          {fixedReportsTab === "incomplete" && (
-            <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
-              <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-                    <AlertTriangle size={17} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold">گزارش‌های ثابت انجام‌نشده</h2>
-                    <p className="text-[11px] text-[--text-3]">{incompleteFixedTasks.length} مورد نیاز به بررسی</p>
-                  </div>
-                </div>
-                <button
-                  className="flex h-9 items-center gap-2 rounded-lg border border-[--border] bg-[--surface-2] px-4 text-sm font-semibold transition hover:bg-[--surface]"
-                  onClick={() => void loadSupervisorData()}
-                  type="button"
-                >
-                  <RefreshCw size={15} />
-                  بروزرسانی
-                </button>
-              </div>
-              <div className="divide-y divide-[--border]">
-                {incompleteFixedTasks.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-[--text-3]">
-                    گزارش ثابت انجام‌نشده‌ای یافت نشد
-                  </p>
-                ) : (
-                  incompleteFixedTasks.map((item: any) => (
-                    <IncompleteRow key={getId(item)} item={item} />
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Activation Modal */}
-          {activatingTask && (
-            <ActivationModal
-              task={activatingTask}
-              onClose={() => setActivatingTask(null)}
-              onActivate={async (values) => {
-                const activated = await activateFixedTask(activatingTask, values);
-                if (activated) await loadSupervisorData();
-                return activated;
-              }}
-            />
-          )}
         </section>
       )}
     </>

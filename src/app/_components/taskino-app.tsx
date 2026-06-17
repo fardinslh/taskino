@@ -61,6 +61,7 @@ export function TaskinoApp({
     sidebarCollapsed,
     statsUsers,
     supervisorFixedTasks,
+    supervisorStats,
     supervisorTasks,
     taskQuery,
     tasks,
@@ -114,6 +115,7 @@ export function TaskinoApp({
             sidebarCollapsed={sidebarCollapsed}
             statsUsers={statsUsers}
             supervisorFixedTasks={supervisorFixedTasks}
+            supervisorStats={supervisorStats}
             supervisorTasks={supervisorTasks}
             tasks={tasks}
           />

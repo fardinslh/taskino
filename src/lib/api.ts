@@ -414,9 +414,13 @@ export type IncompleteFixedTask = FixedTask & {
   deadlineStatus?: DeadlineStatus;
 };
 
-export function getId(item?: { _id?: string; id?: string } | string) {
+export function getId(
+  item?: { _id?: string; id?: string; userId?: string } | string,
+) {
   if (!item) return "";
-  return typeof item === "string" ? item : (item._id ?? item.id ?? "");
+  return typeof item === "string"
+    ? item
+    : (item._id ?? item.id ?? item.userId ?? "");
 }
 
 export type ListResponse<T> = T[] | { data?: T[]; items?: T[]; docs?: T[] };
@@ -747,6 +751,10 @@ export const supervisorApi = {
   tasks: (token: string, params?: Params) =>
     unwrapAxios(
       apiClient.get<ListResponse<Task>>(`/supervisor/tasks${qs(params)}`),
+    ),
+  workFieldSpecialists: (token: string) =>
+    unwrapAxios(
+      apiClient.get<ListResponse<User>>("/supervisor/work-field-specialists"),
     ),
   fixedTasks: (token: string, params?: BoolParams) =>
     unwrapAxios(

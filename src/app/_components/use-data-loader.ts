@@ -55,7 +55,9 @@ type DataLoaderInput = {
   setManagerMonthlyPerf: Dispatch<SetStateAction<MonthlyPerformance[]>>;
   setManagerUserProgress: Dispatch<SetStateAction<UserProgress[]>>;
   setSupervisorStats: Dispatch<SetStateAction<SupervisorStats | null>>;
-  setSupervisorTaskStatistics: Dispatch<SetStateAction<SupervisorTaskStatistics | null>>;
+  setSupervisorTaskStatistics: Dispatch<
+    SetStateAction<SupervisorTaskStatistics | null>
+  >;
   setSupervisorMembers: Dispatch<SetStateAction<SupervisorMember[]>>;
   setSupervisorTasks: Dispatch<SetStateAction<Task[]>>;
   setSupervisorFixedTasks: Dispatch<SetStateAction<FixedTask[]>>;
@@ -185,20 +187,23 @@ export function useDataLoader({
   async function loadSupervisorData(authToken = token) {
     if (!authToken) return;
     try {
-      const [stats, taskStats, membersResponse, tasksResponse, fixedTasksResponse] =
-        await Promise.all([
-          supervisorApi.statistics(authToken).catch(() => null),
-          supervisorApi.taskStatistics(authToken).catch(() => null),
-          supervisorApi
-            .members(authToken, { page: 1, limit: 100 })
-            .catch(() => []),
-          supervisorApi
-            .tasks(authToken, { page: 1, limit: 100 })
-            .catch(() => []),
-          supervisorApi
-            .fixedTasks(authToken, { page: 1, limit: 100 })
-            .catch(() => []),
-        ]);
+      const [
+        stats,
+        taskStats,
+        membersResponse,
+        tasksResponse,
+        fixedTasksResponse,
+      ] = await Promise.all([
+        supervisorApi.statistics(authToken).catch(() => null),
+        supervisorApi.taskStatistics(authToken).catch(() => null),
+        supervisorApi
+          .members(authToken, { page: 1, limit: 100 })
+          .catch(() => []),
+        supervisorApi.tasks(authToken, { page: 1, limit: 100 }).catch(() => []),
+        supervisorApi
+          .fixedTasks(authToken, { page: 1, limit: 100 })
+          .catch(() => []),
+      ]);
       setSupervisorTaskStatistics(taskStats);
       const members = normalizeList(
         membersResponse as SupervisorMember[] | { data?: SupervisorMember[] },
@@ -236,18 +241,21 @@ export function useDataLoader({
       setOverdueTasks(overdue);
       setManagerUserProgress(members as UserProgress[]);
       setUsers(
-        members.map((member) => ({
-          _id: member.userId,
-          firstName: member.firstName,
-          lastName: member.lastName,
-          email: member.email,
-          mobile: member.mobile,
-          roles: member.role,
-          isActive: member.isActive,
-          score: member.score,
-          performanceStatus: member.performanceStatus,
-          progressPercentage: member.progressPercentage,
-        })),
+        members
+          .filter((member) => member.userId !== currentUser?._id)
+          .map((member) => ({
+            _id: member.userId,
+            firstName: member.firstName,
+            lastName: member.lastName,
+            email: member.email,
+            mobile: member.mobile,
+            roles: member.role,
+            workField: currentUser?.workField,
+            isActive: member.isActive,
+            score: member.score,
+            performanceStatus: member.performanceStatus,
+            progressPercentage: member.progressPercentage,
+          })),
       );
       setTeamPerformance({
         members,
@@ -272,11 +280,11 @@ export function useDataLoader({
       const userIsManager = currentRole === "manager";
       const userIsSupervisor = currentRole === "supervisor";
       const userIsSpecialist = currentRole === "specialist";
+      const userHasPersonalTaskBoard =
+        currentRole === "specialist" || currentRole === "supervisor";
       const shouldLoadLeaveStats = currentRole === "manager";
       const reportParams =
-        !userIsManager && uid
-          ? { assignedTo: uid }
-          : undefined;
+        !userIsManager && uid ? { assignedTo: uid } : undefined;
       const [u, t, leaves, statsRes, unreadRes, notifRes, leaveStatsRes] =
         await Promise.all([
           userIsManager
@@ -308,18 +316,26 @@ export function useDataLoader({
         specialistFixedTaskCountsRes,
         specialistProgressRes,
         specialistWorkSummaryRes,
-      ] = userIsSpecialist
+      ] = userHasPersonalTaskBoard
         ? await Promise.all([
             taskApi.statusCounts(authToken).catch(() => null),
-            fixedTaskApi.statusCounts(authToken).catch(() => null),
-            userApi.meProgress(authToken).catch(() => null),
-            userApi.meWorkSummary(authToken).catch(() => null),
+            userIsSpecialist
+              ? fixedTaskApi.statusCounts(authToken).catch(() => null)
+              : Promise.resolve(null),
+            userIsSpecialist
+              ? userApi.meProgress(authToken).catch(() => null)
+              : Promise.resolve(null),
+            userIsSpecialist
+              ? userApi.meWorkSummary(authToken).catch(() => null)
+              : Promise.resolve(null),
           ])
         : [null, null, null, null];
       const taskList = normalizeList(
         ((t as ManagerAllTasks)?.tasks ?? t) as Task[] | { data?: Task[] },
       );
-      setUsers(normalizeList(u));
+      if (currentRole !== "supervisor") {
+        setUsers(normalizeList(u));
+      }
       setTasks(taskList);
       setLeaveRequests(normalizeList(leaves));
       setLeaveStatistics(leaveStatsRes);
@@ -336,7 +352,11 @@ export function useDataLoader({
       if (role === "manager") void loadManagerAnalytics(authToken);
       else if (role === "supervisor" && uid) {
         void loadSupervisorData(authToken);
-        fetchAllFixedTasks(authToken, { status: "todo", startDate: "", endDate: "" })
+        fetchAllFixedTasks(authToken, {
+          status: "todo",
+          startDate: "",
+          endDate: "",
+        })
           .then((r) => setFixedTasks(r))
           .catch(() => setFixedTasks([]));
       } else if (uid) {
