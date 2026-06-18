@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   FolderKanban,
   TrendingUp,
+  UserCheck,
 } from "lucide-react";
 
 import { getId, type Task } from "@/lib/api";
@@ -23,6 +24,7 @@ type ProjectBoardSectionProps = {
   inProgressCount: number;
   openCount: number;
   doneCount: number;
+  onClaimTask?: (taskId: string) => void | Promise<void>;
   onMoveTask: (taskId: string, status: string) => void | Promise<void>;
   onSearchChange: (value: string) => void;
   onSelectTask: (task: Task) => void;
@@ -36,6 +38,7 @@ export function ProjectBoardSection({
   inProgressCount,
   openCount,
   doneCount,
+  onClaimTask,
   onMoveTask,
   onSearchChange,
   onSelectTask,
@@ -200,6 +203,8 @@ export function ProjectBoardSection({
                           columnTasks.map((task, index) => {
                             const taskId = getId(task);
                             const isDone = (task.status ?? "todo") === "done";
+                            const canClaimPublicTask =
+                              !!task.isPublic && !isDone && !!onClaimTask;
 
                             return (
                               <Draggable
@@ -252,6 +257,19 @@ export function ProjectBoardSection({
                                         </div>
                                       )}
                                     </div>
+                                    {canClaimPublicTask && (
+                                      <button
+                                        className="mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] px-3 text-xs font-bold text-white transition hover:bg-[#196b7b]"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          void onClaimTask(taskId);
+                                        }}
+                                        type="button"
+                                      >
+                                        <UserCheck size={13} />
+                                        انتخاب پروژه
+                                      </button>
+                                    )}
                                   </article>
                                 )}
                               </Draggable>

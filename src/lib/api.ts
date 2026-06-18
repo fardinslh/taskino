@@ -72,6 +72,7 @@ export type Task = {
   status?: string;
   taskComment?: string;
   isPublic?: boolean;
+  projectType?: "specialist" | "general";
   file?: string;
   excelFile?:
     | string
@@ -79,6 +80,7 @@ export type Task = {
   recurrence?: string;
   startDate?: string;
   dueDate?: string;
+  endDate?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -118,6 +120,8 @@ export type LeaveRequest = {
   startDate: string;
   endDate: string;
   reason?: string;
+  description?: string;
+  details?: string;
   status?: string;
   approvedBy?: string | User;
 };
@@ -675,6 +679,8 @@ export const taskApi = {
         `/tasks/specialist/${userId}${qs(params)}`,
       ),
     ),
+  publicActive: (token: string) =>
+    unwrapAxios(apiClient.get<ListResponse<Task>>("/tasks/public/active")),
   statusCounts: (token: string) =>
     unwrapAxios(apiClient.get<StatusCounts>("/tasks/me/status-counts")),
 };

@@ -13,6 +13,7 @@ import {
   FolderKanban,
   Plus,
   TrendingUp,
+  UserCheck,
   UsersRound,
 } from "lucide-react";
 
@@ -57,6 +58,7 @@ function DashboardPageContent() {
     useSessionContext();
   const {
     activeTasks,
+    claimTask,
     doneTasks,
     inProgressTasks,
     progress,
@@ -915,11 +917,10 @@ function DashboardPageContent() {
               </div>
               <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
                 {tasks.map((t: any) => (
-                  <button
+                  <article
                     key={getId(t)}
-                    className="rounded-xl border border-[--border] border-t-[3px] border-t-indigo-500 bg-[--surface] p-3.5 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                    className="cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-indigo-500 bg-[--surface] p-3.5 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                     onClick={() => setSelectedTask(t)}
-                    type="button"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
@@ -948,7 +949,20 @@ function DashboardPageContent() {
                         {t.description}
                       </p>
                     )}
-                  </button>
+                    {!!t.isPublic && (t.status ?? "todo") !== "done" && (
+                      <button
+                        className="mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] px-3 text-xs font-bold text-white transition hover:bg-[#196b7b]"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void claimTask(getId(t));
+                        }}
+                        type="button"
+                      >
+                        <UserCheck size={13} />
+                        انتخاب پروژه
+                      </button>
+                    )}
+                  </article>
                 ))}
               </div>
             </div>

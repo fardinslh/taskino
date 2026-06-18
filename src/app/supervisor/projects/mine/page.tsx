@@ -11,7 +11,7 @@ function SupervisorMyProjectsPageContent() {
   const { activeView, setSelectedTask, setTaskQuery, taskQuery } =
     useNavigationContext();
   const { isSupervisor } = useSessionContext();
-  const { moveTask, specialistTaskCounts, tasks } = useTaskContext();
+  const { claimTask, moveTask, specialistTaskCounts, tasks } = useTaskContext();
 
   const totalCount = specialistTaskCounts?.total ?? 0;
   const todoCount =
@@ -31,6 +31,7 @@ function SupervisorMyProjectsPageContent() {
     <ProjectBoardSection
       doneCount={doneCount}
       inProgressCount={inProgressCount}
+      onClaimTask={claimTask}
       onMoveTask={moveTask}
       onSearchChange={setTaskQuery}
       onSelectTask={setSelectedTask}

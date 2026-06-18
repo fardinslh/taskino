@@ -24,11 +24,12 @@ type TaskActionsInput = {
 
 type CreateTaskValues = {
   title: string;
+  projectType?: "specialist" | "general";
   assignee?: string;
   recurrence?: string;
   description?: string;
   startDate?: string;
-  dueDate?: string;
+  endDate?: string;
   startTime?: string;
   endTime?: string;
   file?: File | null;
@@ -52,6 +53,7 @@ type DateCountValues = {
 export function useTaskActions({
   token,
   myId,
+  tasks,
   selectedTask,
   setTasks,
   setSelectedTask,
@@ -104,10 +106,13 @@ export function useTaskActions({
   async function createTask(values: CreateTaskValues) {
     const title = values.title.trim();
     if (!myId || !title) return;
-    const assignee = values.assignee || myId;
+    const isGeneralProject = values.projectType === "general";
+    const assignee = values.assignee || (isGeneralProject ? "" : myId);
     const body = {
       title,
-      assignedTo: [assignee],
+      ...(!isGeneralProject ? { assignedTo: [assignee] } : {}),
+      projectType: values.projectType,
+      isPublic: isGeneralProject,
       status: "todo",
       ...(values.description?.trim()
         ? { description: values.description.trim() }
@@ -116,8 +121,8 @@ export function useTaskActions({
       ...(values.startDate
         ? { startDate: new Date(values.startDate).toISOString() }
         : {}),
-      ...(values.dueDate
-        ? { dueDate: new Date(values.dueDate).toISOString() }
+      ...(values.endDate
+        ? { endDate: new Date(values.endDate).toISOString() }
         : {}),
       ...(values.startTime ? { startTime: values.startTime } : {}),
       ...(values.endTime ? { endTime: values.endTime } : {}),
@@ -141,10 +146,12 @@ export function useTaskActions({
     try {
       const updated = await taskApi.update(token, taskId, {
         assignedTo: [myId],
+        isPublic: false,
       });
       setTasks((prev) => prev.map((t) => (getId(t) === taskId ? updated : t)));
       if (selectedTask && getId(selectedTask) === taskId)
         setSelectedTask(updated);
+      await loadData();
       setMessage("گزارش برای شما اساین شد.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "اساین گزارش ناموفق بود");
@@ -153,15 +160,31 @@ export function useTaskActions({
 
   async function moveTask(taskId: string, newStatus: string) {
     try {
-      await taskApi.updateStatus(token, taskId, newStatus);
+      const currentTask = tasks.find((task) => getId(task) === taskId);
+      const shouldClaimPublicTask =
+        !!currentTask?.isPublic &&
+        (newStatus === "in_progress" || newStatus === "done");
+      if (shouldClaimPublicTask && !myId) return;
+      const updatedTask: Partial<Task> = shouldClaimPublicTask
+        ? await taskApi.update(token, taskId, {
+            status: newStatus,
+            assignedTo: [myId],
+            isPublic: false,
+          })
+        : { status: newStatus };
+
+      if (!shouldClaimPublicTask) {
+        await taskApi.updateStatus(token, taskId, newStatus);
+      }
+
       setTasks((prev) =>
         prev.map((t) =>
-          getId(t) === taskId ? { ...t, status: newStatus } : t,
+          getId(t) === taskId ? { ...t, ...updatedTask } : t,
         ),
       );
       if (selectedTask && getId(selectedTask) === taskId)
         setSelectedTask((prev) =>
-          prev ? { ...prev, status: newStatus } : prev,
+          prev ? { ...prev, ...updatedTask } : prev,
         );
       await loadData();
     } catch (err) {

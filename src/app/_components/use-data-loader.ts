@@ -283,8 +283,6 @@ export function useDataLoader({
       const userHasPersonalTaskBoard =
         currentRole === "specialist" || currentRole === "supervisor";
       const shouldLoadLeaveStats = currentRole === "manager";
-      const reportParams =
-        !userIsManager && uid ? { assignedTo: uid } : undefined;
       const [u, t, leaves, statsRes, unreadRes, notifRes, leaveStatsRes] =
         await Promise.all([
           userIsManager
@@ -294,7 +292,7 @@ export function useDataLoader({
             ? managerApi
                 .allTasks(authToken)
                 .catch(() => ({ tasks: [] as Task[] }))
-            : taskApi.list(authToken, reportParams).catch(() => []),
+            : taskApi.list(authToken).catch(() => []),
           uid && !userIsManager && !userIsSupervisor
             ? leaveApi.list(authToken, { limit: 50, user: uid })
             : leaveApi.list(authToken, { limit: 50 }),
@@ -330,9 +328,45 @@ export function useDataLoader({
               : Promise.resolve(null),
           ])
         : [null, null, null, null];
+      const publicTaskResponses =
+        userIsManager
+          ? []
+          : [await taskApi.publicActive(authToken).catch(() => [])];
       const taskList = normalizeList(
-        ((t as ManagerAllTasks)?.tasks ?? t) as Task[] | { data?: Task[] },
-      );
+        [
+          ...normalizeList(
+            ((t as ManagerAllTasks)?.tasks ?? t) as
+              | Task[]
+              | { data?: Task[] },
+          ),
+          ...publicTaskResponses.flatMap((response) =>
+            normalizeList(response as Task[] | { data?: Task[] }),
+          ),
+        ],
+      )
+        .filter((task, index, list) => {
+          const taskId = getId(task);
+          return !!taskId && list.findIndex((item) => getId(item) === taskId) === index;
+        })
+        .filter((task) => {
+          if (userIsManager || !uid) return true;
+          const assignedTo = task.assignedTo;
+          const rawAssignedTo = assignedTo as unknown;
+          const assignedList = Array.isArray(assignedTo) ? assignedTo : [];
+          const isAssignedToMe = assignedList.some(
+            (assignee) => getId(assignee) === uid,
+          );
+          const isGeneralProject =
+            task.isPublic ||
+            task.projectType === "general" ||
+            (typeof rawAssignedTo === "string" && rawAssignedTo === "");
+
+          return isAssignedToMe || isGeneralProject;
+        })
+        .map((task) => ({
+          ...task,
+          assignedTo: Array.isArray(task.assignedTo) ? task.assignedTo : [],
+        }));
       if (currentRole !== "supervisor") {
         setUsers(normalizeList(u));
       }

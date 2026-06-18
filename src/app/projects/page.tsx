@@ -77,6 +77,7 @@ function ProjectsPageContent() {
     tasks,
     taCompletionResult,
     taCountResult,
+    claimTask,
     createTaskFromValues,
     deleteTask,
     moveTask,
@@ -187,6 +188,11 @@ function ProjectsPageContent() {
     control: projectForm.control,
     name: "startDate",
   });
+  useEffect(() => {
+    if (projectType === "general") {
+      projectForm.setValue("assignee", "");
+    }
+  }, [projectForm, projectType]);
   const todayStart = useMemo(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -253,6 +259,7 @@ function ProjectsPageContent() {
         <ProjectBoardSection
           doneCount={specialistDoneCount}
           inProgressCount={specialistInProgressCount}
+          onClaimTask={claimTask}
           onMoveTask={moveTask}
           onSearchChange={setTaskQuery}
           onSelectTask={setSelectedTask}
@@ -327,12 +334,22 @@ function ProjectsPageContent() {
                     });
                     return;
                   }
+                  if (values.projectType === "specialist" && !values.assignee) {
+                    projectForm.setError("assignee", {
+                      message: "انتخاب مسئول پروژه الزامی است.",
+                    });
+                    return;
+                  }
                   await createTaskFromValues({
                     title: values.title,
-                    assignee: values.assignee,
+                    projectType: values.projectType,
+                    assignee:
+                      values.projectType === "specialist"
+                        ? values.assignee
+                        : "",
                     description: values.description,
                     startDate: values.startDate,
-                    dueDate: values.dueDate,
+                    endDate: values.dueDate,
                     file: values.file?.[0] ?? null,
                   });
                   projectForm.reset();
@@ -389,19 +406,24 @@ function ProjectsPageContent() {
                   </div>
                   <div className="rounded-xl bg-[--surface-2] p-3 text-xs text-[--text-2]">
                     {projectType === "general"
-                      ? "پروژه عمومی است؛ می‌توانی از بین متخصص یا سرپرست همان حوزه انتخاب کنی."
+                      ? "پروژه عمومی است و برای همه نمایش داده می‌شود."
                       : "پروژه تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند."}
                   </div>
-                  <Select
-                    label={assigneeLabel}
-                    options={scopedAssigneeOptions}
-                    placeholder={
-                      projectType === "general"
-                        ? "انتخاب متخصص یا سرپرست"
-                        : "انتخاب متخصص"
-                    }
-                    registration={projectForm.register("assignee")}
-                  />
+                  {projectType === "specialist" && (
+                    <Select
+                      label={assigneeLabel}
+                      options={scopedAssigneeOptions}
+                      placeholder="انتخاب متخصص"
+                      registration={projectForm.register("assignee", {
+                        required: true,
+                      })}
+                    />
+                  )}
+                  {projectForm.formState.errors.assignee && (
+                    <span className="-mt-2 block text-xs text-red-500">
+                      {projectForm.formState.errors.assignee.message}
+                    </span>
+                  )}
                   <div className="grid gap-3 sm:grid-cols-2">
                     {(["startDate", "dueDate"] as const).map((name) => (
                       <label className="block" key={name}>

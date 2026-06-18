@@ -22,6 +22,8 @@ type LeaveRequestView = {
   id?: string;
   status?: string;
   reason?: string;
+  description?: string;
+  details?: string;
   startDate: string;
   endDate: string;
   user?: User | string;
@@ -249,6 +251,8 @@ function LeaveRequestReviewRow({ formatDate, getId, handleLeaveAction, initials,
   userName: (user?: User | string) => string;
 }) {
   const badge = leaveBadge(leaveRequest.status);
+  const requestDetails =
+    leaveRequest.reason || leaveRequest.description || leaveRequest.details;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -263,9 +267,12 @@ function LeaveRequestReviewRow({ formatDate, getId, handleLeaveAction, initials,
           </div>
           <p className="mt-0.5 text-xs text-[--text-3]">
             {formatDate(leaveRequest.startDate)} تا {formatDate(leaveRequest.endDate)}
-            {leaveRequest.reason ? ` · ${leaveRequest.reason}` : ""}
             {leaveRequest.approvedBy ? ` · بررسی: ${userName(leaveRequest.approvedBy)}` : ""}
           </p>
+          <div className="mt-2 rounded-lg bg-[--surface-2] px-3 py-2 text-xs leading-5 text-[--text-2]">
+            <span className="font-semibold text-[--text-3]">توضیحات: </span>
+            {requestDetails?.trim() || "بدون توضیحات"}
+          </div>
         </div>
       </div>
       {leaveRequest.status === "pending" && (
