@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, CircleDashed, Clock, Download, Pause, Play, UserPlus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, ChevronLeft, CircleDashed, Download, UserPlus, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { getId, type Task, type User } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
 import { formatDate, initials, nextStatus, statusLabel, userName } from "../_lib/task-helpers";
@@ -30,21 +30,6 @@ export function TaskPanel({
   const [comment, setComment] = useState(task.taskComment ?? "");
   const [commentEditing, setCommentEditing] = useState(false);
   const [assignSelect, setAssignSelect] = useState("");
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-
-  useEffect(() => {
-    if (!timerRunning) return;
-    const id = window.setInterval(() => setTimerSeconds((s) => s + 1), 1000);
-    return () => window.clearInterval(id);
-  }, [timerRunning]);
-
-  const fmtTimer = (s: number) => {
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${pad(h)}:${pad(m)}:${pad(sec)}`;
-  };
-
   const assignedIds = (task.assignedTo ?? []).map((u) => typeof u === "string" ? u : getId(u));
   const unassignedUsers = users.filter((u) => !assignedIds.includes(getId(u)));
 
@@ -67,33 +52,6 @@ export function TaskPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* Timer */}
-          <div className="rounded-xl border border-[--border] bg-[--surface-2] p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock size={15} className="text-[#1f7a8c]" />
-                <span className="text-xs font-semibold text-[--text-2]">زمان کار</span>
-              </div>
-              <span className="font-mono text-lg font-bold tracking-wider text-[--text]" dir="ltr">{fmtTimer(timerSeconds)}</span>
-            </div>
-            <div className="mt-3 flex gap-2">
-              {!timerRunning ? (
-                <button className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b]" onClick={() => setTimerRunning(true)} type="button">
-                  <Play size={14} /> {timerSeconds > 0 ? "ادامه" : "شروع"}
-                </button>
-              ) : (
-                <button className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 text-sm font-semibold text-white transition hover:bg-amber-600" onClick={() => setTimerRunning(false)} type="button">
-                  <Pause size={14} /> توقف
-                </button>
-              )}
-              {timerSeconds > 0 && (
-                <button className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[--border] bg-[--surface] px-4 text-sm font-semibold text-[--text-2] transition hover:bg-[--surface-2]" onClick={() => { setTimerRunning(false); setTimerSeconds(0); }} type="button">
-                  ریست
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* Title */}
           <div>
             <div className="flex items-start gap-2">

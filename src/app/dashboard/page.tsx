@@ -867,12 +867,12 @@ function DashboardPageContent() {
                     {[
                       { l: "امتیاز", v: summaryScore, c: "text-amber-600" },
                       {
-                        l: "کل وظایف",
+                        l: "کل پروژه‌ها",
                         v: summaryTotalTasks,
                         c: "text-indigo-600",
                       },
                       {
-                        l: "وظایف انجام‌شده",
+                        l: "پروژه‌های انجام‌شده",
                         v: summaryCompletedTasks,
                         c: "text-emerald-600",
                       },
@@ -900,9 +900,7 @@ function DashboardPageContent() {
               );
             })()}
 
-          {/* Specialist projects under the board */}
-
-          {!isManager && activeView === "dashboard" && (
+          {isSpecialist && activeView === "dashboard" && tasks.length > 0 && (
             <div className="overflow-hidden rounded-2xl border border-indigo-200 dark:border-indigo-900 bg-[--surface] shadow-md shadow-indigo-500/8">
               <div className="flex items-center gap-3 border-b border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-l from-indigo-50 to-white dark:from-indigo-950/30 dark:to-transparent px-5 py-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
@@ -911,57 +909,51 @@ function DashboardPageContent() {
                 <div>
                   <h2 className="font-bold text-[--text]">پروژه‌ها</h2>
                   <p className="text-[11px] text-[--text-3]">
-                    {tasks.length} پروژه واگذارشده · برای شروع و دانلود فایل
-                    کلیک کن
+                    {tasks.length} پروژه واگذارشده
                   </p>
                 </div>
               </div>
-              {tasks.length === 0 ? (
-                <p className="py-10 text-center text-sm text-[--text-3]">
-                  پروژه‌ای به شما واگذار نشده
-                </p>
-              ) : (
-                <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {tasks.map((t: any) => (
-                    <button
-                      key={getId(t)}
-                      className="rounded-xl border border-[--border] border-t-[3px] border-t-indigo-500 bg-[--surface] p-3.5 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                      onClick={() => setSelectedTask(t)}
-                      type="button"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${COLUMNS.find((c: any) => c.status === t.status)?.badge ?? "bg-slate-100 text-slate-600"}`}
-                        >
-                          {statusLabel(t.status)}
+              <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                {tasks.map((t: any) => (
+                  <button
+                    key={getId(t)}
+                    className="rounded-xl border border-[--border] border-t-[3px] border-t-indigo-500 bg-[--surface] p-3.5 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                    onClick={() => setSelectedTask(t)}
+                    type="button"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${COLUMNS.find((c: any) => c.status === t.status)?.badge ?? "bg-slate-100 text-slate-600"}`}
+                      >
+                        {statusLabel(t.status)}
+                      </span>
+                      {t.excelFile && (
+                        <span className="flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                          <FileSpreadsheet size={10} />
+                          اکسل
                         </span>
-                        {t.excelFile && (
-                          <span className="flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                            <FileSpreadsheet size={10} />
-                            اکسل
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2.5 flex items-start gap-2">
-                        <FolderKanban
-                          size={15}
-                          className="mt-0.5 shrink-0 text-indigo-500"
-                        />
-                        <h4 className="text-sm font-semibold leading-snug">
-                          {t.title}
-                        </h4>
-                      </div>
-                      {t.description && (
-                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
-                          {t.description}
-                        </p>
                       )}
-                    </button>
-                  ))}
-                </div>
-              )}
+                    </div>
+                    <div className="mt-2.5 flex items-start gap-2">
+                      <FolderKanban
+                        size={15}
+                        className="mt-0.5 shrink-0 text-indigo-500"
+                      />
+                      <h4 className="text-sm font-semibold leading-snug">
+                        {t.title}
+                      </h4>
+                    </div>
+                    {t.description && (
+                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
+                        {t.description}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
+
         </>
       )}
     </>

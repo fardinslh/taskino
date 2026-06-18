@@ -34,13 +34,13 @@ export default function LeavePage() {
 
 function LeavePageContent() {
   const { activeView } = useNavigationContext();
-  const { isManager, isSupervisor } = useSessionContext();
-  const { handleLeaveAction, leaveRequests, leaveStatistics } =
+  const { currentUser, isManager, isSupervisor } = useSessionContext();
+  const { handleLeaveAction, leaveRequests, leaveStatistics, users } =
     useManagementContext();
 
   if (activeView !== "leave") return null;
 
-  if (!isManager) {
+  if (!isManager && !isSupervisor) {
     return (
       <section className="space-y-4">
         <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
@@ -74,32 +74,108 @@ function LeavePageContent() {
   }
 
   if (!isSupervisor && !isManager) return null;
+  const myLeaveRequests = isSupervisor
+    ? leaveRequests.filter(
+        (leaveRequest: LeaveRequestView) =>
+          getId(leaveRequest.user) === getId(currentUser ?? undefined),
+      )
+    : [];
+  const reviewableLeaveRequests = isSupervisor
+    ? leaveRequests.filter((leaveRequest: LeaveRequestView) => {
+        const requestUser = leaveRequest.user;
+        const requestUserId = getId(requestUser);
+        if (!requestUserId || requestUserId === getId(currentUser ?? undefined)) {
+          return false;
+        }
+        const fullUser =
+          typeof requestUser === "string"
+            ? users.find((user) => getId(user) === requestUserId)
+            : requestUser;
+        const requestUserRole = (fullUser as User & { role?: string } | undefined)
+          ?.role;
+        const role = fullUser?.roles ?? requestUserRole;
+
+        return !role || role === "specialist";
+      })
+    : leaveRequests;
+  const reviewStats = {
+    total: reviewableLeaveRequests.length,
+    pending: reviewableLeaveRequests.filter(
+      (lr: LeaveRequestView) => lr.status === "pending",
+    ).length,
+    approved: reviewableLeaveRequests.filter(
+      (lr: LeaveRequestView) => lr.status === "approved",
+    ).length,
+    rejected: reviewableLeaveRequests.filter(
+      (lr: LeaveRequestView) => lr.status === "rejected",
+    ).length,
+  };
 
   return (
     <section className="space-y-4">
+      {isSupervisor && (
+        <>
+          <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={17} className="text-[#1f7a8c]" />
+              <h2 className="font-bold">درخواست مرخصی</h2>
+            </div>
+            <LeaveRequestForm />
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
+            <div className="border-b border-[--border] px-5 py-4">
+              <h2 className="font-bold">درخواست‌های من</h2>
+            </div>
+            <div className="divide-y divide-[--border]">
+              {myLeaveRequests.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[--text-3]">
+                  درخواستی ثبت نکرده‌ای
+                </p>
+              ) : (
+                myLeaveRequests.map((leaveRequest: LeaveRequestView) => (
+                  <LeaveRequestRow
+                    formatDate={formatDate}
+                    getId={getId}
+                    key={getId(leaveRequest)}
+                    leaveRequest={leaveRequest}
+                    statusLabel={statusLabel}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
             label: "کل درخواست‌ها",
-            value: leaveStatistics?.total ?? leaveRequests.length,
+            value: isManager
+              ? (leaveStatistics?.total ?? reviewStats.total)
+              : reviewStats.total,
           },
           {
             label: "در انتظار",
             value:
-              leaveStatistics?.pending ??
-              leaveRequests.filter((lr: LeaveRequestView) => lr.status === "pending").length,
+              isManager
+                ? (leaveStatistics?.pending ?? reviewStats.pending)
+                : reviewStats.pending,
           },
           {
             label: "تأیید شده",
             value:
-              leaveStatistics?.approved ??
-              leaveRequests.filter((lr: LeaveRequestView) => lr.status === "approved").length,
+              isManager
+                ? (leaveStatistics?.approved ?? reviewStats.approved)
+                : reviewStats.approved,
           },
           {
             label: "رد شده",
             value:
-              leaveStatistics?.rejected ??
-              leaveRequests.filter((lr: LeaveRequestView) => lr.status === "rejected").length,
+              isManager
+                ? (leaveStatistics?.rejected ?? reviewStats.rejected)
+                : reviewStats.rejected,
           },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl border border-[--border] bg-[--surface] p-4">
@@ -116,13 +192,17 @@ function LeavePageContent() {
           </div>
           <div>
             <h2 className="font-bold">درخواست‌های مرخصی</h2>
-            <p className="text-[11px] text-[--text-3]">همه درخواست‌ها و وضعیت تأیید</p>
+            <p className="text-[11px] text-[--text-3]">
+              {isSupervisor
+                ? "درخواست‌های کارشناسان و وضعیت تأیید"
+                : "همه درخواست‌ها و وضعیت تأیید"}
+            </p>
           </div>
         </div>
         <div className="divide-y divide-[--border]">
-          {leaveRequests.length === 0 ? (
+          {reviewableLeaveRequests.length === 0 ? (
             <p className="py-10 text-center text-sm text-[--text-3]">درخواست مرخصی‌ای ثبت نشده</p>
-          ) : leaveRequests.map((leaveRequest: LeaveRequestView) => (
+          ) : reviewableLeaveRequests.map((leaveRequest: LeaveRequestView) => (
             <LeaveRequestReviewRow
               formatDate={formatDate}
               getId={getId}

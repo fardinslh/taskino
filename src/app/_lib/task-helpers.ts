@@ -27,6 +27,7 @@ export function statusLabel(s?: string) {
     in_progress: "در حال انجام",
     done: "تکمیل شده",
     pending: "در انتظار",
+    approved: "تأیید شد",
     completed: "تکمیل شده",
     rejected: "رد شد",
   };

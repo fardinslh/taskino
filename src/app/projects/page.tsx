@@ -227,16 +227,12 @@ function ProjectsPageContent() {
     Number(dateCountStats?.pendingTasks ?? 0),
     Number(dateCountStats?.todoTasks ?? 0),
   );
-  const createTitle = isSupervisor ? "گزارش جدید" : "پروژه جدید";
-  const createButtonLabel = isSupervisor ? "گزارش جدید" : "پروژه جدید";
-  const titleFieldLabel = isSupervisor ? "عنوان گزارش *" : "عنوان پروژه *";
-  const titlePlaceholder = isSupervisor
-    ? "مثلاً: تکمیل اکسل فروش"
-    : "مثلاً: تکمیل اکسل فروش";
-  const descriptionPlaceholder = isSupervisor
-    ? "شرح کوتاه گزارش"
-    : "شرح کوتاه پروژه";
-  const assigneeLabel = isSupervisor ? "مسئول گزارش" : "مسئول پروژه";
+  const createTitle = "پروژه جدید";
+  const createButtonLabel = "پروژه جدید";
+  const titleFieldLabel = "عنوان پروژه *";
+  const titlePlaceholder = "مثلاً: تکمیل اکسل فروش";
+  const descriptionPlaceholder = "شرح کوتاه پروژه";
+  const assigneeLabel = "مسئول پروژه";
   function formatLocalDateBoundary(value: string, endOfDay = false) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
@@ -283,7 +279,7 @@ function ProjectsPageContent() {
                   <div className="space-y-1">
                     <h2 className="font-bold">{createTitle}</h2>
                     <p className="text-[12px] text-[--text-3]">
-                      نوع {isSupervisor ? "گزارش" : "پروژه"} را مشخص کن، بعد
+                      نوع پروژه را مشخص کن، بعد
                       مسئول مناسب همان حوزه را انتخاب کن.
                     </p>
                   </div>
@@ -393,8 +389,8 @@ function ProjectsPageContent() {
                   </div>
                   <div className="rounded-xl bg-[--surface-2] p-3 text-xs text-[--text-2]">
                     {projectType === "general"
-                      ? `${isSupervisor ? "گزارش" : "پروژه"} عمومی است؛ می‌توانی از بین متخصص یا سرپرست همان حوزه انتخاب کنی.`
-                      : `${isSupervisor ? "گزارش" : "پروژه"} تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند.`}
+                      ? "پروژه عمومی است؛ می‌توانی از بین متخصص یا سرپرست همان حوزه انتخاب کنی."
+                      : "پروژه تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند."}
                   </div>
                   <Select
                     label={assigneeLabel}
@@ -465,7 +461,7 @@ function ProjectsPageContent() {
                       disabled={projectForm.formState.isSubmitting}
                       type="submit"
                     >
-                      ایجاد {isSupervisor ? "گزارش" : "پروژه"}
+                      ایجاد پروژه
                     </button>
                     {selectedFile && (
                       <button
