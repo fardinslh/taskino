@@ -26,6 +26,7 @@ import {
   useNavigationContext,
   useSessionContext,
 } from "../_components/taskino-context";
+import { userName } from "../_lib/task-helpers";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function FixedReportsPage() {
@@ -70,7 +71,9 @@ function FixedReportsPageContent() {
         !filterRecurrence || (task.recurrence ?? "daily") === filterRecurrence;
       const specialistMatch =
         !specialistQuery ||
-        userName(task.assignedTo).toLowerCase().includes(specialistQuery);
+        `${userName(task.assignedTo)} ${task.specialistName ?? ""}`
+          .toLowerCase()
+          .includes(specialistQuery);
       const titleMatch =
         !titleQuery || String(task.title ?? "").toLowerCase().includes(titleQuery);
       return recurrenceMatch && specialistMatch && titleMatch;

@@ -22,6 +22,7 @@ export function TaskinoApp({
   const controller = useTaskinoProviderValue(initialView);
   const {
     activeView,
+    activeFixedTaskCount,
     authHydrated,
     claimTask,
     confirmRejectLeave,
@@ -105,6 +106,7 @@ export function TaskinoApp({
         <div className="flex">
           <TaskinoSidebar
             activeView={activeView}
+            activeFixedTaskCount={activeFixedTaskCount}
             currentUser={currentUser}
             isManager={isManager}
             isSupervisor={isSupervisor}

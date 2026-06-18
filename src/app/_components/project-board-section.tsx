@@ -48,7 +48,7 @@ export function ProjectBoardSection({
       task.title,
       task.description,
       statusLabel(task.status),
-      userName(task.assignedTo),
+      ...(task.assignedTo ?? []).map(userName),
     ]
       .filter(Boolean)
       .join(" ")
@@ -244,7 +244,7 @@ export function ProjectBoardSection({
                                       </p>
                                     )}
                                     <div className="mt-3 flex items-center justify-between gap-2">
-                                      <AssigneeStack fallback={task.assignedTo} />
+                                      <AssigneeStack users={task.assignedTo} />
                                       {task.dueDate && (
                                         <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
                                           <CalendarDays size={10} />

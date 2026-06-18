@@ -27,6 +27,7 @@ import { SideItem } from "./shared";
 
 type TaskinoSidebarProps = {
   activeView: View;
+  activeFixedTaskCount: number;
   currentUser: User | null;
   isManager: boolean;
   isSupervisor: boolean;
@@ -44,6 +45,7 @@ type TaskinoSidebarProps = {
 
 export function TaskinoSidebar({
   activeView,
+  activeFixedTaskCount,
   currentUser,
   isManager,
   isSupervisor,
@@ -195,7 +197,7 @@ export function TaskinoSidebar({
               active={activeView === "tasks"}
               icon={ClipboardList}
               label="گزارش‌ها"
-              meta={tasks.length}
+              meta={activeFixedTaskCount}
               collapsed={sidebarCollapsed}
               onClick={() => onSetActiveView("tasks")}
             />
@@ -251,7 +253,7 @@ export function TaskinoSidebar({
               active={activeView === "tasks"}
               icon={ClipboardList}
               label="گزارش‌ها"
-              meta={tasks.length}
+              meta={activeFixedTaskCount}
               collapsed={sidebarCollapsed}
               onClick={() => onSetActiveView("tasks")}
             />

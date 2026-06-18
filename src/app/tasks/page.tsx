@@ -49,8 +49,15 @@ function TasksPageContent() {
   } = useNavigationContext();
   const { currentUser, isManager, isSpecialist, isSupervisor } =
     useSessionContext();
-  const { activeTasks, doneTasks, inProgressTasks, progress, projects, tasks, specialistWorkSummary } =
-    useTaskContext();
+  const {
+    activeTasks,
+    doneTasks,
+    inProgressTasks,
+    progress,
+    projects,
+    tasks,
+    specialistWorkSummary,
+  } = useTaskContext();
   const { managerStats, managerTaskStatus, statsUsers, users } =
     useManagementContext();
   const {
@@ -158,20 +165,19 @@ function TasksPageContent() {
             {(isManager
               ? [
                   {
-                    label: "پروژه‌ها",
-                    value: tasks.length,
-                    sub: "پروژه",
+                    label: "گزارش ها",
+                    value: activeFixedTaskCount,
+                    sub: "گزارش ثابت",
                     icon: FolderKanban,
                     a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
-                    onClick: () => setActiveView("tasks-admin"),
+                    onClick: () => setActiveView("fixed-reports"),
                   },
                   {
-                    label: "پروژه‌های باز",
-                    value: managerStats?.openTasks ?? activeTasks,
-                    sub: `${inProgressTasks} جاری`,
+                    label: "گزارش های باز",
+                    value: fixedOpenTasks,
+                    sub: `${fixedOpenTasks} باز`,
                     icon: ClipboardList,
                     a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-                    onClick: () => setActiveView("tasks"),
                   },
                   {
                     label: "کاربران فعال",
@@ -179,7 +185,7 @@ function TasksPageContent() {
                     sub: "کاربر",
                     icon: UsersRound,
                     a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
-                    onClick: () => setActiveView("team"),
+                    onClick: () => undefined,
                   },
                   {
                     label: "آنالیتیکس",
@@ -190,17 +196,19 @@ function TasksPageContent() {
                     sub: "گزارش تکمیل",
                     icon: BarChart2,
                     a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
-                    onClick: () => setActiveView("analytics"),
+                    onClick: () => undefined,
                   },
                 ]
               : [
                   {
                     label: "همه گزارشات",
-                    value: specialistWorkSummary?.totalFixedTasks ?? activeFixedTaskCount,
+                    value:
+                      specialistWorkSummary?.totalFixedTasks ??
+                      activeFixedTaskCount,
                     sub: "واگذارشده",
                     icon: FolderKanban,
                     a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
-                    onClick: () => setActiveView("tasks-admin"),
+                    onClick: () => undefined,
                   },
                   {
                     label: "گزارش در حال انجام",
@@ -220,7 +228,9 @@ function TasksPageContent() {
                   },
                   {
                     label: "تکمیل شده",
-                    value: specialistWorkSummary?.completedFixedTasks ?? fixedDoneTasks,
+                    value:
+                      specialistWorkSummary?.completedFixedTasks ??
+                      fixedDoneTasks,
                     sub: `${progress}% پیشرفت`,
                     icon: TrendingUp,
                     a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
@@ -268,8 +278,7 @@ function TasksPageContent() {
                       {(() => {
                         const od = fixedTasks.filter(
                           (f: any) =>
-                            f.isActive !== false &&
-                            isFixedTaskOverdue(f),
+                            f.isActive !== false && isFixedTaskOverdue(f),
                         ).length;
                         return od ? ` · ${od} مهلت‌گذشته` : "";
                       })()}
@@ -380,7 +389,8 @@ function TasksPageContent() {
                                     draggableId={getId(ft)}
                                     index={idx}
                                     isDragDisabled={
-                                      !canMoveOwnFixedTasks || (ft.status ?? "todo") === "done"
+                                      !canMoveOwnFixedTasks ||
+                                      (ft.status ?? "todo") === "done"
                                     }
                                   >
                                     {(dragProvided: any, dragSnapshot: any) => (

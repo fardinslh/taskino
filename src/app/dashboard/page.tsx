@@ -310,7 +310,7 @@ function DashboardPageContent() {
                         l: "پروژه فعال",
                       },
                       {
-                        n: managerStats?.openTasks ?? tasks.length,
+                        n: fixedOpenTasks,
                         l: "گزارش باز",
                       },
                       {
@@ -351,11 +351,11 @@ function DashboardPageContent() {
                 },
                 {
                   label: "گزارش‌های باز",
-                  value: managerStats?.openTasks ?? activeTasks,
-                  sub: `${inProgressTasks} جاری`,
+                  value: fixedOpenTasks,
+                  sub: `${fixedOpenTasks} در انتظار`,
                   icon: ClipboardList,
                   a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-                  onClick: () => setActiveView("tasks"),
+                  onClick: () => setActiveView("fixed-reports"),
                 },
                 {
                   label: "کاربران فعال",

@@ -90,7 +90,7 @@ export function useTaskinoDerivedData({
     (item) => item.status === "done",
   ).length;
   const fixedOpenTasks = activeFixedTasks.filter(
-    (item) => (item.status ?? "todo") === "todo",
+    (item) => (item.status ?? "todo") !== "done",
   ).length;
   const fixedInProgressTasks = activeFixedTasks.filter(
     (item) => item.status === "in_progress",
