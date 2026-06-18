@@ -168,11 +168,15 @@ export function FixedTaskFormPanel({
         <Select
           label="مسئول * (هم‌حوزه)"
           options={users
-            .filter(
-              (user: any) =>
-                (user.roles === "specialist" || user.roles === "supervisor") &&
-                (!currentUser?.workField || user.workField === currentUser.workField),
-            )
+            .filter((user: any) => {
+              const role = user.roles ?? user.role;
+              return (
+                (role === "specialist" || role === "supervisor") &&
+                (!currentUser?.workField ||
+                  !user.workField ||
+                  user.workField === currentUser.workField)
+              );
+            })
             .map((user: any) => [getId(user), userName(user)] as [string, string])}
           placeholder="انتخاب مسئول هم‌حوزه"
           registration={form.register("assignedTo", { required: true })}

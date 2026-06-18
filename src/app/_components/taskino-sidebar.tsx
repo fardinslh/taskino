@@ -61,9 +61,6 @@ export function TaskinoSidebar({
   const pendingLeaves = leaveRequests.filter(
     (request) => request.status === "pending",
   ).length;
-  const supervisedFixedTaskCount =
-    supervisorStats?.supervisedFixedTasks ?? undefined;
-
   return (
     <aside
       className="sticky top-[53px] h-[calc(100vh-53px)] shrink-0 overflow-y-auto overflow-x-hidden border-l border-[--border] bg-[--surface] transition-all duration-200"
@@ -107,30 +104,28 @@ export function TaskinoSidebar({
             <SideItem
               active={
                 activeView === "tasks" ||
-                activeView === "tasks-admin" ||
+                activeView === "supervisor-create-report" ||
                 activeView === "supervisor-projects"
               }
               icon={ClipboardList}
               label="گزارش‌ها"
-              meta={supervisedFixedTaskCount}
               collapsed={sidebarCollapsed}
-              onClick={() => onSetActiveView("tasks-admin")}
+              onClick={() => onSetActiveView("supervisor-create-report")}
             />
             <div
               className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}
             >
               <SideItem
-                active={activeView === "tasks-admin"}
+                active={activeView === "supervisor-create-report"}
                 icon={Plus}
                 label="ایجاد گزارش"
                 collapsed={sidebarCollapsed}
-                onClick={() => onSetActiveView("tasks-admin")}
+                onClick={() => onSetActiveView("supervisor-create-report")}
               />
               <SideItem
                 active={activeView === "tasks"}
                 icon={ClipboardList}
                 label="گزارش‌های من"
-                meta={supervisedFixedTaskCount}
                 collapsed={sidebarCollapsed}
                 onClick={() => onSetActiveView("tasks")}
               />
@@ -138,7 +133,6 @@ export function TaskinoSidebar({
                 active={activeView === "supervisor-projects"}
                 icon={FolderKanban}
                 label="گزارش‌های تحت نظر"
-                meta={supervisorFixedTasks.length || undefined}
                 collapsed={sidebarCollapsed}
                 onClick={() => onSetActiveView("supervisor-projects")}
               />
