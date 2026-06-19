@@ -28,14 +28,10 @@ export type ActivationFormValues = {
 // ─── Template Row ─────────────────────────────────────────────────────────────
 export function TemplateRow({
   task,
-  onActivate,
-  onDeactivate,
   onEdit,
   onDelete,
 }: {
   task: any;
-  onActivate: () => void;
-  onDeactivate: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -64,17 +60,6 @@ export function TemplateRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-            active
-              ? "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
-              : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400"
-          }`}
-          onClick={active ? onDeactivate : onActivate}
-          type="button"
-        >
-          {active ? "غیرفعال کن" : "فعال کن"}
-        </button>
         <button
           className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface-2]"
           onClick={onEdit}

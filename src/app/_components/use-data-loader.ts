@@ -146,6 +146,18 @@ export function useDataLoader({
     return all;
   }
 
+  async function fetchActiveFixedTasksByUserId(
+    authToken: string,
+    userId: string,
+  ) {
+    if (!userId.trim()) return [];
+    const response = await fixedTaskApi.activeByUserId(authToken, userId).catch(
+      () => null,
+    );
+    if (!response) return [];
+    return normalizeList(response as FixedTask[] | { data?: FixedTask[] });
+  }
+
   async function loadManagerAnalytics(authToken = token) {
     if (!authToken) return;
     try {
@@ -318,7 +330,7 @@ export function useDataLoader({
         ? await Promise.all([
             taskApi.statusCounts(authToken).catch(() => null),
             userIsSpecialist
-              ? fixedTaskApi.statusCounts(authToken).catch(() => null)
+              ? Promise.resolve(null)
               : Promise.resolve(null),
             userIsSpecialist
               ? userApi.meProgress(authToken).catch(() => null)
@@ -394,8 +406,31 @@ export function useDataLoader({
           .then((r) => setFixedTasks(r))
           .catch(() => setFixedTasks([]));
       } else if (uid) {
-        fetchAllSpecialistFixedTasks(authToken, uid, { status: "todo" })
-          .then((r) => setFixedTasks(r))
+        fetchActiveFixedTasksByUserId(authToken, uid)
+          .then((r) => {
+            setFixedTasks(r);
+            if (userIsSpecialist) {
+              const counts = r.reduce<StatusCounts>(
+                (acc, item) => {
+                  const status = item.status ?? "todo";
+                  acc.total = (acc.total ?? 0) + 1;
+                  if (status === "todo") {
+                    acc.todo = (acc.todo ?? 0) + 1;
+                    acc.pending = (acc.pending ?? 0) + 1;
+                  } else if (status === "in_progress") {
+                    acc.inProgress = (acc.inProgress ?? 0) + 1;
+                    acc.in_progress = (acc.in_progress ?? 0) + 1;
+                  } else if (status === "done") {
+                    acc.done = (acc.done ?? 0) + 1;
+                    acc.completed = (acc.completed ?? 0) + 1;
+                  }
+                  return acc;
+                },
+                { total: 0, todo: 0, pending: 0, inProgress: 0, in_progress: 0, done: 0, completed: 0 },
+              );
+              setSpecialistFixedTaskCounts(counts);
+            }
+          })
           .catch(() => setFixedTasks([]));
       } else {
         setFixedTasks([]);

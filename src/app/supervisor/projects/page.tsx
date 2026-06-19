@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { fixedTaskApi, getId, type FixedTask } from "@/lib/api";
+import { TaskDeadlineCountdown } from "../../_components/task-deadline-countdown";
 import {
   useFeedbackContext,
   useManagementContext,
@@ -278,6 +279,7 @@ function WorkList({
             const specialistLabel =
               item.specialistName ||
               (assignee ? userName(assignee) : "بدون مسئول");
+            const deadline = item.endDate ?? item.nextRunAt;
             const content = (
               <>
                 <div className="min-w-0 flex-1">
@@ -288,6 +290,11 @@ function WorkList({
                       ? ` · ${recurrenceLabel(item.recurrence)}`
                       : ""}
                   </p>
+                  <TaskDeadlineCountdown
+                    className="mt-3"
+                    dueDate={deadline}
+                    status={item.status}
+                  />
                   <span className="mt-3 inline-flex rounded-md bg-[--surface-2] px-2 py-1 text-[10px] font-bold text-[--text-2]">
                     {statusLabel(item.status)}
                   </span>

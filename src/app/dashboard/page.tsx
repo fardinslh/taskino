@@ -19,6 +19,7 @@ import {
 
 import { getId } from "@/lib/api";
 import { AssigneeStack } from "../_components/shared";
+import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
 import {
   useFixedTaskContext,
   useManagementContext,
@@ -741,6 +742,11 @@ function DashboardPageContent() {
                                             {ft.description}
                                           </p>
                                         )}
+                                        <TaskDeadlineCountdown
+                                          className="mt-3"
+                                          dueDate={ft.endDate ?? ft.nextRunAt}
+                                          status={ft.status}
+                                        />
                                         <div className="mt-3 flex items-center justify-between gap-2">
                                           <AssigneeStack
                                             users={
