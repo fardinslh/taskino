@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 
 import type { View } from "../_lib/task-constants";
@@ -20,6 +21,7 @@ export function TaskinoApp({
   children,
 }: TaskinoAppProps) {
   const controller = useTaskinoProviderValue(initialView);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const {
     activeView,
     activeFixedTaskCount,
@@ -73,10 +75,9 @@ export function TaskinoApp({
     setActiveView,
   } = controller;
 
-  if (!authHydrated || !token) return null;
-
   return (
     <TaskinoProvider value={controller}>
+      {!authHydrated || !token ? null : (
       <div className="min-h-screen bg-[--bg] text-[--text]">
         <Toast
           message={error || message}
@@ -95,6 +96,7 @@ export function TaskinoApp({
           onMarkNotificationRead={(id) => void markNotificationRead(id)}
           onRefresh={() => void loadData()}
           onSearchChange={setTaskQuery}
+          onToggleMobileSidebar={() => setMobileSidebarOpen((value) => !value)}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
           onToggleNotifications={() => setShowNotifications(!showNotifications)}
           searchQuery={taskQuery}
@@ -111,7 +113,12 @@ export function TaskinoApp({
             isManager={isManager}
             isSupervisor={isSupervisor}
             leaveRequests={leaveRequests}
-            onSetActiveView={setActiveView}
+            mobileOpen={mobileSidebarOpen}
+            onCloseMobile={() => setMobileSidebarOpen(false)}
+            onSetActiveView={(view) => {
+              setMobileSidebarOpen(false);
+              setActiveView(view);
+            }}
             onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
             overdueTasks={overdueTasks}
             sidebarCollapsed={sidebarCollapsed}
@@ -123,7 +130,7 @@ export function TaskinoApp({
           />
 
           <main
-            className="min-w-0 flex-1 space-y-4 overflow-auto p-4"
+            className="min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-3 sm:p-4"
             onClick={() => showNotifications && setShowNotifications(false)}
           >
             {children}
@@ -169,6 +176,7 @@ export function TaskinoApp({
           />
         )}
       </div>
+      )}
     </TaskinoProvider>
   );
 }

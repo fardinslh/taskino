@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ClipboardList, RefreshCw, X } from "lucide-react";
 
 import { getId, type Task } from "@/lib/api";
+import { TaskDeadlineCountdown } from "../../../_components/task-deadline-countdown";
 import {
   useManagementContext,
   useNavigationContext,
@@ -227,6 +228,7 @@ function WorkList({
             const specialistLabel = assignee
               ? userName(assignee)
               : "بدون مسئول";
+            const deadline = item.dueDate ?? item.endDate;
 
             return (
               <div
@@ -247,6 +249,11 @@ function WorkList({
                   <p className="mt-0.5 truncate text-[11px] text-[--text-3]">
                     {`مسئول: ${specialistLabel}`}
                   </p>
+                  <TaskDeadlineCountdown
+                    className="mt-3"
+                    dueDate={deadline}
+                    status={item.status}
+                  />
                   <span className="mt-3 inline-flex rounded-md bg-[--surface-2] px-2 py-1 text-[10px] font-bold text-[--text-2]">
                     {statusLabel(item.status)}
                   </span>

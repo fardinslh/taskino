@@ -185,7 +185,7 @@ function DashboardPageContent() {
           </div>
 
           {/* Stats cards */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {[
               {
                 label: "گزارش‌های تحت نظر",
@@ -284,7 +284,7 @@ function DashboardPageContent() {
         <>
           {/* Welcome banner */}
           <div
-            className={`relative overflow-hidden rounded-2xl px-6 py-5 text-white shadow-lg ${isManager ? "bg-gradient-to-l from-indigo-700 via-indigo-600 to-indigo-500 shadow-indigo-500/15" : "bg-gradient-to-l from-[#1a6b7c] via-[#1f7a8c] to-[#2491a5] shadow-[#1f7a8c]/15"}`}
+            className={`relative overflow-hidden rounded-2xl px-4 py-5 text-white shadow-lg sm:px-6 ${isManager ? "bg-gradient-to-l from-indigo-700 via-indigo-600 to-indigo-500 shadow-indigo-500/15" : "bg-gradient-to-l from-[#1a6b7c] via-[#1f7a8c] to-[#2491a5] shadow-[#1f7a8c]/15"}`}
           >
             <div className="pointer-events-none absolute -left-6 -top-6 h-36 w-36 rounded-full bg-white/5" />
             <div className="pointer-events-none absolute -bottom-8 left-24 h-28 w-28 rounded-full bg-white/5" />
@@ -630,7 +630,7 @@ function DashboardPageContent() {
               </div>
 
               <DragDropContext onDragEnd={onDragEnd}>
-                <div className="grid gap-4 bg-[--surface-2]/40 p-4 lg:grid-cols-3">
+                <div className="grid gap-4 bg-[--surface-2]/40 p-3 sm:p-4 lg:grid-cols-3">
                   {COLUMNS.map((col: any) => {
                     const allItems = filteredFixedTemplates.filter(
                       (ft: any) => (ft.status ?? "todo") === col.status,
@@ -698,7 +698,7 @@ function DashboardPageContent() {
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
-                                        className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" ? "cursor-grab active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                        className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                         onClick={
                                           isManager
                                             ? () => {
@@ -865,7 +865,7 @@ function DashboardPageContent() {
                       {rate}%
                     </span>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 xl:grid-cols-5 gap-2 text-center">
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-3 xl:grid-cols-5">
                     {[
                       { l: "امتیاز", v: summaryScore, c: "text-amber-600" },
                       {

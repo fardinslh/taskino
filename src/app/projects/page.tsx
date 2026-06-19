@@ -309,7 +309,7 @@ function ProjectsPageContent() {
 
             {showNewProjectForm && (
               <form
-                className="grid gap-4 bg-[--surface-2]/40 p-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
+                className="grid gap-4 bg-[--surface-2]/40 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
                 onSubmit={projectForm.handleSubmit(async (values) => {
                   const now = new Date();
                   if (values.startDate && new Date(values.startDate) < now) {

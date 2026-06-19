@@ -15,6 +15,7 @@ import { getId, type Task } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
 import { formatDate, statusLabel, userName } from "../_lib/task-helpers";
 import { AssigneeStack } from "./shared";
+import { TaskDeadlineCountdown } from "./task-deadline-countdown";
 
 type ProjectBoardSectionProps = {
   progress: number;
@@ -62,7 +63,7 @@ export function ProjectBoardSection({
 
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {[
           {
             label: "پروژه‌ها",
@@ -143,7 +144,7 @@ export function ProjectBoardSection({
             void onMoveTask(result.draggableId, result.destination.droppableId);
           }}
         >
-          <div className="grid gap-4 bg-[--surface-2]/40 p-4 lg:grid-cols-3">
+          <div className="grid gap-4 bg-[--surface-2]/40 p-3 sm:p-4 lg:grid-cols-3">
             {COLUMNS.map((column: any) => {
               const columnTasks = filteredTasks.filter(
                 (task) => (task.status ?? "todo") === column.status,
@@ -205,6 +206,7 @@ export function ProjectBoardSection({
                             const isDone = (task.status ?? "todo") === "done";
                             const canClaimPublicTask =
                               !!task.isPublic && !isDone && !!onClaimTask;
+                            const deadline = task.dueDate ?? task.endDate;
 
                             return (
                               <Draggable
@@ -218,7 +220,7 @@ export function ProjectBoardSection({
                                     ref={dragProvided.innerRef}
                                     {...dragProvided.draggableProps}
                                     {...dragProvided.dragHandleProps}
-                                    className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-all ${isDone ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} hover:-translate-y-0.5 hover:shadow-md ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                    className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-all ${isDone ? "cursor-pointer" : "cursor-grab touch-none active:cursor-grabbing"} hover:-translate-y-0.5 hover:shadow-md ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                     onClick={() => onSelectTask(task)}
                                   >
                                     <div className="flex items-start justify-between gap-2">
@@ -248,12 +250,17 @@ export function ProjectBoardSection({
                                         {task.description}
                                       </p>
                                     )}
+                                    <TaskDeadlineCountdown
+                                      className="mt-3"
+                                      dueDate={deadline}
+                                      status={task.status}
+                                    />
                                     <div className="mt-3 flex items-center justify-between gap-2">
                                       <AssigneeStack users={task.assignedTo} />
-                                      {task.dueDate && (
+                                      {deadline && (
                                         <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
                                           <CalendarDays size={10} />
-                                          {formatDate(task.dueDate)}
+                                          {formatDate(deadline)}
                                         </div>
                                       )}
                                     </div>
