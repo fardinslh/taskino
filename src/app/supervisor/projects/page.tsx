@@ -43,7 +43,7 @@ function SupervisorWorkPageContent() {
 
   const filteredSupervisorFixedTasks = useMemo(() => {
     return supervisorFixedTasks.filter((item) => {
-      if (item.isActive === false) return false;
+      if (item.isActive === false && item.status !== "done") return false;
       if (
         fixedTaskStatusFilter &&
         (item.status ?? "todo") !== fixedTaskStatusFilter

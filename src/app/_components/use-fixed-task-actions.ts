@@ -331,6 +331,9 @@ export function useFixedTaskActions({
           getId(item) === id ? { ...item, ...updated } : item,
         ),
       );
+      if (status === "done") {
+        await loadData();
+      }
     } catch (error) {
       setFixedTasks(previous);
       setError(

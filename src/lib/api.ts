@@ -826,6 +826,13 @@ export const fixedTaskApi = {
       ),
       "دریافت گزارش‌های فعال ناموفق بود",
     ),
+  doneByUserId: (token: string, userId: string, params?: Params) =>
+    unwrapAxios(
+      apiClient.get<ListResponse<FixedTask>>(
+        `/fixed-tasks/user/${userId}/done${qs(params)}`,
+      ),
+      "Ø¯Ø±ÛŒØ§ÙØª Ú¯Ø²Ø§Ø±Ø´â€ŒÙ‡Ø§ÛŒ ØªÚ©Ù…ÛŒÙ„â€ŒØ´Ø¯Ù‡ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
+    ),
   get: (token: string, id: string) =>
     unwrapAxios(apiClient.get<FixedTask>(`/fixed-tasks/${id}`)),
   create: (token: string, body: Record<string, unknown>) =>

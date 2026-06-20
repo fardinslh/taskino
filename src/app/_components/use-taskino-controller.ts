@@ -383,7 +383,13 @@ export function useTaskinoController(initialView: View = "dashboard") {
 
     if (!selectedSpecialistId) {
       if (role === "supervisor") {
-        queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
+        if (!myId) {
+          queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
+          return;
+        }
+        void loadLatestSpecialistFixedTasks(token, myId)
+          .then((r) => setFixedTasks(r))
+          .catch(() => setFixedTasks(supervisorFixedTasks));
       } else {
         void loadLatestManagerAnalytics(token);
       }
@@ -396,6 +402,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
   }, [
     authHydrated,
     currentUser?.roles,
+    myId,
     selectedSpecialistId,
     supervisorFixedTasks,
     token,

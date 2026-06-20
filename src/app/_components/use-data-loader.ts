@@ -95,6 +95,13 @@ export function useDataLoader({
   setOverdueTasks,
   setTeamPerformance,
 }: DataLoaderInput) {
+  function dedupeFixedTasks(items: FixedTask[]) {
+    return items.filter((item, index, list) => {
+      const id = getId(item);
+      return !!id && list.findIndex((entry) => getId(entry) === id) === index;
+    });
+  }
+
   async function fetchAllFixedTasks(
     authToken: string,
     base: Record<string, string | number | boolean | undefined> = {},
@@ -158,6 +165,46 @@ export function useDataLoader({
     return normalizeList(response as FixedTask[] | { data?: FixedTask[] });
   }
 
+  async function fetchDoneFixedTasksByUserId(
+    authToken: string,
+    userId: string,
+  ) {
+    if (!userId.trim()) return [];
+    const all: FixedTask[] = [];
+    const limit = 100;
+    for (let page = 1; page <= 50; page++) {
+      const response = await fixedTaskApi
+        .doneByUserId(authToken, userId, { page, limit })
+        .catch(() => null);
+      if (!response) break;
+      const list = normalizeList(
+        response as FixedTask[] | { data?: FixedTask[] },
+      );
+      all.push(...list);
+      const total =
+        response &&
+        typeof response === "object" &&
+        "total" in (response as Record<string, unknown>)
+          ? Number((response as Record<string, unknown>).total)
+          : all.length;
+      if (list.length === 0 || list.length < limit || all.length >= total) {
+        break;
+      }
+    }
+    return all;
+  }
+
+  async function fetchBoardFixedTasksByUserId(
+    authToken: string,
+    userId: string,
+  ) {
+    const [active, done] = await Promise.all([
+      fetchActiveFixedTasksByUserId(authToken, userId),
+      fetchDoneFixedTasksByUserId(authToken, userId),
+    ]);
+    return dedupeFixedTasks([...active, ...done]);
+  }
+
   async function loadManagerAnalytics(authToken = token) {
     if (!authToken) return;
     try {
@@ -166,11 +213,7 @@ export function useDataLoader({
           managerApi.taskStatusOverview(authToken).catch(() => null),
           managerApi.taskCountsByUsers(authToken).catch(() => []),
           managerApi.monthlyPerformance(authToken).catch(() => []),
-          fetchAllFixedTasks(authToken, {
-            status: "todo",
-            startDate: "",
-            endDate: "",
-          }).catch(() => [] as FixedTask[]),
+          fetchAllFixedTasks(authToken).catch(() => [] as FixedTask[]),
           managerApi.usersProgress(authToken).catch(() => []),
         ]);
       setManagerTaskStatus(taskStatus);
@@ -189,7 +232,7 @@ export function useDataLoader({
                 | { data?: MonthlyPerformance[] },
             ),
       );
-      setFixedTasks(recurring as FixedTask[]);
+      setFixedTasks(dedupeFixedTasks(recurring as FixedTask[]));
       setManagerUserProgress(
         normalizeList(progress as UserProgress[] | { data?: UserProgress[] }),
       );
@@ -223,9 +266,22 @@ export function useDataLoader({
       const supervisedTasks = normalizeList(
         tasksResponse as Task[] | { data?: Task[] },
       );
-      const supervisedFixedTasks = normalizeList(
-        fixedTasksResponse as FixedTask[] | { data?: FixedTask[] },
+      const memberIds = members
+        .map((member) => member.userId ?? getId(member))
+        .filter((id): id is string => !!id);
+      const doneFixedTaskLists = await Promise.all(
+        memberIds.map((memberId) =>
+          fetchDoneFixedTasksByUserId(authToken, memberId).catch(
+            () => [] as FixedTask[],
+          ),
+        ),
       );
+      const supervisedFixedTasks = dedupeFixedTasks([
+        ...normalizeList(
+          fixedTasksResponse as FixedTask[] | { data?: FixedTask[] },
+        ),
+        ...doneFixedTaskLists.flat(),
+      ]);
       const now = Date.now();
       const overdue = supervisedTasks.filter(
         (task) =>
@@ -254,9 +310,12 @@ export function useDataLoader({
       setManagerUserProgress(members as UserProgress[]);
       setUsers(
         members
-          .filter((member) => member.userId !== currentUser?._id)
+          .filter(
+            (member) =>
+              (member.userId ?? getId(member)) !== currentUser?._id,
+          )
           .map((member) => ({
-            _id: member.userId,
+            _id: member.userId ?? getId(member),
             firstName: member.firstName,
             lastName: member.lastName,
             email: member.email,
@@ -398,15 +457,11 @@ export function useDataLoader({
       if (role === "manager") void loadManagerAnalytics(authToken);
       else if (role === "supervisor" && uid) {
         void loadSupervisorData(authToken);
-        fetchAllFixedTasks(authToken, {
-          status: "todo",
-          startDate: "",
-          endDate: "",
-        })
+        fetchBoardFixedTasksByUserId(authToken, uid)
           .then((r) => setFixedTasks(r))
           .catch(() => setFixedTasks([]));
       } else if (uid) {
-        fetchActiveFixedTasksByUserId(authToken, uid)
+        fetchBoardFixedTasksByUserId(authToken, uid)
           .then((r) => {
             setFixedTasks(r);
             if (userIsSpecialist) {
@@ -449,9 +504,11 @@ export function useDataLoader({
     specialistId: string,
   ) {
     if (!specialistId) return [];
-    return fetchAllSpecialistFixedTasks(authToken, specialistId, {
-      status: "todo",
-    });
+    const [specialistTasks, specialistDoneTasks] = await Promise.all([
+      fetchAllSpecialistFixedTasks(authToken, specialistId),
+      fetchDoneFixedTasksByUserId(authToken, specialistId),
+    ]);
+    return dedupeFixedTasks([...specialistTasks, ...specialistDoneTasks]);
   }
 
   return {
