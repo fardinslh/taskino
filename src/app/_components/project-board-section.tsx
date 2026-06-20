@@ -152,7 +152,7 @@ export function ProjectBoardSection({
 
               return (
                 <div
-                  className={`overflow-hidden rounded-2xl border ${column.border} ${column.colBg}`}
+                  className={`flex min-h-[420px] flex-col overflow-hidden rounded-2xl border ${column.border} ${column.colBg}`}
                   key={column.status}
                 >
                   <div
@@ -182,7 +182,7 @@ export function ProjectBoardSection({
                       <div
                         ref={dropProvided.innerRef}
                         {...dropProvided.droppableProps}
-                        className={`min-h-72 space-y-3 p-3 transition ${
+                        className={`flex min-h-72 flex-1 flex-col space-y-3 p-3 transition ${
                           dropSnapshot.isDraggingOver
                             ? "bg-white/45 dark:bg-white/5"
                             : ""
@@ -190,7 +190,7 @@ export function ProjectBoardSection({
                       >
                         {columnTasks.length === 0 ? (
                           <div
-                            className={`flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed ${column.emptyBorder} bg-white/45 text-center dark:bg-slate-900/20`}
+                            className={`flex min-h-40 flex-1 flex-col items-center justify-center rounded-xl border border-dashed ${column.emptyBorder} bg-white/45 text-center dark:bg-slate-900/20`}
                           >
                             <CircleDashed
                               size={20}

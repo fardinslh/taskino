@@ -642,7 +642,7 @@ function DashboardPageContent() {
                     return (
                       <div
                         key={col.status}
-                        className={`flex flex-col rounded-2xl border ${col.border} ${col.colBg}`}
+                        className={`flex min-h-[420px] flex-col rounded-2xl border ${col.border} ${col.colBg}`}
                       >
                         <div
                           className={`flex items-center justify-between rounded-t-2xl bg-gradient-to-l ${col.headerGrad} px-4 py-3`}
@@ -671,10 +671,10 @@ function DashboardPageContent() {
                             <div
                               ref={dropProvided.innerRef}
                               {...dropProvided.droppableProps}
-                              className={`flex flex-col gap-2.5 p-2.5 min-h-[120px] transition-colors ${dropSnapshot.isDraggingOver ? "bg-[#1f7a8c]/5" : ""}`}
+                              className={`flex h-full min-h-[120px] flex-1 flex-col gap-2.5 p-2.5 transition-colors ${dropSnapshot.isDraggingOver ? "bg-[#1f7a8c]/5" : ""}`}
                             >
                               {items.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[--border] py-10">
+                                <div className="flex min-h-[160px] flex-1 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[--border] py-10">
                                   <CircleDashed
                                     size={26}
                                     className="text-[--text-3] opacity-30"
