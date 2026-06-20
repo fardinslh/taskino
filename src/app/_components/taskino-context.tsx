@@ -41,6 +41,8 @@ const navigationKeys = [
   "setSpecialistSearchQuery",
   "selectedSpecialistId",
   "setSelectedSpecialistId",
+  "selectedAssigneeFilter",
+  "setSelectedAssigneeFilter",
   "boardShowAll",
   "setBoardShowAll",
   "selectedPeriodFilter",

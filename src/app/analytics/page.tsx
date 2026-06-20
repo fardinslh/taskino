@@ -30,9 +30,9 @@ function AnalyticsPageContent() {
               {/* Task status overview */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "در انتظار", value: managerTaskStatus?.todoTasks ?? managerTaskStatus?.todo ?? 0, color: "text-slate-600", bg: "bg-slate-50 dark:bg-slate-900/40", ring: "ring-slate-200 dark:ring-slate-700", dot: "bg-slate-400" },
-                  { label: "در حال انجام", value: managerTaskStatus?.inProgressTasks ?? managerTaskStatus?.inProgress ?? managerTaskStatus?.in_progress ?? 0, color: "text-[#1f7a8c]", bg: "bg-[#e8f4f7] dark:bg-[#0f3040]", ring: "ring-[#1f7a8c]/20", dot: "bg-[#1f7a8c]" },
-                  { label: "تکمیل شده", value: managerTaskStatus?.doneTasks ?? managerTaskStatus?.done ?? 0, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/40", ring: "ring-emerald-200 dark:ring-emerald-900", dot: "bg-emerald-500" },
+                  { label: "پروژه‌های در انتظار", value: managerTaskStatus?.todoTasks ?? managerTaskStatus?.todo ?? 0, color: "text-slate-600", bg: "bg-slate-50 dark:bg-slate-900/40", ring: "ring-slate-200 dark:ring-slate-700", dot: "bg-slate-400" },
+                  { label: "پروژه‌های در حال انجام", value: managerTaskStatus?.inProgressTasks ?? managerTaskStatus?.inProgress ?? managerTaskStatus?.in_progress ?? 0, color: "text-[#1f7a8c]", bg: "bg-[#e8f4f7] dark:bg-[#0f3040]", ring: "ring-[#1f7a8c]/20", dot: "bg-[#1f7a8c]" },
+                  { label: "پروژه‌های تکمیل شده", value: managerTaskStatus?.doneTasks ?? managerTaskStatus?.done ?? 0, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/40", ring: "ring-emerald-200 dark:ring-emerald-900", dot: "bg-emerald-500" },
                 ].map((s: any) => (
                   <div key={s.label} className={`rounded-xl border border-[--border] ${s.bg} p-5 text-center ring-2 ${s.ring}`}>
                     <div className={`mx-auto mb-2 h-3 w-3 rounded-full ${s.dot}`} />

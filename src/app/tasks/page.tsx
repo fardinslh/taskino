@@ -38,9 +38,11 @@ function TasksPageContent() {
   const {
     activeView,
     boardShowAll,
+    selectedAssigneeFilter,
     selectedPeriodFilter,
     setActiveView,
     setBoardShowAll,
+    setSelectedAssigneeFilter,
     setSelectedPeriodFilter,
     setSelectedSpecialistId,
     setSpecialistSearchQuery,
@@ -73,6 +75,14 @@ function TasksPageContent() {
     deleteFixedTask,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
+  const fixedTaskAssigneeUsers = fixedTasks.reduce((acc: any[], ft: any) => {
+    const assigneeId = getId(ft.assignedTo);
+    if (!assigneeId || acc.some((user) => getId(user) === assigneeId)) {
+      return acc;
+    }
+    acc.push(users.find((user: any) => getId(user) === assigneeId) ?? ft.assignedTo);
+    return acc;
+  }, []);
   const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
   const specialistMatches = specialistSearchQuery.trim()
     ? specialistUsers.filter((u: any) =>
@@ -314,6 +324,18 @@ function TasksPageContent() {
                     value={taskQuery}
                     onChange={(e) => setTaskQuery(e.target.value)}
                   />
+                  <select
+                    className="h-8 w-44 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition focus:border-[#1f7a8c]"
+                    value={selectedAssigneeFilter}
+                    onChange={(e) => setSelectedAssigneeFilter(e.target.value)}
+                  >
+                    <option value="">همه کاربران</option>
+                    {fixedTaskAssigneeUsers.map((user: any) => (
+                      <option key={getId(user)} value={getId(user)}>
+                        {userName(user)}
+                      </option>
+                    ))}
+                  </select>
                   {isManager && (
                     <button
                       className="flex h-8 items-center gap-1.5 rounded-lg bg-[#1f7a8c] px-3 text-xs font-semibold text-white transition hover:bg-[#196b7b]"
