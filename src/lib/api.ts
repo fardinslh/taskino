@@ -327,6 +327,13 @@ export type MonthlyPerformanceResponse = {
 };
 
 export type AuthResponse = { user: User; accessToken: string };
+export type PasswordResetVerifyResponse = {
+  resetToken: string;
+  changePasswordPath?: string;
+  changePasswordUrl?: string;
+  expiresIn?: number;
+  expiresAt?: string;
+};
 
 export type ManagerAllTasks = {
   recurrence?: string | null;

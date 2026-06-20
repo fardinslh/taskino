@@ -1,6 +1,15 @@
-import type { HTMLAttributes } from "react";
+import { useState, type HTMLAttributes } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
-import { AlertCircle, CheckCircle2, FolderKanban, LayoutDashboard, Plus, X } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  FolderKanban,
+  LayoutDashboard,
+  Plus,
+  X,
+} from "lucide-react";
 import type { User } from "@/lib/api";
 import { initials, userName } from "../_lib/task-helpers";
 
@@ -11,20 +20,36 @@ export function Field({ label, name, id, required, type = "text", value, onChang
   dir?: "ltr" | "rtl"; inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
   registration?: UseFormRegisterReturn;
 }) {
+  const isPasswordField = type === "password";
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const resolvedType = isPasswordField && passwordVisible ? "text" : type;
+
   return (
     <label className="block">
       {label && <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">{label}</span>}
-      <input
-        id={id} dir={dir} inputMode={inputMode} ref={registration?.ref}
-        className={`h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15 ${dir === "ltr" ? "text-left" : ""}`}
-        name={registration?.name ?? name}
-        onBlur={registration?.onBlur}
-        onChange={(e) => { void registration?.onChange(e); onChange?.(e.target.value); }}
-        required={required}
-        type={type}
-        value={value}
-        placeholder={placeholder}
-      />
+      <span className="relative block">
+        <input
+          id={id} dir={dir} inputMode={inputMode} ref={registration?.ref}
+          className={`h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15 ${dir === "ltr" ? "text-left" : ""} ${isPasswordField ? "pl-10" : ""}`}
+          name={registration?.name ?? name}
+          onBlur={registration?.onBlur}
+          onChange={(e) => { void registration?.onChange(e); onChange?.(e.target.value); }}
+          required={required}
+          type={resolvedType}
+          value={value}
+          placeholder={placeholder}
+        />
+        {isPasswordField ? (
+          <button
+            aria-label={passwordVisible ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+            className="absolute inset-y-0 left-0 flex w-10 items-center justify-center text-[--text-3] transition hover:text-[--text]"
+            onClick={() => setPasswordVisible((visible) => !visible)}
+            type="button"
+          >
+            {passwordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        ) : null}
+      </span>
     </label>
   );
 }
