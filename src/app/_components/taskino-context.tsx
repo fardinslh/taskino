@@ -114,6 +114,7 @@ const managementKeys = [
   "users",
   "managerStats",
   "managerTaskStatus",
+  "managerTaskStatusRange",
   "managerUserCounts",
   "managerMonthlyPerf",
   "managerUserProgress",

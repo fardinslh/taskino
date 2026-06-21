@@ -12,7 +12,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { getId, type UserProgress, type UserTaskCount } from "@/lib/api";
+import { getId, type ManagerTaskStatusRange, type UserProgress, type UserTaskCount } from "@/lib/api";
 import {
   useManagementContext,
   useSessionContext,
@@ -43,6 +43,7 @@ export default function AnalyticsPage() {
     users,
     managerStats,
     managerTaskStatus,
+    managerTaskStatusRange,
     managerUserCounts,
     managerMonthlyPerf,
     managerUserProgress,
@@ -83,6 +84,14 @@ export default function AnalyticsPage() {
         <Metric icon={CheckCircle2} label="نرخ تکمیل" value={`${completionRate}%`} note={`${done} کار تکمیل‌شده`} tone="green" />
         <Metric icon={AlertTriangle} label="نیازمند رسیدگی" value={attentionUsers.length + pendingLeaves} note={`${attentionUsers.length} عملکرد ضعیف · ${pendingLeaves} مرخصی`} tone="amber" />
       </div>
+
+      <Panel title="نمودار وضعیت کارهای ماه جاری" subtitle="مقایسه کارهای عادی و ثابت در بازه ماه جاری" icon={BarChart3}>
+        {managerTaskStatusRange ? (
+          <StatusRangeChart data={managerTaskStatusRange} />
+        ) : (
+          <EmptyState text="داده نمودار این بازه در دسترس نیست." />
+        )}
+      </Panel>
 
       <div className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
         <Panel title="وضعیت جریان کار" subtitle="توزیع تمام کارهای ثبت‌شده" icon={Target}>
@@ -176,4 +185,56 @@ function TaskRow({ user }: { user: UserTaskCount }) {
 
 function EmptyState({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-[--border] bg-[--surface-2] px-4 py-8 text-center text-sm text-[--text-3]">{text}</div>;
+}
+
+function StatusRangeChart({ data }: { data: ManagerTaskStatusRange }) {
+  const groups = [
+    { label: "همه کارها", values: data },
+    { label: "کارهای عادی", values: data.tasks },
+    { label: "کارهای ثابت", values: data.fixedTasks },
+  ];
+  const statuses = [
+    { key: "done" as const, label: "انجام‌شده", color: "bg-emerald-500", text: "text-emerald-600" },
+    { key: "inProgress" as const, label: "در حال انجام", color: "bg-[#1f7a8c]", text: "text-[#1f7a8c]" },
+    { key: "todo" as const, label: "در انتظار", color: "bg-slate-400", text: "text-slate-600" },
+    { key: "overdueUnfinished" as const, label: "معوق", color: "bg-red-500", text: "text-red-600" },
+  ];
+
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap gap-4">
+        {statuses.map((status) => (
+          <div key={status.key} className="flex items-center gap-2 text-xs text-[--text-2]">
+            <span className={`h-2.5 w-2.5 rounded-full ${status.color}`} />
+            {status.label}
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        {groups.map((group) => (
+          <div key={group.label} className="rounded-xl border border-[--border] bg-[--surface-2] p-4">
+            <div className="mb-5 flex items-end justify-between">
+              <div><p className="text-sm font-bold">{group.label}</p><p className="text-[11px] text-[--text-3]">تعداد کل در بازه</p></div>
+              <p className="text-3xl font-black">{group.values.total}</p>
+            </div>
+            <div className="flex h-40 items-end justify-around gap-3 border-b border-[--border] px-1">
+              {statuses.map((status) => {
+                const value = group.values[status.key];
+                const height = group.values.total ? Math.max(6, value / group.values.total * 100) : 0;
+                return (
+                  <div key={status.key} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+                    <span className={`text-xs font-extrabold ${status.text}`}>{value}</span>
+                    <div className={`w-full max-w-10 rounded-t-md ${status.color} transition-all duration-500`} style={{ height: `${height}%` }} />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 grid grid-cols-4 gap-1 text-center text-[9px] text-[--text-3]">
+              {statuses.map((status) => <span key={status.key}>{status.label}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

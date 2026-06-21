@@ -17,6 +17,7 @@ import {
   type LeaveRequestStatistics,
   type ManagerAllTasks,
   type ManagerStats,
+  type ManagerTaskStatusRange,
   type MonthlyPerformance,
   type MyProgressStats,
   type MyWorkSummary,
@@ -51,6 +52,7 @@ type DataLoaderInput = {
   setNotifications: Dispatch<SetStateAction<Notification[]>>;
   setFixedTasks: Dispatch<SetStateAction<FixedTask[]>>;
   setManagerTaskStatus: Dispatch<SetStateAction<TaskStatusOverview | null>>;
+  setManagerTaskStatusRange: Dispatch<SetStateAction<ManagerTaskStatusRange | null>>;
   setManagerUserCounts: Dispatch<SetStateAction<UserTaskCount[]>>;
   setManagerMonthlyPerf: Dispatch<SetStateAction<MonthlyPerformance[]>>;
   setManagerUserProgress: Dispatch<SetStateAction<UserProgress[]>>;
@@ -84,6 +86,7 @@ export function useDataLoader({
   setNotifications,
   setFixedTasks,
   setManagerTaskStatus,
+  setManagerTaskStatusRange,
   setManagerUserCounts,
   setManagerMonthlyPerf,
   setManagerUserProgress,
@@ -208,15 +211,22 @@ export function useDataLoader({
   async function loadManagerAnalytics(authToken = token) {
     if (!authToken) return;
     try {
-      const [taskStatus, userCounts, monthlyPerf, recurring, progress] =
+      const now = new Date();
+      const dateParam = (date: Date) =>
+        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      const from = dateParam(new Date(now.getFullYear(), now.getMonth(), 1));
+      const to = dateParam(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+      const [taskStatus, statusRange, userCounts, monthlyPerf, recurring, progress] =
         await Promise.all([
           managerApi.taskStatusOverview(authToken).catch(() => null),
+          managerApi.taskStatusRange(authToken, from, to).catch(() => null),
           managerApi.taskCountsByUsers(authToken).catch(() => []),
           managerApi.monthlyPerformance(authToken).catch(() => []),
           fetchAllFixedTasks(authToken).catch(() => [] as FixedTask[]),
           managerApi.usersProgress(authToken).catch(() => []),
         ]);
       setManagerTaskStatus(taskStatus);
+      setManagerTaskStatusRange(statusRange);
       setManagerUserCounts(
         normalizeList(
           userCounts as UserTaskCount[] | { data?: UserTaskCount[] },

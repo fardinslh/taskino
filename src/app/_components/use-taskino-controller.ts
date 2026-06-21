@@ -9,6 +9,7 @@ import {
   type LeaveRequest,
   type LeaveRequestStatistics,
   type ManagerStats,
+  type ManagerTaskStatusRange,
   type MonthlyPerformance,
   type MyProgressStats,
   type MyWorkSummary,
@@ -64,6 +65,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
   const [managerStats, setManagerStats] = useState<ManagerStats | null>(null);
   const [managerTaskStatus, setManagerTaskStatus] =
     useState<TaskStatusOverview | null>(null);
+  const [managerTaskStatusRange, setManagerTaskStatusRange] =
+    useState<ManagerTaskStatusRange | null>(null);
   const [managerUserCounts, setManagerUserCounts] = useState<UserTaskCount[]>(
     [],
   );
@@ -201,6 +204,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setNotifications,
     setFixedTasks,
     setManagerTaskStatus,
+    setManagerTaskStatusRange,
     setManagerUserCounts,
     setManagerMonthlyPerf,
     setManagerUserProgress,
@@ -518,6 +522,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     fixedTasks,
     managerStats,
     managerTaskStatus,
+    managerTaskStatusRange,
     managerUserCounts,
     managerMonthlyPerf,
     managerUserProgress,

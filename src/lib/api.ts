@@ -254,6 +254,19 @@ export type TaskStatusOverview = {
   total?: number;
 };
 
+export type TaskStatusRangeBreakdown = {
+  total: number;
+  done: number;
+  inProgress: number;
+  todo: number;
+  overdueUnfinished: number;
+};
+
+export type ManagerTaskStatusRange = TaskStatusRangeBreakdown & {
+  tasks: TaskStatusRangeBreakdown;
+  fixedTasks: TaskStatusRangeBreakdown;
+};
+
 export type StatusCounts = {
   total?: number;
   todo?: number;
@@ -716,6 +729,12 @@ export const managerApi = {
     ),
   taskStatusOverview: (token: string) =>
     unwrapAxios(apiClient.get<TaskStatusOverview>("/manager/tasks/status")),
+  taskStatusRange: (token: string, from: string, to: string) =>
+    unwrapAxios(
+      apiClient.get<ManagerTaskStatusRange>(
+        `/manager/tasks/status-range${qs({ from, to })}`,
+      ),
+    ),
   taskCountsByUsers: (token: string) =>
     unwrapAxios(
       apiClient.get<ListResponse<UserTaskCount>>("/manager/tasks/users/counts"),
