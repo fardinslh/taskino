@@ -17,7 +17,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { getId } from "@/lib/api";
+import { getId, type MyProgressStats } from "@/lib/api";
 import { AssigneeStack } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
 import {
@@ -71,7 +71,6 @@ function DashboardPageContent() {
     specialistFixedTaskCounts,
     specialistProgressStats,
     specialistTaskCounts,
-    specialistWorkSummary,
   } = useTaskContext();
   const {
     handleLeaveAction,
@@ -284,6 +283,12 @@ function DashboardPageContent() {
               )}
             </div>
           )}
+
+          <PersonalPerformanceCard
+            stats={specialistProgressStats}
+            fallbackProgress={specialistProgress}
+            fallbackStatus={currentUser?.performanceStatus}
+          />
 
         </section>
       )}
@@ -834,21 +839,9 @@ function DashboardPageContent() {
               const rate =
                 specialistProgressStats?.progressPercentage ??
                 specialistProgress;
-              const summaryScore = specialistWorkSummary?.score ?? 0;
-              const summaryTotalTasks = specialistWorkSummary?.totalTasks ?? 0;
-              const summaryCompletedTasks =
-                specialistWorkSummary?.completedTasks ?? 0;
-              const summaryTotalFixedTasks =
-                specialistWorkSummary?.totalFixedTasks ?? 0;
-              const summaryCompletedFixedTasks =
-                specialistWorkSummary?.completedFixedTasks ?? 0;
-              const ps = specialistProgressStats?.score
-                ? specialistProgressStats.score > 80
-                  ? "good"
-                  : specialistProgressStats.score < 50
-                    ? "weak"
-                    : "normal"
-                : currentUser?.performanceStatus;
+              const ps =
+                specialistProgressStats?.performanceStatus ??
+                currentUser?.performanceStatus;
               const psLabel =
                 ps === "good"
                   ? "خوب"
@@ -887,28 +880,27 @@ function DashboardPageContent() {
                       {rate}%
                     </span>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-3 xl:grid-cols-5">
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-center xl:grid-cols-4">
                     {[
-                      { l: "امتیاز", v: summaryScore, c: "text-amber-600" },
                       {
-                        l: "کل پروژه‌ها",
-                        v: summaryTotalTasks,
+                        l: "امتیاز",
+                        v: specialistProgressStats?.score ?? 0,
+                        c: "text-amber-600",
+                      },
+                      {
+                        l: "پیشرفت کارها",
+                        v: `${specialistProgressStats?.taskProgressPercentage ?? 0}%`,
                         c: "text-indigo-600",
                       },
                       {
-                        l: "پروژه‌های انجام‌شده",
-                        v: summaryCompletedTasks,
-                        c: "text-emerald-600",
-                      },
-                      {
-                        l: "کل گزارش‌ها",
-                        v: summaryTotalFixedTasks,
-                        c: "text-[--text]",
-                      },
-                      {
-                        l: "گزارش‌های انجام‌شده",
-                        v: summaryCompletedFixedTasks,
+                        l: "پیشرفت کارهای ثابت",
+                        v: `${specialistProgressStats?.fixedTaskProgressPercentage ?? 0}%`,
                         c: "text-[#1f7a8c]",
+                      },
+                      {
+                        l: "پیشرفت کلی",
+                        v: `${rate}%`,
+                        c: "text-emerald-600",
                       },
                     ].map((s: any) => (
                       <div
@@ -993,5 +985,77 @@ function DashboardPageContent() {
         </>
       )}
     </>
+  );
+}
+
+function PersonalPerformanceCard({
+  stats,
+  fallbackProgress,
+  fallbackStatus,
+}: {
+  stats: MyProgressStats | null;
+  fallbackProgress: number;
+  fallbackStatus?: string;
+}) {
+  const rate = stats?.progressPercentage ?? fallbackProgress;
+  const status = stats?.performanceStatus ?? fallbackStatus;
+  const statusLabel =
+    status === "good"
+      ? "خوب"
+      : status === "weak" || status === "bad"
+        ? "بد"
+        : status === "normal"
+          ? "متوسط"
+          : "—";
+  const statusClass =
+    status === "good"
+      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+      : status === "weak" || status === "bad"
+        ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+        : "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
+  const metrics = [
+    { label: "امتیاز", value: stats?.score ?? 0, color: "text-amber-600" },
+    {
+      label: "پیشرفت کارها",
+      value: `${stats?.taskProgressPercentage ?? 0}%`,
+      color: "text-indigo-600",
+    },
+    {
+      label: "پیشرفت کارهای ثابت",
+      value: `${stats?.fixedTaskProgressPercentage ?? 0}%`,
+      color: "text-[#1f7a8c]",
+    },
+    { label: "پیشرفت کلی", value: `${rate}%`, color: "text-emerald-600" },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={17} className="text-violet-600" />
+          <h2 className="font-bold">عملکرد من</h2>
+        </div>
+        <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${statusClass}`}>
+          {statusLabel}
+        </span>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[--border]">
+          <div
+            className="h-full rounded-full bg-gradient-to-l from-violet-600 to-violet-400"
+            style={{ width: `${Math.min(100, Math.max(0, rate))}%` }}
+          />
+        </div>
+        <span className="text-sm font-bold text-violet-600">{rate}%</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-center xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-xl bg-[--surface-2] py-3">
+            <p className={`text-xl font-bold ${metric.color}`}>{metric.value}</p>
+            <p className="text-[11px] text-[--text-3]">{metric.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

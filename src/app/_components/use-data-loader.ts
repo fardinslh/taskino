@@ -393,12 +393,8 @@ export function useDataLoader({
             userIsSpecialist
               ? Promise.resolve(null)
               : Promise.resolve(null),
-            userIsSpecialist
-              ? userApi.meProgress(authToken).catch(() => null)
-              : Promise.resolve(null),
-            userIsSpecialist
-              ? userApi.meWorkSummary(authToken).catch(() => null)
-              : Promise.resolve(null),
+            userApi.meProgress(authToken).catch(() => null),
+            Promise.resolve(null),
           ])
         : [null, null, null, null];
       const publicTaskResponses =

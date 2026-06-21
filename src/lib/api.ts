@@ -265,8 +265,12 @@ export type StatusCounts = {
 };
 
 export type MyProgressStats = {
+  userId?: string;
+  taskProgressPercentage?: number;
+  fixedTaskProgressPercentage?: number;
   progressPercentage?: number;
   score?: number;
+  performanceStatus?: "good" | "normal" | "weak" | "bad";
   completedTasks?: number;
   totalTasks?: number;
   doneTasks?: number;
