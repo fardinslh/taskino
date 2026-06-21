@@ -3,7 +3,9 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { getId } from "@/lib/api";
 import type { View } from "../_lib/task-constants";
+import { SelectedFixedTaskPanel } from "./selected-fixed-task-panel";
 import { SelectedTaskPanel } from "./selected-task-panel";
 import { TaskinoProvider, useTaskinoProviderValue } from "./taskino-context";
 import { NotificationDialog, RejectLeaveDialog } from "./taskino-dialogs";
@@ -44,11 +46,13 @@ export function TaskinoApp({
     markNotificationRead,
     message,
     moveTask,
+    myId,
     notifications,
     overdueTasks,
     popupNotif,
     rejectLeaveId,
     rejectReason,
+    selectedFixedTask,
     selectedTask,
     setDarkMode,
     setError,
@@ -56,6 +60,7 @@ export function TaskinoApp({
     setPopupNotif,
     setRejectLeaveId,
     setRejectReason,
+    setSelectedFixedTask,
     setSelectedTask,
     setShowNotifications,
     setSidebarCollapsed,
@@ -74,6 +79,12 @@ export function TaskinoApp({
     users,
     setActiveView,
   } = controller;
+  const selectedFixedTaskAssigneeId = getId(selectedFixedTask?.assignedTo);
+  const canSupervisorEditFixedTask =
+    isSupervisor &&
+    !!selectedFixedTask &&
+    !!selectedFixedTaskAssigneeId &&
+    selectedFixedTaskAssigneeId !== myId;
 
   return (
     <TaskinoProvider value={controller}>
@@ -173,6 +184,26 @@ export function TaskinoApp({
             task={selectedTask}
             token={token}
             users={users}
+          />
+        )}
+        {selectedFixedTask && (
+          <SelectedFixedTaskPanel
+            canChangeStatus={isSpecialist || isSupervisor}
+            canDeleteTemplate={isManager}
+            canEditTemplate={isManager || canSupervisorEditFixedTask}
+            onClose={() => setSelectedFixedTask(null)}
+            onDelete={(taskId) => void controller.deleteFixedTask(taskId)}
+            onEdit={(task) => {
+              setSelectedFixedTask(null);
+              setActiveView(
+                isSupervisor ? "supervisor-create-report" : "fixed-reports",
+              );
+              controller.openFixedTaskForm(task);
+            }}
+            onStatusChange={(taskId, status) =>
+              void controller.moveFixedTask(taskId, status)
+            }
+            task={selectedFixedTask}
           />
         )}
       </div>

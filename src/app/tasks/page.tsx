@@ -43,6 +43,7 @@ function TasksPageContent() {
     setActiveView,
     setBoardShowAll,
     setSelectedAssigneeFilter,
+    setSelectedFixedTask,
     setSelectedPeriodFilter,
     setSelectedSpecialistId,
     setSpecialistSearchQuery,
@@ -422,14 +423,7 @@ function TasksPageContent() {
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
                                         className={`rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
-                                        onClick={
-                                          isManager
-                                            ? () => {
-                                                setActiveView("fixed-reports");
-                                                openFixedTaskForm(ft);
-                                              }
-                                            : undefined
-                                        }
+                                        onClick={() => setSelectedFixedTask(ft)}
                                       >
                                         <div className="flex items-center justify-between gap-2">
                                           <span className="rounded-md border border-[#b8dfe8] bg-[#e8f4f7] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7a8c] dark:border-[#1f5060] dark:bg-[#0f3040] dark:text-[#4fc3d5]">

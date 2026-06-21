@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  ClipboardList,
-  RefreshCw,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ClipboardList, RefreshCw, Trash2 } from "lucide-react";
 
 import { fixedTaskApi, getId, type FixedTask } from "@/lib/api";
 import { TaskDeadlineCountdown } from "../../_components/task-deadline-countdown";
@@ -16,11 +11,7 @@ import {
   useNavigationContext,
   useSessionContext,
 } from "../../_components/taskino-context";
-import {
-  recurrenceLabel,
-  statusLabel,
-  userName,
-} from "../../_lib/task-helpers";
+import { recurrenceLabel, statusLabel, userName } from "../../_lib/task-helpers";
 
 type FixedTaskStatusFilter = "" | "todo" | "in_progress" | "done";
 
@@ -31,11 +22,8 @@ export default function SupervisorProjectsPage() {
 function SupervisorWorkPageContent() {
   const [fixedTaskStatusFilter, setFixedTaskStatusFilter] =
     useState<FixedTaskStatusFilter>("");
-  const [selectedFixedTask, setSelectedFixedTask] = useState<FixedTask | null>(
-    null,
-  );
   const [deletingId, setDeletingId] = useState("");
-  const { activeView } = useNavigationContext();
+  const { activeView, setSelectedFixedTask } = useNavigationContext();
   const { isSupervisor, token } = useSessionContext();
   const { setError, setMessage } = useFeedbackContext();
   const { supervisorFixedTasks, loadSupervisorData } =
@@ -63,9 +51,6 @@ function SupervisorWorkPageContent() {
     setDeletingId(id);
     try {
       await fixedTaskApi.delete(token, id);
-      setSelectedFixedTask((current) =>
-        current && getId(current) === id ? null : current,
-      );
       setMessage("گزارش ثابت حذف شد.");
       await loadSupervisorData();
     } catch (error) {
@@ -121,96 +106,8 @@ function SupervisorWorkPageContent() {
           />
         </div>
       </div>
-
-      {selectedFixedTask && (
-        <FixedTaskDetailDialog
-          item={selectedFixedTask}
-          onClose={() => setSelectedFixedTask(null)}
-        />
-      )}
     </section>
   );
-}
-
-function FixedTaskDetailDialog({
-  item,
-  onClose,
-}: {
-  item: FixedTask;
-  onClose: () => void;
-}) {
-  const assignee = Array.isArray(item.assignedTo)
-    ? item.assignedTo[0]
-    : item.assignedTo;
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-[--border] bg-[--surface] shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-[--border] px-5 py-4">
-          <div>
-            <p className="text-xs font-semibold text-[#1f7a8c]">
-              گزارش ثابت
-            </p>
-            <h3 className="mt-1 text-base font-bold text-[--text]">
-              {item.title}
-            </h3>
-          </div>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[--text-3] transition hover:bg-[--surface-2] hover:text-[--text]"
-            onClick={onClose}
-            type="button"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="grid gap-3 p-5 sm:grid-cols-2">
-          <DetailItem label="مسئول" value={assignee ? userName(assignee) : "بدون مسئول"} />
-          <DetailItem label="وضعیت" value={statusLabel(item.status)} />
-          <DetailItem label="فعال" value={item.isActive === false ? "خیر" : "بله"} />
-          <DetailItem label="شروع" value={formatDateTime(item.startDate, item.startTime)} />
-          <DetailItem label="پایان" value={formatDateTime(item.endDate, item.endTime)} />
-        </div>
-
-        {item.description && (
-          <div className="border-t border-[--border] px-5 py-4">
-            <p className="text-xs font-semibold text-[--text-3]">توضیحات</p>
-            <p className="mt-2 text-sm leading-6 text-[--text-2]">
-              {item.description}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DetailItem({ label, value }: { label: string; value?: string }) {
-  return (
-    <div className="rounded-xl border border-[--border] bg-[--surface-2] p-3">
-      <p className="text-[11px] font-semibold text-[--text-3]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[--text]">
-        {value || "—"}
-      </p>
-    </div>
-  );
-}
-
-function formatDateTime(date?: string, time?: string) {
-  if (!date && !time) return "";
-  const dateLabel = date
-    ? new Intl.DateTimeFormat("fa-IR", {
-        month: "short",
-        day: "numeric",
-      }).format(new Date(date))
-    : "";
-  return [dateLabel, time].filter(Boolean).join(" · ");
 }
 
 function StatusFilter({
@@ -286,9 +183,7 @@ function WorkList({
                   <p className="truncate text-sm font-semibold">{item.title}</p>
                   <p className="mt-0.5 truncate text-[11px] text-[--text-3]">
                     {`مسئول: ${specialistLabel}`}
-                    {item.recurrence
-                      ? ` · ${recurrenceLabel(item.recurrence)}`
-                      : ""}
+                    {item.recurrence ? ` · ${recurrenceLabel(item.recurrence)}` : ""}
                   </p>
                   <TaskDeadlineCountdown
                     className="mt-3"

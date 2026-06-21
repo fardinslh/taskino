@@ -28,16 +28,32 @@ export type ActivationFormValues = {
 // ─── Template Row ─────────────────────────────────────────────────────────────
 export function TemplateRow({
   task,
+  onClick,
   onEdit,
   onDelete,
+  canEdit = true,
 }: {
   task: any;
+  onClick?: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canEdit?: boolean;
 }) {
   const active = task.isActive !== false;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+    <div
+      className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 ${onClick ? "cursor-pointer transition hover:bg-[--surface-2]/60" : ""}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="font-semibold">{task.title}</p>
@@ -60,16 +76,24 @@ export function TemplateRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface-2]"
-          onClick={onEdit}
-          type="button"
-        >
-          ویرایش
-        </button>
+        {canEdit && (
+          <button
+            className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface-2]"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit();
+            }}
+            type="button"
+          >
+            ویرایش
+          </button>
+        )}
         <button
           className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40"
-          onClick={onDelete}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
           type="button"
         >
           <Trash2 size={14} />
@@ -260,7 +284,7 @@ export function FilterBar({
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <p className="text-xs text-[--text-3]">
-          {filteredCount} مورد از {totalCount} مورد
+          {filteredCount} مورد
         </p>
         <button
           className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface] focus:outline-none"

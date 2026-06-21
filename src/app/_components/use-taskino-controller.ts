@@ -116,6 +116,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
     return localStorage.getItem(darkModeStorageKey) === "true";
   });
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedFixedTask, setSelectedFixedTask] = useState<FixedTask | null>(
+    null,
+  );
   const [taskPriorities, setTaskPriorities] = useState<
     Record<string, Priority>
   >({});
@@ -227,6 +230,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
   const leaveActions = useLeaveActions({
     token,
     myId,
+    isManager: currentUser?.roles === "manager",
     setError,
     setMessage,
     loadData,
@@ -383,13 +387,15 @@ export function useTaskinoController(initialView: View = "dashboard") {
 
     if (!selectedSpecialistId) {
       if (role === "supervisor") {
-        if (!myId) {
+        if (activeView === "supervisor-create-report") {
           queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
-          return;
+        } else if (!myId) {
+          queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
+        } else {
+          void loadLatestSpecialistFixedTasks(token, myId)
+            .then((r) => setFixedTasks(r))
+            .catch(() => setFixedTasks(supervisorFixedTasks));
         }
-        void loadLatestSpecialistFixedTasks(token, myId)
-          .then((r) => setFixedTasks(r))
-          .catch(() => setFixedTasks(supervisorFixedTasks));
       } else {
         void loadLatestManagerAnalytics(token);
       }
@@ -401,6 +407,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
       .catch(() => setFixedTasks([]));
   }, [
     authHydrated,
+    activeView,
     currentUser?.roles,
     myId,
     selectedSpecialistId,
@@ -497,6 +504,8 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setDarkMode,
     selectedTask,
     setSelectedTask,
+    selectedFixedTask,
+    setSelectedFixedTask,
     taskPriorities,
     setTaskPriorities,
 

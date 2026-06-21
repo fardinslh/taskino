@@ -206,7 +206,6 @@ function TeamPageContent() {
                     {user.isActive === false && (
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">در انتظار تأیید</span>
                     )}
-                    <span className="rounded-full bg-[--surface] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">امتیاز: {user.score ?? 0}</span>
                   </div>
                   <p className="text-xs text-[--text-3]">{user.mobile ?? user.email}</p>
                 </div>

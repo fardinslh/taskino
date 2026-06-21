@@ -364,9 +364,11 @@ export function useDataLoader({
                 .allTasks(authToken)
                 .catch(() => ({ tasks: [] as Task[] }))
             : taskApi.list(authToken).catch(() => []),
-          uid && !userIsManager && !userIsSupervisor
-            ? leaveApi.list(authToken, { limit: 50, user: uid })
-            : leaveApi.list(authToken, { limit: 50 }),
+          userIsManager
+            ? managerApi.leaveRequests(authToken, { page: 1, limit: 50 })
+            : uid && !userIsSupervisor
+              ? leaveApi.list(authToken, { limit: 50, user: uid })
+              : leaveApi.list(authToken, { limit: 50 }),
           userIsManager
             ? managerApi.statistics(authToken).catch(() => null)
             : Promise.resolve(null),

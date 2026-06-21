@@ -48,6 +48,7 @@ const navigationKeys = [
   "selectedPeriodFilter",
   "setSelectedPeriodFilter",
   "setSelectedTask",
+  "setSelectedFixedTask",
   "showNewProjectForm",
   "setShowNewProjectForm",
 ] as const;
@@ -156,6 +157,8 @@ const fixedTaskKeys = [
   "filteredFixedTemplates",
   "fixedReportsTab",
   "setFixedReportsTab",
+  "selectedFixedTask",
+  "setFixedTasks",
   "showFixedTaskForm",
   "editingFixedTask",
   "ftTitle",

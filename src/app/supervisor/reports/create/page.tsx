@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { ClipboardList, Plus, RefreshCw } from "lucide-react";
 
 import {
+  type FixedTask,
   fixedTaskApi,
   getId,
   normalizeList,
@@ -31,6 +32,7 @@ export default function SupervisorCreateReportsPage() {
   const { loadSupervisorData } = useManagementContext();
   const {
     fixedTasks,
+    setFixedTasks,
     showFixedTaskForm,
     editingFixedTask,
     openFixedTaskForm,
@@ -58,6 +60,10 @@ export default function SupervisorCreateReportsPage() {
     const titleQuery = filterTitle.trim().toLowerCase();
 
     return visibleFixedTasks.filter((task: any) => {
+      if (getId(task.assignedTo) === myId) {
+        return false;
+      }
+
       const recurrenceMatch =
         !filterRecurrence || (task.recurrence ?? "daily") === filterRecurrence;
       const specialistMatch =
@@ -81,7 +87,13 @@ export default function SupervisorCreateReportsPage() {
 
       return recurrenceMatch && specialistMatch && titleMatch;
     });
-  }, [filterRecurrence, filterSpecialist, filterTitle, visibleFixedTasks]);
+  }, [
+    filterRecurrence,
+    filterSpecialist,
+    filterTitle,
+    myId,
+    visibleFixedTasks,
+  ]);
 
   useEffect(() => {
     if (!showFixedTaskForm) return;
@@ -92,6 +104,48 @@ export default function SupervisorCreateReportsPage() {
       description: editingFixedTask?.description ?? "",
     });
   }, [editingFixedTask, form, showFixedTaskForm]);
+
+  const loadFixedTaskTemplates = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      const limit = 100;
+      const firstResponse = await fixedTaskApi.list(token, { page: 1, limit });
+      const firstPageItems = normalizeList(
+        firstResponse as FixedTask[] | { data?: FixedTask[] },
+      );
+      const total =
+        firstResponse &&
+        typeof firstResponse === "object" &&
+        "total" in (firstResponse as Record<string, unknown>)
+          ? Number((firstResponse as Record<string, unknown>).total)
+          : firstPageItems.length;
+      const totalPages = Math.ceil(total / limit);
+      const remainingResponses =
+        totalPages > 1
+          ? await Promise.all(
+              Array.from({ length: totalPages - 1 }, (_, index) =>
+                fixedTaskApi.list(token, {
+                  page: index + 2,
+                  limit,
+                }),
+              ),
+            )
+          : [];
+      const remainingItems = remainingResponses.flatMap((response) =>
+        normalizeList(response as FixedTask[] | { data?: FixedTask[] }),
+      );
+
+      setFixedTasks([...firstPageItems, ...remainingItems]);
+    } catch (error) {
+      setFixedTasks([]);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "دریافت گزارش‌های ثابت ناموفق بود",
+      );
+    }
+  }, [setError, setFixedTasks, token]);
 
   const loadWorkFieldUsers = useCallback(async () => {
     if (!token) return;
@@ -118,10 +172,21 @@ export default function SupervisorCreateReportsPage() {
     }
 
     queueMicrotask(() => void loadWorkFieldUsers());
-  }, [activeView, isSupervisor, loadWorkFieldUsers, token]);
+    queueMicrotask(() => void loadFixedTaskTemplates());
+  }, [
+    activeView,
+    isSupervisor,
+    loadFixedTaskTemplates,
+    loadWorkFieldUsers,
+    token,
+  ]);
 
   async function reloadSupervisorCreateData() {
-    await Promise.all([loadSupervisorData(), loadWorkFieldUsers()]);
+    await Promise.all([
+      loadSupervisorData(),
+      loadWorkFieldUsers(),
+      loadFixedTaskTemplates(),
+    ]);
   }
 
   async function saveSupervisorFixedTask(values: FixedTaskFormValues) {
@@ -256,6 +321,7 @@ export default function SupervisorCreateReportsPage() {
               <TemplateRow
                 key={getId(task)}
                 task={task}
+                canEdit
                 onEdit={() => openFixedTaskForm(task)}
                 onDelete={() => void deleteFixedTask(getId(task))}
               />

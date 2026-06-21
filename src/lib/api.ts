@@ -705,6 +705,11 @@ export const managerApi = {
       apiClient.patch(`/manager/users/${userId}/role`, { role }),
       "تغییر نقش ناموفق بود",
     ),
+  adjustSpecialistScore: (token: string, userId: string, score: number) =>
+    unwrapAxios(
+      apiClient.patch<User>(`/manager/users/${userId}/score`, { score }),
+      "Failed to adjust specialist score",
+    ),
   taskStatusOverview: (token: string) =>
     unwrapAxios(apiClient.get<TaskStatusOverview>("/manager/tasks/status")),
   taskCountsByUsers: (token: string) =>
@@ -730,6 +735,19 @@ export const managerApi = {
   usersProgress: (token: string) =>
     unwrapAxios(
       apiClient.get<ListResponse<UserProgress>>("/manager/users/progress"),
+    ),
+  leaveRequests: (token: string, params?: Params) =>
+    unwrapAxios(
+      apiClient.get<ListResponse<LeaveRequest>>(
+        `/manager/leave-requests${qs(params)}`,
+      ),
+    ),
+  approveLeaveRequest: (token: string, id: string) =>
+    unwrapAxios(
+      apiClient.patch<LeaveRequest>(
+        `/manager/leave-requests/${id}/approve`,
+      ),
+      "Failed to approve leave request",
     ),
 };
 

@@ -24,7 +24,7 @@ export default function FixedReportsPage() {
 }
 
 function FixedReportsPageContent() {
-  const { activeView } = useNavigationContext();
+  const { activeView, setSelectedFixedTask } = useNavigationContext();
   const { currentUser, isManager } = useSessionContext();
   const { users, loadManagerAnalytics } = useManagementContext();
   const {
@@ -182,6 +182,7 @@ function FixedReportsPageContent() {
               <TemplateRow
                 key={getId(task)}
                 task={task}
+                onClick={() => setSelectedFixedTask(task)}
                 onEdit={() => openFixedTaskForm(task)}
                 onDelete={() => void deleteFixedTask(getId(task))}
               />

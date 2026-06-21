@@ -3,11 +3,12 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useState } from "react";
 
-import { leaveApi } from "@/lib/api";
+import { leaveApi, managerApi } from "@/lib/api";
 
 type LeaveActionsInput = {
   token: string;
   myId: string;
+  isManager: boolean;
   setError: Dispatch<SetStateAction<string>>;
   setMessage: Dispatch<SetStateAction<string>>;
   loadData: () => Promise<void>;
@@ -16,6 +17,7 @@ type LeaveActionsInput = {
 export function useLeaveActions({
   token,
   myId,
+  isManager,
   setError,
   setMessage,
   loadData,
@@ -42,7 +44,8 @@ export function useLeaveActions({
       return;
     }
     try {
-      await leaveApi.approve(token, id, myId);
+      if (isManager) await managerApi.approveLeaveRequest(token, id);
+      else await leaveApi.approve(token, id, myId);
       setMessage("مرخصی تأیید شد.");
       await loadData();
     } catch (err) {
