@@ -191,6 +191,7 @@ export function TaskinoApp({
             canChangeStatus={isSpecialist || isSupervisor}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
+            canReviewTiming={isManager}
             onClose={() => setSelectedFixedTask(null)}
             onDelete={(taskId) => void controller.deleteFixedTask(taskId)}
             onEdit={(task) => {
@@ -200,9 +201,18 @@ export function TaskinoApp({
               );
               controller.openFixedTaskForm(task);
             }}
-            onStatusChange={(taskId, status) =>
-              void controller.moveFixedTask(taskId, status)
-            }
+            onStatusChange={async (taskId, status) => {
+              const updated = await controller.moveFixedTask(taskId, status);
+              if (updated) setSelectedFixedTask(updated);
+            }}
+            onReviewTiming={async (taskId, status, duration) => {
+              const updated = await controller.reviewFixedTaskTiming(
+                taskId,
+                status,
+                duration,
+              );
+              if (updated) setSelectedFixedTask(updated);
+            }}
             task={selectedFixedTask}
           />
         )}

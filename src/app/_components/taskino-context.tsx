@@ -184,6 +184,7 @@ const fixedTaskKeys = [
   "seedFixedTasksFromExcel",
   "onDragEnd",
   "moveFixedTask",
+  "reviewFixedTaskTiming",
 ] as const;
 
 const excelKeys = [

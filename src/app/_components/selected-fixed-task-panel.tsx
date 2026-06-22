@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { CheckCircle2, ChevronLeft, CircleDashed, Repeat, X } from "lucide-react";
 
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
@@ -11,19 +13,27 @@ export function SelectedFixedTaskPanel({
   canChangeStatus,
   canEditTemplate,
   canDeleteTemplate,
+  canReviewTiming,
   onClose,
   onDelete,
   onEdit,
   onStatusChange,
+  onReviewTiming,
   task,
 }: {
   canChangeStatus: boolean;
   canEditTemplate: boolean;
   canDeleteTemplate: boolean;
+  canReviewTiming: boolean;
   onClose: () => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: FixedTask) => void;
   onStatusChange: (taskId: string, status: FixedTaskStatus) => void;
+  onReviewTiming: (
+    taskId: string,
+    status: "approved" | "rejected",
+    approvedDurationMinutes?: number,
+  ) => Promise<void>;
   task: FixedTask;
 }) {
   const taskId = getId(task);
@@ -31,6 +41,21 @@ export function SelectedFixedTaskPanel({
     ? task.assignedTo[0]
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
+  const [approvedDuration, setApprovedDuration] = useState(
+    String(task.actualDurationMinutes ?? ""),
+  );
+  const [reviewing, setReviewing] = useState(false);
+  const timingPending =
+    canReviewTiming &&
+    currentStatus === "done" &&
+    task.timingApprovalStatus === "pending" &&
+    !!task.actualDurationMinutes;
+  const timingStatusLabel =
+    task.timingApprovalStatus === "approved"
+      ? "تأیید شده"
+      : task.timingApprovalStatus === "rejected"
+        ? "رد شده"
+        : "در انتظار بررسی";
 
   return (
     <>
@@ -105,12 +130,60 @@ export function SelectedFixedTaskPanel({
             <MetaRow label="پایان" value={formatDate(task.endDate)} />
             <MetaRow label="نوبت بعدی" value={formatDate(task.nextRunAt)} />
             <MetaRow label="ایجاد" value={formatDate(task.createdAt)} />
+            {task.startedAt && <MetaRow label="شروع تایمر" value={formatDate(task.startedAt)} />}
+            {task.doneTime && <MetaRow label="پایان تایمر" value={formatDate(task.doneTime)} />}
+            {task.actualDurationMinutes != null && (
+              <MetaRow label="مدت واقعی" value={`${task.actualDurationMinutes} دقیقه`} />
+            )}
+            {task.approvedDurationMinutes != null && (
+              <MetaRow label="مدت تأییدشده" value={`${task.approvedDurationMinutes} دقیقه`} />
+            )}
+            {currentStatus === "done" && (
+              <MetaRow label="تأیید زمان‌بندی" value={timingStatusLabel} />
+            )}
           </div>
         </div>
 
         {((canEditTemplate || canDeleteTemplate) ||
-          (canChangeStatus && currentStatus !== "done")) && (
+          (canChangeStatus && currentStatus !== "done") || timingPending) && (
           <div className="border-t border-[--border] p-4 space-y-2">
+            {timingPending && (
+              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300">بررسی زمان انجام گزارش</p>
+                <label className="mt-2 block text-[11px] text-amber-700 dark:text-amber-400">
+                  مدت تأییدشده (دقیقه)
+                  <input
+                    className="mt-1 h-9 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-[--text] outline-none focus:border-amber-500 dark:border-amber-900 dark:bg-[--surface]"
+                    min={1}
+                    onChange={(event) => setApprovedDuration(event.target.value)}
+                    type="number"
+                    value={approvedDuration}
+                  />
+                </label>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    className="h-9 rounded-lg bg-emerald-600 text-xs font-bold text-white disabled:opacity-50"
+                    disabled={reviewing || !Number(approvedDuration)}
+                    onClick={async () => {
+                      setReviewing(true);
+                      await onReviewTiming(taskId, "approved", Number(approvedDuration));
+                      setReviewing(false);
+                    }}
+                    type="button"
+                  >تأیید زمان</button>
+                  <button
+                    className="h-9 rounded-lg border border-red-200 text-xs font-bold text-red-600 disabled:opacity-50 dark:border-red-900"
+                    disabled={reviewing}
+                    onClick={async () => {
+                      setReviewing(true);
+                      await onReviewTiming(taskId, "rejected");
+                      setReviewing(false);
+                    }}
+                    type="button"
+                  >رد زمان</button>
+                </div>
+              </div>
+            )}
             {canChangeStatus && currentStatus !== "done" && (
               <button
                 className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] active:scale-[0.98]"

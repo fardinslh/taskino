@@ -69,6 +69,11 @@ export function TemplateRow({
           <span className="rounded-full bg-[--surface-2] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">
             {recurrenceLabel(task.recurrence ?? "daily")}
           </span>
+          {task.status === "done" && task.timingApprovalStatus === "pending" && task.actualDurationMinutes && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+              زمان در انتظار تأیید
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-xs text-[--text-3]">
           {task.assignedTo ? `مسئول: ${userName(task.assignedTo)}` : ""}

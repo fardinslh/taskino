@@ -422,6 +422,12 @@ export type FixedTask = {
   isActive?: boolean;
   status?: FixedTaskStatus;
   doneTime?: string;
+  startedAt?: string | null;
+  actualDurationMinutes?: number | null;
+  approvedDurationMinutes?: number | null;
+  timingApprovalStatus?: "pending" | "approved" | "rejected";
+  timingApprovedBy?: string | User | null;
+  timingApprovedAt?: string | null;
   lastGeneratedAt?: string;
   nextRunAt?: string;
   startDate?: string;
@@ -727,6 +733,21 @@ export const managerApi = {
       apiClient.patch<User>(`/manager/users/${userId}/score`, { score }),
       "Failed to adjust specialist score",
     ),
+  reviewFixedTaskTiming: (
+    token: string,
+    id: string,
+    status: "approved" | "rejected",
+    approvedDurationMinutes?: number,
+  ) =>
+    unwrapAxios(
+      apiClient.patch<FixedTask>(`/manager/fixed-tasks/${id}/timing-approval`, {
+        status,
+        ...(approvedDurationMinutes !== undefined
+          ? { approvedDurationMinutes }
+          : {}),
+      }),
+      "بررسی زمان گزارش ثابت ناموفق بود",
+    ),
   taskStatusOverview: (token: string) =>
     unwrapAxios(apiClient.get<TaskStatusOverview>("/manager/tasks/status")),
   taskStatusRange: (token: string, from: string, to: string) =>
@@ -896,6 +917,11 @@ export const fixedTaskApi = {
     unwrapAxios(
       apiClient.patch<FixedTask>(`/fixed-tasks/${id}`, { status }),
       "تغییر وضعیت گزارش ثابت ناموفق بود",
+    ),
+  startTimer: (token: string, id: string) =>
+    unwrapAxios(
+      apiClient.patch<FixedTask>(`/fixed-tasks/${id}/timer/start`),
+      "شروع زمان‌سنج گزارش ثابت ناموفق بود",
     ),
   delete: (token: string, id: string) =>
     unwrapAxios(

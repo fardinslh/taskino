@@ -46,7 +46,22 @@ body {
 }
 
 button, input, select, textarea { font: inherit; }
-button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
+button { -webkit-tap-highlight-color: transparent; }
+
+button:not(:disabled),
+a[href],
+select:not(:disabled),
+summary,
+[role="button"]:not([aria-disabled="true"]),
+.rmdp-container input:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
 ::selection { background: #cce9ef; color: var(--text); }
 
 /* Skeleton animation */

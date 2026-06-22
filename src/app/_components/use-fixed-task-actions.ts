@@ -11,6 +11,7 @@ import {
 import {
   fixedTaskApi,
   getId,
+  managerApi,
   type User,
   type FixedTask,
   type FixedTaskStatus,
@@ -320,12 +321,28 @@ export function useFixedTaskActions({
       setError("This fixed task is assigned to another user.");
       return;
     }
+    const currentStatus = target?.status ?? "todo";
+    if (status === currentStatus) return target;
+    const validTransition =
+      (currentStatus === "todo" && status === "in_progress") ||
+      (currentStatus === "in_progress" && status === "done");
+    if (!validTransition) {
+      setError("گزارش ثابت باید به‌ترتیب از «در انتظار» به «در حال انجام» و سپس «تکمیل‌شده» منتقل شود.");
+      return;
+    }
+    if (status === "done" && !target?.startedAt) {
+      setError("ابتدا زمان‌سنج گزارش را شروع کنید.");
+      return;
+    }
     const previous = fixedTasks;
     setFixedTasks((current) =>
       current.map((item) => (getId(item) === id ? { ...item, status } : item)),
     );
     try {
-      const updated = await fixedTaskApi.updateStatus(token, id, status);
+      const updated =
+        status === "in_progress" && !target?.startedAt
+          ? await fixedTaskApi.startTimer(token, id)
+          : await fixedTaskApi.updateStatus(token, id, status);
       setFixedTasks((current) =>
         current.map((item) =>
           getId(item) === id ? { ...item, ...updated } : item,
@@ -334,11 +351,34 @@ export function useFixedTaskActions({
       if (status === "done") {
         await loadData();
       }
+      return updated;
     } catch (error) {
       setFixedTasks(previous);
       setError(
         error instanceof Error ? error.message : "تغییر وضعیت گزارش ناموفق بود",
       );
+    }
+  }
+
+  async function reviewFixedTaskTiming(
+    id: string,
+    status: "approved" | "rejected",
+    approvedDurationMinutes?: number,
+  ) {
+    try {
+      const updated = await managerApi.reviewFixedTaskTiming(
+        token,
+        id,
+        status,
+        approvedDurationMinutes,
+      );
+      setFixedTasks((current) =>
+        current.map((item) => (getId(item) === id ? updated : item)),
+      );
+      setMessage(status === "approved" ? "زمان گزارش تأیید شد." : "زمان گزارش رد شد.");
+      return updated;
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "بررسی زمان گزارش ناموفق بود");
     }
   }
 
@@ -356,6 +396,7 @@ export function useFixedTaskActions({
     ftRecurrence,
     ftTitle,
     moveFixedTask,
+    reviewFixedTaskTiming,
     onDragEnd,
     openFixedTaskForm,
     saveFixedTask,

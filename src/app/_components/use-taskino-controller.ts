@@ -285,6 +285,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     ftRecurrence,
     ftTitle,
     moveFixedTask,
+    reviewFixedTaskTiming,
     onDragEnd,
     openFixedTaskForm,
     saveFixedTask,
@@ -645,6 +646,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     seedFixedTasksFromExcel,
     onDragEnd,
     moveFixedTask,
+    reviewFixedTaskTiming,
   };
 }
 
