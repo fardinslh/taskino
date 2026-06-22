@@ -215,7 +215,7 @@ export function useDataLoader({
       const dateParam = (date: Date) =>
         `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
       const from = dateParam(new Date(now.getFullYear(), now.getMonth(), 1));
-      const to = dateParam(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+      const to = dateParam(now);
       const [taskStatus, statusRange, userCounts, monthlyPerf, recurring, progress] =
         await Promise.all([
           managerApi.taskStatusOverview(authToken).catch(() => null),

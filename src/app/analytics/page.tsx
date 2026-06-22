@@ -1,18 +1,24 @@
 "use client";
 
+import { type FormEvent, useState } from "react";
+import DatePicker from "react-multi-date-picker";
+import jalali from "react-date-object/calendars/jalali";
+import persianFa from "react-date-object/locales/persian_fa";
+
 import {
   Activity,
   AlertTriangle,
   BarChart3,
   CheckCircle2,
   Clock3,
+  CalendarDays,
   ShieldCheck,
   Target,
   TrendingUp,
   UsersRound,
 } from "lucide-react";
 
-import { getId, type ManagerTaskStatusRange, type UserProgress, type UserTaskCount } from "@/lib/api";
+import { getId, managerApi, type ManagerTaskStatusRange, type UserProgress, type UserTaskCount } from "@/lib/api";
 import {
   useManagementContext,
   useSessionContext,
@@ -36,8 +42,20 @@ function statusStyle(status?: string) {
   return { label: "متوسط", className: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" };
 }
 
+function dateParam(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function currentMonthRange() {
+  const now = new Date();
+  return {
+    from: dateParam(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: dateParam(now),
+  };
+}
+
 export default function AnalyticsPage() {
-  const { isManager } = useSessionContext();
+  const { isManager, token } = useSessionContext();
   const { tasks } = useTaskContext();
   const {
     users,
@@ -49,6 +67,34 @@ export default function AnalyticsPage() {
     managerUserProgress,
     leaveRequests,
   } = useManagementContext();
+  const initialRange = currentMonthRange();
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
+  const [rangeData, setRangeData] = useState<ManagerTaskStatusRange | null>(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeError, setRangeError] = useState("");
+
+  async function applyRangeFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!from || !to) return;
+    if (from > to) {
+      setRangeError("تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
+      return;
+    }
+    if (to > dateParam(new Date())) {
+      setRangeError("انتخاب تاریخ آینده امکان‌پذیر نیست.");
+      return;
+    }
+    setRangeLoading(true);
+    setRangeError("");
+    try {
+      setRangeData(await managerApi.taskStatusRange(token, from, to));
+    } catch (error) {
+      setRangeError(error instanceof Error ? error.message : "دریافت اطلاعات بازه ناموفق بود.");
+    } finally {
+      setRangeLoading(false);
+    }
+  }
 
   if (!isManager) return null;
 
@@ -70,7 +116,7 @@ export default function AnalyticsPage() {
         <div>
           <p className="text-xs font-bold text-[#1f7a8c]">مرکز کنترل مدیریت</p>
           <h1 className="mt-1 text-2xl font-extrabold">نمای جامع عملکرد سازمان</h1>
-          <p className="mt-1 text-sm text-[--text-3]">وضعیت کارشناسان، سرپرستان و جریان انجام کارها در یک نگاه</p>
+          <p className="mt-1 text-sm text-[--text-3]">وضعیت کارشناسان، سرپرستان، پروژه‌ها و گزارش‌ها در یک نگاه</p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-[--border] bg-[--surface] px-3 py-2 text-xs text-[--text-2]">
           <Activity size={15} className="text-emerald-500" />
@@ -80,21 +126,69 @@ export default function AnalyticsPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric icon={UsersRound} label="نیروی فعال" value={managerStats?.activeUsers ?? users.length} note={`${specialists} کارشناس · ${supervisors} سرپرست`} tone="blue" />
-        <Metric icon={BarChart3} label="کل کارها" value={total} note={`${inProgress} کار در حال انجام`} tone="violet" />
-        <Metric icon={CheckCircle2} label="نرخ تکمیل" value={`${completionRate}%`} note={`${done} کار تکمیل‌شده`} tone="green" />
+        <Metric icon={BarChart3} label="کل پروژه‌ها" value={total} note={`${inProgress} پروژه در حال انجام`} tone="violet" />
+        <Metric icon={CheckCircle2} label="نرخ تکمیل پروژه‌ها" value={`${completionRate}%`} note={`${done} پروژه تکمیل‌شده`} tone="green" />
         <Metric icon={AlertTriangle} label="نیازمند رسیدگی" value={attentionUsers.length + pendingLeaves} note={`${attentionUsers.length} عملکرد ضعیف · ${pendingLeaves} مرخصی`} tone="amber" />
       </div>
 
-      <Panel title="نمودار وضعیت کارهای ماه جاری" subtitle="مقایسه کارهای عادی و ثابت در بازه ماه جاری" icon={BarChart3}>
-        {managerTaskStatusRange ? (
-          <StatusRangeChart data={managerTaskStatusRange} />
+      <Panel title="نمودار وضعیت پروژه‌ها و گزارش‌ها" subtitle="مقایسه پروژه‌ها و گزارش‌ها در بازه انتخابی" icon={BarChart3}>
+        <form className="mb-6 flex flex-col gap-3 rounded-xl border border-[--border] bg-[--surface-2] p-3 sm:flex-row sm:items-end" onSubmit={applyRangeFilter}>
+          <label className="flex-1 text-xs font-semibold text-[--text-2]">
+            از تاریخ
+            <DatePicker
+              value={from ? new Date(`${from}T00:00:00`) : ""}
+              onChange={(value) => {
+                if (!value || Array.isArray(value)) return setFrom("");
+                setFrom(dateParam(value.toDate()));
+              }}
+              calendar={jalali}
+              locale={persianFa}
+              maxDate={
+                to && to < dateParam(new Date())
+                  ? new Date(`${to}T00:00:00`)
+                  : new Date()
+              }
+              format="YYYY/MM/DD"
+              calendarPosition="bottom-right"
+              inputClass="mt-1.5 h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+              containerClassName="w-full"
+              placeholder="انتخاب تاریخ شروع"
+            />
+          </label>
+          <label className="flex-1 text-xs font-semibold text-[--text-2]">
+            تا تاریخ
+            <DatePicker
+              value={to ? new Date(`${to}T00:00:00`) : ""}
+              onChange={(value) => {
+                if (!value || Array.isArray(value)) return setTo("");
+                setTo(dateParam(value.toDate()));
+              }}
+              calendar={jalali}
+              locale={persianFa}
+              minDate={from ? new Date(`${from}T00:00:00`) : undefined}
+              maxDate={new Date()}
+              format="YYYY/MM/DD"
+              calendarPosition="bottom-right"
+              inputClass="mt-1.5 h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+              containerClassName="w-full"
+              placeholder="انتخاب تاریخ پایان"
+            />
+          </label>
+          <button className="flex items-center justify-center gap-2 rounded-lg bg-[#1f7a8c] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#186777] disabled:cursor-not-allowed disabled:opacity-60" disabled={rangeLoading} type="submit">
+            <CalendarDays size={16} />
+            {rangeLoading ? "در حال دریافت..." : "اعمال فیلتر"}
+          </button>
+        </form>
+        {rangeError && <p className="mb-4 text-xs font-semibold text-red-600">{rangeError}</p>}
+        {(rangeData ?? managerTaskStatusRange) ? (
+          <StatusRangeChart data={(rangeData ?? managerTaskStatusRange)!} />
         ) : (
           <EmptyState text="داده نمودار این بازه در دسترس نیست." />
         )}
       </Panel>
 
       <div className="grid gap-5 xl:grid-cols-[1.35fr_.65fr]">
-        <Panel title="وضعیت جریان کار" subtitle="توزیع تمام کارهای ثبت‌شده" icon={Target}>
+        <Panel title="وضعیت پروژه‌ها" subtitle="توزیع تمام پروژه‌های ثبت‌شده" icon={Target}>
           <div className="grid grid-cols-3 gap-3">
             <StatusCard label="در انتظار" value={todo} total={total} color="bg-slate-400" />
             <StatusCard label="در حال انجام" value={inProgress} total={total} color="bg-[#1f7a8c]" />
@@ -125,22 +219,22 @@ export default function AnalyticsPage() {
           ) : <EmptyState text="هنوز داده ارزیابی عملکرد ثبت نشده است." />}
         </Panel>
 
-        <Panel title="حجم کار به تفکیک نفر" subtitle="مقایسه کارهای باز، جاری و تمام‌شده" icon={UsersRound}>
+        <Panel title="پروژه‌ها به تفکیک نفر" subtitle="مقایسه پروژه‌های باز، جاری و تمام‌شده" icon={UsersRound}>
           {taskRows.length ? (
             <div className="divide-y divide-[--border]">
               {taskRows.map((user, index) => <TaskRow key={user.userId ?? getId(user) ?? index} user={user} />)}
             </div>
-          ) : <EmptyState text="داده‌ای برای توزیع کارها وجود ندارد." />}
+          ) : <EmptyState text="داده‌ای برای توزیع پروژه‌ها وجود ندارد." />}
         </Panel>
       </div>
 
-      <Panel title="عملکرد ماه جاری" subtitle="رتبه‌بندی بر اساس تعداد کار تکمیل‌شده" icon={Clock3}>
+      <Panel title="عملکرد ماه جاری" subtitle="رتبه‌بندی بر اساس تعداد پروژه تکمیل‌شده" icon={Clock3}>
         {managerMonthlyPerf.length ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[...managerMonthlyPerf].sort((a, b) => (b.completedTasks ?? 0) - (a.completedTasks ?? 0)).map((user, index) => (
               <div key={user.userId ?? getId(user) ?? index} className="flex items-center gap-3 rounded-xl border border-[--border] bg-[--surface-2] p-3">
                 <span className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-extrabold ${index < 3 ? "bg-amber-100 text-amber-700" : "bg-[--surface] text-[--text-3]"}`}>{index + 1}</span>
-                <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{personName(user)}</p><p className="text-xs text-[--text-3]">{user.totalTasks ?? 0} کار در ماه</p></div>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{personName(user)}</p><p className="text-xs text-[--text-3]">{user.totalTasks ?? 0} پروژه در ماه</p></div>
                 <div className="text-left"><p className="text-lg font-extrabold text-emerald-600">{user.completedTasks ?? 0}</p><p className="text-[10px] text-[--text-3]">تکمیل</p></div>
               </div>
             ))}
@@ -172,7 +266,7 @@ function RoleRow({ label, value, total, color }: { label: string; value: number;
 function ProgressRow({ user }: { user: UserProgress }) {
   const rate = Math.min(100, Math.max(0, user.progressPercentage ?? 0));
   const status = statusStyle(user.performanceStatus);
-  return <div className="py-3 first:pt-0 last:pb-0"><div className="mb-2 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1f7a8c] text-xs font-bold text-white">{personName(user)[0]}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold">{personName(user)}</p><span className="text-[10px] text-[--text-3]">{roleLabel[user.role ?? ""] ?? "عضو تیم"}</span></div><p className="text-[11px] text-[--text-3]">{user.completedTasks ?? 0} از {user.totalTasks ?? 0} کار · {user.completedFixedTasks ?? 0} از {user.totalFixedTasks ?? 0} کار ثابت</p></div><span className={`rounded-lg px-2 py-1 text-[10px] font-bold ${status.className}`}>{status.label}</span></div><div className="flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-[--surface-2]"><div className="h-full rounded-full bg-[#1f7a8c]" style={{ width: `${rate}%` }} /></div><span className="w-9 text-left text-xs font-black text-[#1f7a8c]">{rate}٪</span></div></div>;
+  return <div className="py-3 first:pt-0 last:pb-0"><div className="mb-2 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1f7a8c] text-xs font-bold text-white">{personName(user)[0]}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold">{personName(user)}</p><span className="text-[10px] text-[--text-3]">{roleLabel[user.role ?? ""] ?? "عضو تیم"}</span></div><p className="text-[11px] text-[--text-3]">{user.completedTasks ?? 0} از {user.totalTasks ?? 0} پروژه · {user.completedFixedTasks ?? 0} از {user.totalFixedTasks ?? 0} گزارش</p></div><span className={`rounded-lg px-2 py-1 text-[10px] font-bold ${status.className}`}>{status.label}</span></div><div className="flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-[--surface-2]"><div className="h-full rounded-full bg-[#1f7a8c]" style={{ width: `${rate}%` }} /></div><span className="w-9 text-left text-xs font-black text-[#1f7a8c]">{rate}٪</span></div></div>;
 }
 
 function TaskRow({ user }: { user: UserTaskCount }) {
@@ -180,7 +274,7 @@ function TaskRow({ user }: { user: UserTaskCount }) {
   const done = user.doneTasks ?? user.done ?? 0;
   const current = user.inProgressTasks ?? user.inProgress ?? user.in_progress ?? 0;
   const open = user.todoTasks ?? user.todo ?? 0;
-  return <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">{personName(user)[0]}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{personName(user)}</p><div className="mt-1 flex flex-wrap gap-3 text-[11px]"><span className="text-slate-500">باز: {open}</span><span className="text-[#1f7a8c]">جاری: {current}</span><span className="text-emerald-600">تمام: {done}</span></div></div><div className="text-left"><p className="text-xl font-black">{total}</p><p className="text-[10px] text-[--text-3]">کل کار</p></div></div>;
+  return <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700">{personName(user)[0]}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{personName(user)}</p><div className="mt-1 flex flex-wrap gap-3 text-[11px]"><span className="text-slate-500">باز: {open}</span><span className="text-[#1f7a8c]">جاری: {current}</span><span className="text-emerald-600">تمام: {done}</span></div></div><div className="text-left"><p className="text-xl font-black">{total}</p><p className="text-[10px] text-[--text-3]">کل پروژه</p></div></div>;
 }
 
 function EmptyState({ text }: { text: string }) {
@@ -189,9 +283,9 @@ function EmptyState({ text }: { text: string }) {
 
 function StatusRangeChart({ data }: { data: ManagerTaskStatusRange }) {
   const groups = [
-    { label: "همه کارها", values: data },
-    { label: "کارهای عادی", values: data.tasks },
-    { label: "کارهای ثابت", values: data.fixedTasks },
+    { label: "مجموع پروژه و گزارش", values: data },
+    { label: "پروژه‌ها", values: data.tasks },
+    { label: "گزارش‌ها", values: data.fixedTasks },
   ];
   const statuses = [
     { key: "done" as const, label: "انجام‌شده", color: "bg-emerald-500", text: "text-emerald-600" },
