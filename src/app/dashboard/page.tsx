@@ -20,6 +20,7 @@ import {
 import { getId, type MyProgressStats } from "@/lib/api";
 import { AssigneeStack } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
+import { FixedTaskElapsedTimer } from "../_components/fixed-task-elapsed-timer";
 import {
   useFixedTaskContext,
   useManagementContext,
@@ -548,7 +549,8 @@ function DashboardPageContent() {
 
           {/* Fixed-task board (recurring reports) */}
 
-          {(activeView === "dashboard" || activeView === "tasks") && (
+          {(activeView === "tasks" ||
+            (activeView === "dashboard" && !isSpecialist)) && (
             <div className="overflow-hidden rounded-2xl border border-[#b8dfe8] dark:border-[#1f5060] bg-[--surface] shadow-md shadow-[#1f7a8c]/8">
               <div className="flex flex-col gap-3 border-b border-[#cce8ef] dark:border-[#1f5060] bg-gradient-to-l from-[#e0f4f8] to-[#f0fafb] dark:from-[#0f2535] dark:to-[#0f172a] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -576,10 +578,10 @@ function DashboardPageContent() {
                   <div className="flex rounded-lg border border-[--border] bg-[--surface] p-0.5 text-xs">
                     {(
                       [
-                        ["", "همه"],
                         ["daily", "روزانه"],
                         ["weekly", "هفتگی"],
                         ["monthly", "ماهانه"],
+                        ["", "همه"],
                       ] as const
                     ).map(([val, lbl]) => (
                       <button
@@ -762,6 +764,21 @@ function DashboardPageContent() {
                                           <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
                                             {ft.description}
                                           </p>
+                                        )}
+                                        {(ft.status ?? "todo") === "done" && (
+                                          <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-[10px] font-bold ${ft.timingApprovalStatus === "approved" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : ft.timingApprovalStatus === "rejected" ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"}`}>
+                                            {ft.timingApprovalStatus === "approved"
+                                              ? "زمان تأیید شده"
+                                              : ft.timingApprovalStatus === "rejected"
+                                                ? "زمان رد شده"
+                                                : "زمان در انتظار تأیید"}
+                                          </span>
+                                        )}
+                                        {(ft.status ?? "todo") === "in_progress" && (
+                                          <FixedTaskElapsedTimer
+                                            className="mt-3"
+                                            startedAt={ft.startedAt}
+                                          />
                                         )}
                                         <TaskDeadlineCountdown
                                           className="mt-3"

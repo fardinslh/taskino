@@ -149,6 +149,7 @@ export function useFixedTaskActions({
       } else {
         const created = await fixedTaskApi.create(token, body);
         setFixedTasks((current) => [created, ...current]);
+        await loadManagerAnalytics();
       }
       setMessage(
         editingFixedTask ? "الگوی ثابت بروزرسانی شد." : "الگوی ثابت ساخته شد.",
@@ -190,6 +191,7 @@ export function useFixedTaskActions({
       } else {
         const created = await fixedTaskApi.create(token, body);
         setFixedTasks((current) => [created, ...current]);
+        await loadManagerAnalytics();
       }
       setMessage(
         editingFixedTask
@@ -364,6 +366,7 @@ export function useFixedTaskActions({
     id: string,
     status: "approved" | "rejected",
     approvedDurationMinutes?: number,
+    taskComment?: string,
   ) {
     try {
       const updated = await managerApi.reviewFixedTaskTiming(
@@ -371,6 +374,7 @@ export function useFixedTaskActions({
         id,
         status,
         approvedDurationMinutes,
+        taskComment,
       );
       setFixedTasks((current) =>
         current.map((item) => (getId(item) === id ? updated : item)),

@@ -112,7 +112,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
   >("");
   const [selectedPeriodFilter, setSelectedPeriodFilter] = useState<
     TaskPeriod | ""
-  >("");
+  >("daily");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -186,6 +186,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     loadSupervisorData,
     loadSelectedSpecialistFixedTasks,
   } = useDataLoader({
+    activeView,
     token,
     currentUser,
     myId,
@@ -393,7 +394,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
     if (!selectedSpecialistId) {
       if (role === "supervisor") {
         if (activeView === "supervisor-create-report") {
-          queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
+          // This page owns fixedTasks and loads the complete template list.
+          // Do not overwrite it with the supervisor-scoped board list.
+          return;
         } else if (!myId) {
           queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
         } else {

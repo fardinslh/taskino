@@ -419,6 +419,7 @@ export type FixedTask = {
   projectId?: string | Project;
   recurrence: FixedTaskRecurrence;
   description?: string;
+  taskComment?: string | null;
   isActive?: boolean;
   status?: FixedTaskStatus;
   doneTime?: string;
@@ -738,6 +739,7 @@ export const managerApi = {
     id: string,
     status: "approved" | "rejected",
     approvedDurationMinutes?: number,
+    taskComment?: string,
   ) =>
     unwrapAxios(
       apiClient.patch<FixedTask>(`/manager/fixed-tasks/${id}/timing-approval`, {
@@ -745,6 +747,7 @@ export const managerApi = {
         ...(approvedDurationMinutes !== undefined
           ? { approvedDurationMinutes }
           : {}),
+        ...(taskComment?.trim() ? { taskComment: taskComment.trim() } : {}),
       }),
       "بررسی زمان گزارش ثابت ناموفق بود",
     ),

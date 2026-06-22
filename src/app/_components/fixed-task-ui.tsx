@@ -69,9 +69,13 @@ export function TemplateRow({
           <span className="rounded-full bg-[--surface-2] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">
             {recurrenceLabel(task.recurrence ?? "daily")}
           </span>
-          {task.status === "done" && task.timingApprovalStatus === "pending" && task.actualDurationMinutes && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
-              زمان در انتظار تأیید
+          {task.status === "done" && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${task.timingApprovalStatus === "approved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : task.timingApprovalStatus === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"}`}>
+              {task.timingApprovalStatus === "approved"
+                ? "زمان تأیید شده"
+                : task.timingApprovalStatus === "rejected"
+                  ? "زمان رد شده"
+                  : "زمان در انتظار تأیید"}
             </span>
           )}
         </div>
@@ -256,7 +260,7 @@ export function FilterBar({
           <select
             className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
             value={filterRecurrence}
-            onChange={(e) => onRecurrenceChange(e.target.value)}
+            onChange={(event) => onRecurrenceChange(event.target.value)}
           >
             <option value="">همه</option>
             <option value="daily">روزانه</option>

@@ -33,6 +33,7 @@ export function SelectedFixedTaskPanel({
     taskId: string,
     status: "approved" | "rejected",
     approvedDurationMinutes?: number,
+    taskComment?: string,
   ) => Promise<void>;
   task: FixedTask;
 }) {
@@ -45,6 +46,7 @@ export function SelectedFixedTaskPanel({
     String(task.actualDurationMinutes ?? ""),
   );
   const [reviewing, setReviewing] = useState(false);
+  const [taskComment, setTaskComment] = useState(task.taskComment ?? "");
   const timingPending =
     canReviewTiming &&
     currentStatus === "done" &&
@@ -101,6 +103,15 @@ export function SelectedFixedTaskPanel({
             </p>
           </div>
 
+          {task.taskComment && (
+            <div>
+              <p className="mb-2 text-xs font-semibold text-[--text-3]">نظر مدیر</p>
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                {task.taskComment}
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="mb-2 text-xs font-semibold text-[--text-3]">وضعیت</p>
             <div className="flex flex-wrap gap-2">
@@ -128,7 +139,6 @@ export function SelectedFixedTaskPanel({
             <MetaRow label="تکرار" value={recurrenceLabel(task.recurrence)} />
             <MetaRow label="شروع" value={formatDate(task.startDate)} />
             <MetaRow label="پایان" value={formatDate(task.endDate)} />
-            <MetaRow label="نوبت بعدی" value={formatDate(task.nextRunAt)} />
             <MetaRow label="ایجاد" value={formatDate(task.createdAt)} />
             {task.startedAt && <MetaRow label="شروع تایمر" value={formatDate(task.startedAt)} />}
             {task.doneTime && <MetaRow label="پایان تایمر" value={formatDate(task.doneTime)} />}
@@ -160,13 +170,27 @@ export function SelectedFixedTaskPanel({
                     value={approvedDuration}
                   />
                 </label>
+                <label className="mt-2 block text-[11px] text-amber-700 dark:text-amber-400">
+                  نظر مدیر
+                  <textarea
+                    className="mt-1 min-h-20 w-full resize-none rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-[--text] outline-none focus:border-amber-500 dark:border-amber-900 dark:bg-[--surface]"
+                    onChange={(event) => setTaskComment(event.target.value)}
+                    placeholder="نظر خود را درباره زمان انجام گزارش بنویسید"
+                    value={taskComment}
+                  />
+                </label>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     className="h-9 rounded-lg bg-emerald-600 text-xs font-bold text-white disabled:opacity-50"
                     disabled={reviewing || !Number(approvedDuration)}
                     onClick={async () => {
                       setReviewing(true);
-                      await onReviewTiming(taskId, "approved", Number(approvedDuration));
+                      await onReviewTiming(
+                        taskId,
+                        "approved",
+                        Number(approvedDuration),
+                        taskComment,
+                      );
                       setReviewing(false);
                     }}
                     type="button"
@@ -176,7 +200,12 @@ export function SelectedFixedTaskPanel({
                     disabled={reviewing}
                     onClick={async () => {
                       setReviewing(true);
-                      await onReviewTiming(taskId, "rejected");
+                      await onReviewTiming(
+                        taskId,
+                        "rejected",
+                        undefined,
+                        taskComment,
+                      );
                       setReviewing(false);
                     }}
                     type="button"

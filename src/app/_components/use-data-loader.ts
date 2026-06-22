@@ -34,6 +34,7 @@ import {
 } from "@/lib/api";
 
 type DataLoaderInput = {
+  activeView: string;
   token: string;
   currentUser: User | null;
   myId: string;
@@ -68,6 +69,7 @@ type DataLoaderInput = {
 };
 
 export function useDataLoader({
+  activeView,
   token,
   currentUser,
   myId,
@@ -465,9 +467,11 @@ export function useDataLoader({
       if (role === "manager") void loadManagerAnalytics(authToken);
       else if (role === "supervisor" && uid) {
         void loadSupervisorData(authToken);
-        fetchBoardFixedTasksByUserId(authToken, uid)
-          .then((r) => setFixedTasks(r))
-          .catch(() => setFixedTasks([]));
+        if (activeView !== "supervisor-create-report") {
+          fetchBoardFixedTasksByUserId(authToken, uid)
+            .then((r) => setFixedTasks(r))
+            .catch(() => setFixedTasks([]));
+        }
       } else if (uid) {
         fetchBoardFixedTasksByUserId(authToken, uid)
           .then((r) => {

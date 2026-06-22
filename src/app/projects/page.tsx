@@ -293,12 +293,10 @@ function ProjectsPageContent() {
                 </div>
                 <button
                   className="flex h-10 items-center gap-1.5 rounded-xl bg-[#1f7a8c] px-4 text-sm font-semibold text-white transition hover:bg-[#196b7b]"
-                  onClick={() =>
-                    setShowNewProjectForm((value: boolean) => {
-                      if (value) projectForm.reset();
-                      return !value;
-                    })
-                  }
+                  onClick={() => {
+                    if (showNewProjectForm) projectForm.reset();
+                    setShowNewProjectForm(!showNewProjectForm);
+                  }}
                   type="button"
                 >
                   {showNewProjectForm ? <X size={15} /> : <Plus size={15} />}

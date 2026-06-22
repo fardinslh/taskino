@@ -205,11 +205,12 @@ export function TaskinoApp({
               const updated = await controller.moveFixedTask(taskId, status);
               if (updated) setSelectedFixedTask(updated);
             }}
-            onReviewTiming={async (taskId, status, duration) => {
+            onReviewTiming={async (taskId, status, duration, taskComment) => {
               const updated = await controller.reviewFixedTaskTiming(
                 taskId,
                 status,
                 duration,
+                taskComment,
               );
               if (updated) setSelectedFixedTask(updated);
             }}

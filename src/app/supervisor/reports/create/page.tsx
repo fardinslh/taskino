@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { ClipboardList, LoaderCircle, Plus, RefreshCw } from "lucide-react";
 
 import {
   type FixedTask,
@@ -50,6 +50,7 @@ export default function SupervisorCreateReportsPage() {
   });
   const [workFieldUsers, setWorkFieldUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [filterRecurrence, setFilterRecurrence] = useState("");
   const [filterSpecialist, setFilterSpecialist] = useState("");
   const [filterTitle, setFilterTitle] = useState("");
@@ -108,6 +109,7 @@ export default function SupervisorCreateReportsPage() {
   const loadFixedTaskTemplates = useCallback(async () => {
     if (!token) return;
 
+    setLoadingTemplates(true);
     try {
       const limit = 100;
       const firstResponse = await fixedTaskApi.list(token, { page: 1, limit });
@@ -144,6 +146,8 @@ export default function SupervisorCreateReportsPage() {
           ? error.message
           : "دریافت گزارش‌های ثابت ناموفق بود",
       );
+    } finally {
+      setLoadingTemplates(false);
     }
   }, [setError, setFixedTasks, token]);
 
@@ -299,12 +303,21 @@ export default function SupervisorCreateReportsPage() {
         />
 
         <div className="divide-y divide-[--border]">
-          {filteredFixedTasks.length === 0 ? (
+          {loadingTemplates ? (
+            <div className="flex min-h-56 flex-col items-center justify-center bg-gradient-to-b from-[--surface] to-[--surface-2]/40 text-center">
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1f7a8c]/10 text-[#1f7a8c]">
+                <span className="absolute inset-0 animate-ping rounded-2xl bg-[#1f7a8c]/10" />
+                <LoaderCircle className="animate-spin" size={30} />
+              </div>
+              <p className="mt-4 font-bold text-[--text]">در حال دریافت الگوهای ثابت</p>
+              <p className="mt-1 text-xs text-[--text-3]">لطفاً چند لحظه صبر کنید...</p>
+            </div>
+          ) : filteredFixedTasks.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center">
               <ClipboardList size={32} className="text-[--text-3]" />
               <p className="mt-3 font-semibold text-[--text]">
                 {loadingUsers
-                  ? "در حال دریافت کاربران و گزارش‌ها..."
+                  ? "در حال دریافت کاربران..."
                   : "موردی با این فیلترها پیدا نشد"}
               </p>
               <button
