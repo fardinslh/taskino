@@ -206,7 +206,7 @@ export default function SupervisorCreateReportsPage() {
       specialistName: specialistName || undefined,
       recurrence: values.recurrence,
       description: values.description?.trim() || undefined,
-      isActive: editingFixedTask?.isActive ?? false,
+      isActive: editingFixedTask?.isActive ?? true,
     };
 
     try {

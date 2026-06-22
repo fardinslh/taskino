@@ -126,7 +126,7 @@ export function useFixedTaskActions({
       assignedTo: ftAssignee,
       recurrence: ftRecurrence,
       description: ftDescription.trim() || undefined,
-      isActive: ftActive,
+      isActive: editingFixedTask ? ftActive : true,
       ...(ftNextRunAt
         ? { nextRunAt: new Date(ftNextRunAt).toISOString() }
         : {}),
@@ -170,7 +170,7 @@ export function useFixedTaskActions({
       specialistName,
       recurrence: values.recurrence,
       description: values.description?.trim() || undefined,
-      isActive: editingFixedTask?.isActive ?? false,
+      isActive: editingFixedTask?.isActive ?? true,
     };
 
     try {
