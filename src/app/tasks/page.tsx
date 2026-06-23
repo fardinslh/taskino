@@ -39,13 +39,13 @@ function TasksPageContent() {
   const {
     activeView,
     boardShowAll,
-    selectedAssigneeFilter,
     selectedPeriodFilter,
+    selectedStatusFilter,
     setActiveView,
     setBoardShowAll,
-    setSelectedAssigneeFilter,
     setSelectedFixedTask,
     setSelectedPeriodFilter,
+    setSelectedStatusFilter,
     setSelectedSpecialistId,
     setSpecialistSearchQuery,
     setTaskQuery,
@@ -70,6 +70,7 @@ function TasksPageContent() {
     fixedDoneTasks,
     fixedOpenTasks,
     fixedInProgressTasks,
+    fixedTodoCount,
     activeFixedTaskCount,
     fixedTasks,
     onDragEnd,
@@ -77,15 +78,23 @@ function TasksPageContent() {
     deleteFixedTask,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
-  const fixedTaskAssigneeUsers = fixedTasks.reduce((acc: any[], ft: any) => {
-    const assigneeId = getId(ft.assignedTo);
-    if (!assigneeId || acc.some((user) => getId(user) === assigneeId)) {
-      return acc;
-    }
-    acc.push(users.find((user: any) => getId(user) === assigneeId) ?? ft.assignedTo);
-    return acc;
-  }, []);
   const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
+  const fixedStatusColumns = selectedStatusFilter
+    ? COLUMNS.filter((col) => col.status === selectedStatusFilter)
+    : COLUMNS;
+  const fixedStatusFilterLabel =
+    selectedStatusFilter === "todo"
+      ? "در انتظار شروع"
+      : selectedStatusFilter === "in_progress"
+        ? "در حال انجام"
+        : selectedStatusFilter === "done"
+          ? "تکمیل شده"
+          : "";
+  const openFixedReportStatus = (status: "" | "todo" | "in_progress" | "done") => {
+    setActiveView("tasks");
+    setSelectedStatusFilter(status);
+    setBoardShowAll(true);
+  };
   const specialistMatches = specialistSearchQuery.trim()
     ? specialistUsers.filter((u: any) =>
         userName(u)
@@ -221,7 +230,7 @@ function TasksPageContent() {
                     sub: "واگذارشده",
                     icon: FolderKanban,
                     a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
-                    onClick: () => undefined,
+                    onClick: () => openFixedReportStatus(""),
                   },
                   {
                     label: "گزارش در حال انجام",
@@ -229,15 +238,15 @@ function TasksPageContent() {
                     sub: "در حال انجام",
                     icon: ClipboardList,
                     a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-                    onClick: undefined,
+                    onClick: () => openFixedReportStatus("in_progress"),
                   },
                   {
                     label: "گزارش در حال انتظار",
-                    value: fixedOpenTasks,
+                    value: fixedTodoCount,
                     sub: "در انتظار شروع",
                     icon: ClipboardList,
                     a: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
-                    onClick: undefined,
+                    onClick: () => openFixedReportStatus("todo"),
                   },
                   {
                     label: "تکمیل شده",
@@ -247,7 +256,7 @@ function TasksPageContent() {
                     sub: `${progress}% پیشرفت`,
                     icon: TrendingUp,
                     a: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
-                    onClick: undefined,
+                    onClick: () => openFixedReportStatus("done"),
                   },
                 ]
             ).map((s: any) => (
@@ -299,6 +308,15 @@ function TasksPageContent() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {selectedStatusFilter && (
+                    <button
+                      className="h-8 rounded-lg border border-[#1f7a8c]/30 bg-[#e8f4f7] px-3 text-xs font-semibold text-[#1f7a8c] transition hover:bg-[#d7eef4] dark:border-[#1f7a8c]/40 dark:bg-[#0f3040] dark:text-[#4fc3d5]"
+                      onClick={() => setSelectedStatusFilter("")}
+                      type="button"
+                    >
+                      {fixedStatusFilterLabel} ×
+                    </button>
+                  )}
                   <div className="flex rounded-lg border border-[--border] bg-[--surface] p-0.5 text-xs">
                     {(
                       [
@@ -326,18 +344,6 @@ function TasksPageContent() {
                     value={taskQuery}
                     onChange={(e) => setTaskQuery(e.target.value)}
                   />
-                  <select
-                    className="h-8 w-44 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition focus:border-[#1f7a8c]"
-                    value={selectedAssigneeFilter}
-                    onChange={(e) => setSelectedAssigneeFilter(e.target.value)}
-                  >
-                    <option value="">همه کاربران</option>
-                    {fixedTaskAssigneeUsers.map((user: any) => (
-                      <option key={getId(user)} value={getId(user)}>
-                        {userName(user)}
-                      </option>
-                    ))}
-                  </select>
                   {isManager && (
                     <button
                       className="flex h-8 items-center gap-1.5 rounded-lg bg-[#1f7a8c] px-3 text-xs font-semibold text-white transition hover:bg-[#196b7b]"
@@ -356,7 +362,7 @@ function TasksPageContent() {
 
               <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid gap-4 bg-[--surface-2]/40 p-4 lg:grid-cols-3">
-                  {COLUMNS.map((col: any) => {
+                  {fixedStatusColumns.map((col: any) => {
                     const allItems = filteredFixedTemplates.filter(
                       (ft: any) => (ft.status ?? "todo") === col.status,
                     );

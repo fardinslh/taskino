@@ -201,6 +201,11 @@ export function useTaskinoDerivedData({
         (item) => (item.recurrence ?? "daily") === selectedPeriodFilter,
       );
     }
+    if (selectedStatusFilter) {
+      list = list.filter(
+        (item) => (item.status ?? "todo") === selectedStatusFilter,
+      );
+    }
     const specialistQuery = specialistSearchQuery.trim().toLowerCase();
     if (specialistQuery) {
       list = list.filter((item) =>
@@ -220,6 +225,7 @@ export function useTaskinoDerivedData({
     activeFixedTasks,
     selectedAssigneeFilter,
     selectedPeriodFilter,
+    selectedStatusFilter,
     specialistSearchQuery,
     taskQuery,
   ]);

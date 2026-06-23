@@ -47,6 +47,8 @@ const navigationKeys = [
   "setBoardShowAll",
   "selectedPeriodFilter",
   "setSelectedPeriodFilter",
+  "selectedStatusFilter",
+  "setSelectedStatusFilter",
   "setSelectedTask",
   "setSelectedFixedTask",
   "showNewProjectForm",

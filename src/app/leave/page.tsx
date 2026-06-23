@@ -155,50 +155,45 @@ function LeavePageContent() {
         </>
       )}
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {[
-          {
-            label: "کل درخواست‌ها",
-            value: isManager
-              ? (leaveStatistics?.totalRequests ??
+      {isManager && (
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          {[
+            {
+              label: "کل درخواست‌ها",
+              value:
+                leaveStatistics?.totalRequests ??
                 leaveStatistics?.total ??
-                reviewStats.total)
-              : reviewStats.total,
-          },
-          {
-            label: "در انتظار",
-            value:
-              isManager
-                ? (leaveStatistics?.pendingRequests ??
-                  leaveStatistics?.pending ??
-                  reviewStats.pending)
-                : reviewStats.pending,
-          },
-          {
-            label: "تأیید شده",
-            value:
-              isManager
-                ? (leaveStatistics?.approvedRequests ??
-                  leaveStatistics?.approved ??
-                  reviewStats.approved)
-                : reviewStats.approved,
-          },
-          {
-            label: "رد شده",
-            value:
-              isManager
-                ? (leaveStatistics?.rejectedRequests ??
-                  leaveStatistics?.rejected ??
-                  reviewStats.rejected)
-                : reviewStats.rejected,
-          },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-[--border] bg-[--surface] p-4">
-            <p className="text-xs text-[--text-3]">{stat.label}</p>
-            <p className="mt-1 text-2xl font-bold">{stat.value}</p>
-          </div>
-        ))}
-      </div>
+                reviewStats.total,
+            },
+            {
+              label: "در انتظار",
+              value:
+                leaveStatistics?.pendingRequests ??
+                leaveStatistics?.pending ??
+                reviewStats.pending,
+            },
+            {
+              label: "تأیید شده",
+              value:
+                leaveStatistics?.approvedRequests ??
+                leaveStatistics?.approved ??
+                reviewStats.approved,
+            },
+            {
+              label: "رد شده",
+              value:
+                leaveStatistics?.rejectedRequests ??
+                leaveStatistics?.rejected ??
+                reviewStats.rejected,
+            },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-xl border border-[--border] bg-[--surface] p-4">
+              <p className="text-xs text-[--text-3]">{stat.label}</p>
+              <p className="mt-1 text-2xl font-bold">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
         <div className="flex items-center gap-3 border-b border-[--border] px-5 py-4">
