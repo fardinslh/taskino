@@ -117,14 +117,6 @@ export function TaskinoSidebar({
                 onClick={() => handleSelect("dashboard")}
               />
               <SideItem
-                active={activeView === "leave"}
-                collapsed={sidebarCollapsed}
-                icon={CalendarDays}
-                label="مرخصی"
-                meta={pendingLeaves || undefined}
-                onClick={() => handleSelect("leave")}
-              />
-              <SideItem
                 active={
                   activeView === "tasks" ||
                   activeView === "supervisor-create-report" ||
@@ -192,6 +184,14 @@ export function TaskinoSidebar({
                   onClick={() => handleSelect("supervisor-watched-projects")}
                 />
               </div>
+              <SideItem
+                active={activeView === "leave"}
+                collapsed={sidebarCollapsed}
+                icon={CalendarDays}
+                label="مرخصی"
+                meta={pendingLeaves || undefined}
+                onClick={() => handleSelect("leave")}
+              />
               <div className="my-1.5 border-t border-[--border]" />
               <SideItem
                 active={activeView === "settings"}

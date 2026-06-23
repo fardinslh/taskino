@@ -24,6 +24,11 @@ type LeaveRequestView = {
   reason?: string;
   description?: string;
   details?: string;
+  recurrence?: string;
+  leaveType?: string;
+  type?: string;
+  startTime?: string;
+  endTime?: string;
   startDate: string;
   endDate: string;
   user?: User | string;
@@ -155,28 +160,36 @@ function LeavePageContent() {
           {
             label: "کل درخواست‌ها",
             value: isManager
-              ? (leaveStatistics?.total ?? reviewStats.total)
+              ? (leaveStatistics?.totalRequests ??
+                leaveStatistics?.total ??
+                reviewStats.total)
               : reviewStats.total,
           },
           {
             label: "در انتظار",
             value:
               isManager
-                ? (leaveStatistics?.pending ?? reviewStats.pending)
+                ? (leaveStatistics?.pendingRequests ??
+                  leaveStatistics?.pending ??
+                  reviewStats.pending)
                 : reviewStats.pending,
           },
           {
             label: "تأیید شده",
             value:
               isManager
-                ? (leaveStatistics?.approved ?? reviewStats.approved)
+                ? (leaveStatistics?.approvedRequests ??
+                  leaveStatistics?.approved ??
+                  reviewStats.approved)
                 : reviewStats.approved,
           },
           {
             label: "رد شده",
             value:
               isManager
-                ? (leaveStatistics?.rejected ?? reviewStats.rejected)
+                ? (leaveStatistics?.rejectedRequests ??
+                  leaveStatistics?.rejected ??
+                  reviewStats.rejected)
                 : reviewStats.rejected,
           },
         ].map((stat) => (
@@ -229,11 +242,12 @@ function LeaveRequestRow({ formatDate, getId, leaveRequest, statusLabel }: {
   statusLabel: (status?: string) => string;
 }) {
   const badge = leaveBadge(leaveRequest.status);
+  const rangeText = leaveRangeText(leaveRequest, formatDate);
 
   return (
     <div key={getId(leaveRequest)} className="flex items-center justify-between gap-3 px-5 py-3.5">
       <div>
-        <p className="text-sm font-semibold">{formatDate(leaveRequest.startDate)} تا {formatDate(leaveRequest.endDate)}</p>
+        <p className="text-sm font-semibold">{rangeText}</p>
         {leaveRequest.reason && <p className="mt-0.5 text-xs text-[--text-3]">{leaveRequest.reason}</p>}
       </div>
       <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${badge}`}>{statusLabel(leaveRequest.status)}</span>
@@ -251,6 +265,7 @@ function LeaveRequestReviewRow({ formatDate, getId, handleLeaveAction, initials,
   userName: (user?: User | string) => string;
 }) {
   const badge = leaveBadge(leaveRequest.status);
+  const rangeText = leaveRangeText(leaveRequest, formatDate);
   const requestDetails =
     leaveRequest.reason || leaveRequest.description || leaveRequest.details;
 
@@ -266,7 +281,7 @@ function LeaveRequestReviewRow({ formatDate, getId, handleLeaveAction, initials,
             <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${badge}`}>{statusLabel(leaveRequest.status)}</span>
           </div>
           <p className="mt-0.5 text-xs text-[--text-3]">
-            {formatDate(leaveRequest.startDate)} تا {formatDate(leaveRequest.endDate)}
+            {rangeText}
             {leaveRequest.approvedBy ? ` · بررسی: ${userName(leaveRequest.approvedBy)}` : ""}
           </p>
           <div className="mt-2 rounded-lg bg-[--surface-2] px-3 py-2 text-xs leading-5 text-[--text-2]">
@@ -293,4 +308,41 @@ function leaveBadge(status?: string) {
   if (status === "approved") return "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400";
   if (status === "rejected") return "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400";
   return "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
+}
+
+function leaveRangeText(
+  leaveRequest: LeaveRequestView,
+  formatDate: (value?: string) => string,
+) {
+  const leaveType =
+    leaveRequest.recurrence ?? leaveRequest.leaveType ?? leaveRequest.type;
+  if (leaveType !== "hourly") {
+    return `${formatDate(leaveRequest.startDate)} تا ${formatDate(leaveRequest.endDate)}`;
+  }
+
+  const startTime = formatPersianTime(
+    leaveRequest.startTime ?? formatTime(leaveRequest.startDate),
+  );
+  const endTime = formatPersianTime(
+    leaveRequest.endTime ?? formatTime(leaveRequest.endDate),
+  );
+
+  return `${formatDate(leaveRequest.startDate)} · ${startTime} تا ${endTime}`;
+}
+
+function formatTime(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleTimeString("fa-IR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatPersianTime(value?: string) {
+  if (!value) return "";
+
+  return value.replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
 }

@@ -119,6 +119,11 @@ export type LeaveRequest = {
   user?: string | User;
   startDate: string;
   endDate: string;
+  recurrence?: "daily" | "weekly" | "hourly" | string;
+  leaveType?: "daily" | "hourly" | string;
+  type?: "daily" | "hourly" | string;
+  startTime?: string;
+  endTime?: string;
   reason?: string;
   description?: string;
   details?: string;
@@ -128,9 +133,13 @@ export type LeaveRequest = {
 
 export type LeaveRequestStatistics = {
   total?: number;
+  totalRequests?: number;
   pending?: number;
+  pendingRequests?: number;
   approved?: number;
+  approvedRequests?: number;
   rejected?: number;
+  rejectedRequests?: number;
 };
 
 export type ManagerStats = {
