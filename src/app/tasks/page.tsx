@@ -126,61 +126,37 @@ function TasksPageContent() {
         (isSupervisor && activeView === "tasks")) && (
         <>
           {/* Welcome banner */}
-          <div
-            className={`relative overflow-hidden rounded-2xl px-6 py-5 text-white shadow-lg ${isManager ? "bg-gradient-to-l from-indigo-700 via-indigo-600 to-indigo-500 shadow-indigo-500/15" : "bg-gradient-to-l from-[#1a6b7c] via-[#1f7a8c] to-[#2491a5] shadow-[#1f7a8c]/15"}`}
-          >
-            <div className="pointer-events-none absolute -left-6 -top-6 h-36 w-36 rounded-full bg-white/5" />
-            <div className="pointer-events-none absolute -bottom-8 left-24 h-28 w-28 rounded-full bg-white/5" />
-            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium opacity-75">
-                  سلام، {userName(currentUser ?? undefined).split(" ")[0]}
-                </p>
-                <h1 className="mt-0.5 text-xl font-bold">
-                  {isManager ? "داشبورد مدیر" : "داشبورد گزارش ها"}
-                </h1>
-                <p className="mt-1 text-sm opacity-75">
-                  {isManager
-                    ? `${managerStats?.activeProjects ?? projects.length} پروژه فعال · ${managerStats?.activeUsers ?? users.length} کاربر`
-                    : activeTasks === 0
+          {!isManager && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-[#1a6b7c] via-[#1f7a8c] to-[#2491a5] px-6 py-5 text-white shadow-lg shadow-[#1f7a8c]/15">
+              <div className="pointer-events-none absolute -left-6 -top-6 h-36 w-36 rounded-full bg-white/5" />
+              <div className="pointer-events-none absolute -bottom-8 left-24 h-28 w-28 rounded-full bg-white/5" />
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium opacity-75">
+                    سلام، {userName(currentUser ?? undefined).split(" ")[0]}
+                  </p>
+                  <h1 className="mt-0.5 text-xl font-bold">داشبورد گزارش ها</h1>
+                  <p className="mt-1 text-sm opacity-75">
+                    {activeTasks === 0
                       ? "همه گزارش ها تکمیل شده‌اند"
                       : `${activeTasks} پروژه باز داری`}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-5">
-                {isManager
-                  ? [
-                      {
-                        n: managerStats?.activeProjects ?? projects.length,
-                        l: "پروژه فعال",
-                      },
-                      {
-                        n: managerStats?.openTasks ?? tasks.length,
-                        l: "گزارش باز",
-                      },
-                      {
-                        n: managerStats?.activeUsers ?? users.length,
-                        l: "کاربر فعال",
-                      },
-                    ].map((s: any, i: number) => (
-                      <div key={i} className="text-center">
-                        <p className="text-2xl font-extrabold">{s.n}</p>
-                        <p className="text-[11px] opacity-75">{s.l}</p>
-                      </div>
-                    ))
-                  : [
-                      { n: tasks.length, l: "کل پروژه" },
-                      { n: activeFixedTaskCount, l: "گزارشات ثابت" },
-                      { n: `${progress}%`, l: "پیشرفت" },
-                    ].map((s: any, i: number) => (
-                      <div key={i} className="text-center">
-                        <p className="text-2xl font-extrabold">{s.n}</p>
-                        <p className="text-[11px] opacity-75">{s.l}</p>
-                      </div>
-                    ))}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-5">
+                  {[
+                    { n: tasks.length, l: "کل پروژه" },
+                    { n: activeFixedTaskCount, l: "گزارشات ثابت" },
+                    { n: `${progress}%`, l: "پیشرفت" },
+                  ].map((s: any, i: number) => (
+                    <div key={i} className="text-center">
+                      <p className="text-2xl font-extrabold">{s.n}</p>
+                      <p className="text-[11px] opacity-75">{s.l}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

@@ -388,6 +388,30 @@ export type UserProgress = {
   performanceEvaluatedAt?: string;
 };
 
+export type WorkStatusCounts = {
+  total: number;
+  done: number;
+  inProgress: number;
+  todo: number;
+  overdueUnfinished: number;
+};
+
+export type WorkStatusSummaryUser = {
+  userId: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  tasks: WorkStatusCounts;
+  fixedTasks: WorkStatusCounts;
+};
+
+export type WorkStatusSummary = {
+  from: string;
+  to: string;
+  evaluatedAt?: string;
+  users: WorkStatusSummaryUser[];
+};
+
 export type ProjectMember = {
   _id?: string;
   id?: string;
@@ -791,6 +815,14 @@ export const managerApi = {
   usersProgress: (token: string) =>
     unwrapAxios(
       apiClient.get<ListResponse<UserProgress>>("/manager/users/progress"),
+    ),
+  workStatusSummary: (
+    token: string,
+    params: { userId: string; from: string; to: string },
+  ) =>
+    unwrapAxios<WorkStatusSummary>(
+      apiClient.get(`/manager/users/work-status-summary${qs(params)}`),
+      "دریافت گزارش عملکرد کاربر ناموفق بود",
     ),
   leaveRequests: (token: string, params?: Params) =>
     unwrapAxios(

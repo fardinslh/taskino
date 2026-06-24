@@ -159,6 +159,16 @@ export function useTaskinoController(initialView: View = "dashboard") {
     if (token && isAuthRoute) router.replace(VIEW_PATHS[activeView]);
   }, [activeView, authHydrated, isAuthRoute, router, token]);
 
+  useEffect(() => {
+    if (!authHydrated || !token || !currentUser?.roles) return;
+    if (currentUser.roles === "manager" && pathname === "/dashboard") {
+      router.replace(VIEW_PATHS.analytics);
+    }
+    if (currentUser.roles !== "manager" && pathname === "/analytics") {
+      router.replace(VIEW_PATHS.dashboard);
+    }
+  }, [authHydrated, currentUser?.roles, pathname, router, token]);
+
   // ─── Notifications (defined early so setters are available for data loader) ─
   const {
     markAllNotificationsRead,

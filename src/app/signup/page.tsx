@@ -19,6 +19,10 @@ type SignupFormValues = {
   workField: WorkField;
 };
 
+function defaultRouteForRole(role?: string) {
+  return role === "manager" ? "/analytics" : "/dashboard";
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const { formState: { isSubmitting }, handleSubmit, register } = useForm<SignupFormValues>({
@@ -35,7 +39,10 @@ export default function SignupPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (localStorage.getItem("taskino-token")) router.replace("/dashboard");
+    if (!localStorage.getItem("taskino-token")) return;
+    const storedUser = localStorage.getItem("taskino-user");
+    const role = storedUser ? JSON.parse(storedUser)?.roles : undefined;
+    router.replace(defaultRouteForRole(role));
   }, [router]);
 
   async function handleSignup(values: SignupFormValues) {
@@ -47,7 +54,7 @@ export default function SignupPage() {
       localStorage.setItem("taskino-token", data.accessToken);
       localStorage.setItem("taskino-user", JSON.stringify(data.user));
       setMessage("ثبت‌نام انجام شد.");
-      router.push("/dashboard");
+      router.push(defaultRouteForRole(data.user?.roles));
     } catch (err) {
       setError(err instanceof Error ? err.message : "ثبت‌نام ناموفق بود");
     }

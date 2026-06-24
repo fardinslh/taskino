@@ -204,11 +204,11 @@ export function TaskinoSidebar({
           ) : isManager ? (
             <>
               <SideItem
-                active={activeView === "dashboard"}
+                active={activeView === "analytics"}
                 collapsed={sidebarCollapsed}
-                icon={LayoutDashboard}
-                label="داشبورد"
-                onClick={() => handleSelect("dashboard")}
+                icon={BarChart2}
+                label="آنالیتیکس"
+                onClick={() => handleSelect("analytics")}
               />
               <SideItem
                 active={activeView === "tasks"}
@@ -224,13 +224,6 @@ export function TaskinoSidebar({
                 icon={ClipboardList}
                 label="پروژه‌ها"
                 onClick={() => handleSelect("tasks-admin")}
-              />
-              <SideItem
-                active={activeView === "analytics"}
-                collapsed={sidebarCollapsed}
-                icon={BarChart2}
-                label="آنالیتیکس"
-                onClick={() => handleSelect("analytics")}
               />
               <SideItem
                 active={activeView === "team"}
