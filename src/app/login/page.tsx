@@ -23,13 +23,23 @@ export default function LoginPage() {
     defaultValues: { mobile: "", password: "" },
   });
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const signupMessage = sessionStorage.getItem("taskino-signup-message") ?? "";
+    if (signupMessage) sessionStorage.removeItem("taskino-signup-message");
+    return signupMessage;
+  });
 
   useEffect(() => {
     if (!localStorage.getItem("taskino-token")) return;
     const storedUser = localStorage.getItem("taskino-user");
-    const role = storedUser ? JSON.parse(storedUser)?.roles : undefined;
-    router.replace(defaultRouteForRole(role));
+    const user = storedUser ? JSON.parse(storedUser) : undefined;
+    if (user?.isActive !== true) {
+      localStorage.removeItem("taskino-token");
+      localStorage.removeItem("taskino-user");
+      return;
+    }
+    router.replace(defaultRouteForRole(user?.roles));
   }, [router]);
 
   async function handleLogin(values: LoginFormValues) {
@@ -38,6 +48,13 @@ export default function LoginPage() {
 
     try {
       const data = await authApi.login(values);
+      if (data.user?.isActive !== true) {
+        localStorage.removeItem("taskino-token");
+        localStorage.removeItem("taskino-user");
+        setError("حساب شما هنوز توسط مدیر تایید نشده است. لطفا منتظر تایید مدیر بمانید.");
+        return;
+      }
+
       localStorage.setItem("taskino-token", data.accessToken);
       localStorage.setItem("taskino-user", JSON.stringify(data.user));
       setMessage("با موفقیت وارد شدی.");

@@ -43,6 +43,9 @@ const statusRows = [
   { key: "overdueUnfinished", label: "معوق", color: "#ef4444" },
 ] as const;
 
+type WorkTypeFilter = "all" | "projects" | "reports";
+type StatusFilter = "all" | (typeof statusRows)[number]["key"];
+
 function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -71,6 +74,8 @@ export default function AnalyticsPage() {
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [summary, setSummary] = useState<WorkStatusSummary | null>(null);
+  const [workTypeFilter, setWorkTypeFilter] = useState<WorkTypeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -80,6 +85,9 @@ export default function AnalyticsPage() {
     summary?.users[0];
   const projectCounts = summaryUser?.tasks ?? emptyCounts;
   const reportCounts = summaryUser?.fixedTasks ?? emptyCounts;
+  const selectedStatus = statusRows.find((status) => status.key === statusFilter);
+  const showProjects = workTypeFilter === "all" || workTypeFilter === "projects";
+  const showReports = workTypeFilter === "all" || workTypeFilter === "reports";
 
   async function loadSummary(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,7 +109,9 @@ export default function AnalyticsPage() {
       );
     } catch (err) {
       setSummary(null);
-      setError(err instanceof Error ? err.message : "دریافت گزارش عملکرد ناموفق بود.");
+      setError(
+        err instanceof Error ? err.message : "دریافت گزارش عملکرد ناموفق بود.",
+      );
     } finally {
       setLoading(false);
     }
@@ -121,18 +131,21 @@ export default function AnalyticsPage() {
           <div className="max-w-3xl">
             <p className="text-xs font-black text-[#1f7a8c]">آنالیتیکس مدیر</p>
             <h1 className="mt-2 text-balance text-xl font-black sm:text-2xl">
-              عملکرد کاربر بر اساس پروژه‌ها و گزارش‌ها
+              عملکرد کاربران
             </h1>
           </div>
 
           <form
-            className="grid gap-3 lg:grid-cols-[minmax(220px,1.3fr)_minmax(160px,1fr)_minmax(160px,1fr)_auto]"
+            className="grid gap-3 lg:grid-cols-[minmax(200px,1.15fr)_minmax(130px,.75fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
             onSubmit={loadSummary}
           >
             <label className="text-xs font-bold text-[--text-2]">
               کاربر
               <div className="relative mt-1.5">
-                <UserRound className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[--text-3]" size={16} />
+                <UserRound
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[--text-3]"
+                  size={16}
+                />
                 <select
                   className="h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] pr-10 pl-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                   onChange={(event) => setSelectedUserId(event.target.value)}
@@ -147,14 +160,60 @@ export default function AnalyticsPage() {
                 </select>
               </div>
             </label>
-            <DateField label="از تاریخ" maxDate={to ? new Date(`${to}T00:00:00`) : new Date()} onChange={setFrom} value={from} />
-            <DateField label="تا تاریخ" maxDate={new Date()} minDate={from ? new Date(`${from}T00:00:00`) : undefined} onChange={setTo} value={to} />
+            <label className="text-xs font-bold text-[--text-2]">
+              نوع
+              <select
+                className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                onChange={(event) =>
+                  setWorkTypeFilter(event.target.value as WorkTypeFilter)
+                }
+                value={workTypeFilter}
+              >
+                <option value="all">همه</option>
+                <option value="projects">پروژه</option>
+                <option value="reports">گزارش</option>
+              </select>
+            </label>
+            <label className="text-xs font-bold text-[--text-2]">
+              وضعیت
+              <select
+                className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as StatusFilter)
+                }
+                value={statusFilter}
+              >
+                <option value="all">همه وضعیت‌ها</option>
+                {statusRows.map((status) => (
+                  <option key={status.key} value={status.key}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <DateField
+              label="از تاریخ"
+              maxDate={to ? new Date(`${to}T00:00:00`) : new Date()}
+              onChange={setFrom}
+              value={from}
+            />
+            <DateField
+              label="تا تاریخ"
+              maxDate={new Date()}
+              minDate={from ? new Date(`${from}T00:00:00`) : undefined}
+              onChange={setTo}
+              value={to}
+            />
             <button
               className="flex h-11 min-w-28 items-center justify-center gap-2 self-end rounded-xl bg-[#1f7a8c] px-4 text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/20 transition-transform duration-150 ease-out hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading || !effectiveUserId}
               type="submit"
             >
-              {loading ? <Loader2 className="animate-spin" size={17} /> : <Search size={17} />}
+              {loading ? (
+                <Loader2 className="animate-spin" size={17} />
+              ) : (
+                <Search size={17} />
+              )}
               نمایش
             </button>
           </form>
@@ -169,38 +228,107 @@ export default function AnalyticsPage() {
       {summary && effectiveUserId && (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard icon={FolderKanban} label="کل پروژه‌ها" value={projectCounts.total} tone="project" />
-            <MetricCard icon={FileText} label="کل گزارش‌ها" value={reportCounts.total} tone="report" />
-            <MetricCard icon={CheckCircle2} label="پروژه‌های انجام‌شده" value={projectCounts.done} tone="done" />
-            <MetricCard icon={Clock3} label="گزارش‌های در انتظار" value={reportCounts.todo} tone="todo" />
+            {statusFilter === "all" ? (
+              <>
+                {showProjects && (
+                  <>
+                    <MetricCard
+                      icon={FolderKanban}
+                      label="کل پروژه‌ها"
+                      value={projectCounts.total}
+                      tone="project"
+                    />
+                    <MetricCard
+                      icon={CheckCircle2}
+                      label="پروژه‌های انجام‌شده"
+                      value={projectCounts.done}
+                      tone="done"
+                    />
+                  </>
+                )}
+                {showReports && (
+                  <>
+                    <MetricCard
+                      icon={FileText}
+                      label="کل گزارش‌ها"
+                      value={reportCounts.total}
+                      tone="report"
+                    />
+                    <MetricCard
+                      icon={Clock3}
+                      label="گزارش‌های در انتظار"
+                      value={reportCounts.todo}
+                      tone="todo"
+                    />
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {showProjects && selectedStatus && (
+                  <MetricCard
+                    icon={FolderKanban}
+                    label={`پروژه‌های ${selectedStatus.label}`}
+                    value={projectCounts[selectedStatus.key]}
+                    tone="project"
+                  />
+                )}
+                {showReports && selectedStatus && (
+                  <MetricCard
+                    icon={FileText}
+                    label={`گزارش‌های ${selectedStatus.label}`}
+                    value={reportCounts[selectedStatus.key]}
+                    tone="report"
+                  />
+                )}
+              </>
+            )}
           </div>
 
-          <div className="grid gap-5">
-            <Panel icon={Target} title="نرخ تکمیل">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <DonutChart
-                  color="#1f7a8c"
-                  label="پروژه"
-                  total={projectCounts.total}
-                  value={projectCounts.done}
-                />
-                <DonutChart
-                  color="#7c3aed"
-                  label="گزارش"
-                  total={reportCounts.total}
-                  value={reportCounts.done}
-                />
-              </div>
-            </Panel>
-          </div>
+          {statusFilter === "all" && (
+            <div className="grid gap-5">
+              <Panel icon={Target} title="نرخ تکمیل">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {showProjects && (
+                    <DonutChart
+                      color="#1f7a8c"
+                      label="پروژه"
+                      total={projectCounts.total}
+                      value={projectCounts.done}
+                    />
+                  )}
+                  {showReports && (
+                    <DonutChart
+                      color="#7c3aed"
+                      label="گزارش"
+                      total={reportCounts.total}
+                      value={reportCounts.done}
+                    />
+                  )}
+                </div>
+              </Panel>
+            </div>
+          )}
 
           <div className="grid gap-5 xl:grid-cols-2">
-            <Panel icon={FolderKanban} title="پروژه‌ها">
-              <StatusBreakdown counts={projectCounts} accent="#1f7a8c" />
-            </Panel>
-            <Panel icon={FileText} title="گزارش‌ها">
-              <StatusBreakdown counts={reportCounts} accent="#7c3aed" />
-            </Panel>
+            {showProjects && (
+              <Panel icon={FolderKanban} title="پروژه‌ها">
+                <StatusBreakdown
+                  accent="#1f7a8c"
+                  counts={projectCounts}
+                  statusFilter={statusFilter}
+                />
+              </Panel>
+            )}
+            {showReports && (
+              <Panel icon={FileText} title="گزارش‌ها">
+                <StatusBreakdown
+                  accent="#7c3aed"
+                  counts={reportCounts}
+                  statusFilter={statusFilter}
+                />
+              </Panel>
+            )}
           </div>
         </>
       )}
@@ -227,7 +355,9 @@ function ManagerSummaryBanner({
         </div>
         <div className="flex shrink-0 items-center gap-5">
           <div className="text-center">
-            <p className="text-2xl font-extrabold tabular-nums">{activeUsers}</p>
+            <p className="text-2xl font-extrabold tabular-nums">
+              {activeUsers}
+            </p>
             <p className="text-[11px] opacity-75">کاربر فعال</p>
           </div>
         </div>
@@ -284,13 +414,17 @@ function MetricCard({
 }) {
   const tones = {
     done: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
-    project: "bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]",
-    report: "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300",
+    project:
+      "bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]",
+    report:
+      "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300",
     todo: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
   };
   return (
     <div className="rounded-2xl bg-[--surface] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_22px_rgba(15,23,42,0.05)] transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_14px_28px_rgba(15,23,42,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-      <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone]}`}>
+      <div
+        className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone]}`}
+      >
         <Icon size={19} />
       </div>
       <p className="text-xs font-bold text-[--text-3]">{label}</p>
@@ -340,8 +474,20 @@ function DonutChart({
   return (
     <div className="rounded-xl bg-[--surface-2] p-4">
       <div className="flex items-center justify-between gap-4">
-        <svg className="h-32 w-32 -rotate-90" viewBox="0 0 120 120" role="img" aria-label={`${label} ${rate}%`}>
-          <circle cx="60" cy="60" fill="none" r={radius} stroke="rgba(148,163,184,.18)" strokeWidth="12" />
+        <svg
+          className="h-32 w-32 -rotate-90"
+          viewBox="0 0 120 120"
+          role="img"
+          aria-label={`${label} ${rate}%`}
+        >
+          <circle
+            cx="60"
+            cy="60"
+            fill="none"
+            r={radius}
+            stroke="rgba(148,163,184,.18)"
+            strokeWidth="12"
+          />
           <circle
             cx="60"
             cy="60"
@@ -355,7 +501,10 @@ function DonutChart({
         </svg>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-[--text-3]">نرخ تکمیل {label}</p>
-          <p className="mt-1 text-3xl font-black tabular-nums" style={{ color }}>
+          <p
+            className="mt-1 text-3xl font-black tabular-nums"
+            style={{ color }}
+          >
             {rate}%
           </p>
           <p className="mt-2 text-xs font-semibold text-[--text-2]">
@@ -370,20 +519,32 @@ function DonutChart({
 function StatusBreakdown({
   accent,
   counts,
+  statusFilter,
 }: {
   accent: string;
   counts: WorkStatusCounts;
+  statusFilter: StatusFilter;
 }) {
+  const rows =
+    statusFilter === "all"
+      ? statusRows
+      : statusRows.filter((status) => status.key === statusFilter);
+
   return (
     <div className="space-y-3">
-      {statusRows.map((status) => {
+      {rows.map((status) => {
         const value = counts[status.key];
-        const width = counts.total ? Math.round((value / counts.total) * 100) : 0;
+        const width = counts.total
+          ? Math.round((value / counts.total) * 100)
+          : 0;
         return (
           <div key={status.key} className="rounded-xl bg-[--surface-2] p-3">
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold">
               <span className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: status.color }} />
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: status.color }}
+                />
                 {status.label}
               </span>
               <span className="tabular-nums">{value} مورد</span>
@@ -391,7 +552,11 @@ function StatusBreakdown({
             <div className="h-2.5 overflow-hidden rounded-full bg-[--surface]">
               <div
                 className="h-full rounded-full transition-[width] duration-300"
-                style={{ backgroundColor: status.key === "done" ? accent : status.color, width: `${width}%` }}
+                style={{
+                  backgroundColor:
+                    status.key === "done" ? accent : status.color,
+                  width: `${width}%`,
+                }}
               />
             </div>
           </div>

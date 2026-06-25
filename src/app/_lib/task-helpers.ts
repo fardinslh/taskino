@@ -151,6 +151,7 @@ export function notificationText(notification: Notification) {
     "Fixed Task Status Updated": "وضعیت گزارش ثابت تغییر کرد",
     "Task Completed": "گزارش تکمیل شد",
     "Fixed Task Completed": "گزارش ثابت تکمیل شد",
+    "New User Registration": "ثبت‌نام کاربر جدید",
   };
 
   let localizedMessage = message;
@@ -168,6 +169,9 @@ export function notificationText(notification: Notification) {
   );
   const genericCompleted = message.match(
     /^(.+?)\s+has been completed(?:\s+by\s+(.+?))?\.?$/i,
+  );
+  const newUserRegistration = message.match(
+    /^(.+?)\s+registered and is waiting for your approval\.?$/i,
   );
   const taskCompleted =
     message.match(
@@ -213,6 +217,11 @@ export function notificationText(notification: Notification) {
         ? `گزارش ثابت «${taskName}» توسط ${actor} تکمیل شد.`
         : `گزارش ثابت «${taskName}» تکمیل شد.`
       : "یک گزارش ثابت تکمیل شد.";
+  } else if (newUserRegistration) {
+    const name = newUserRegistration[1]?.trim();
+    localizedMessage = name
+      ? `${name} ثبت‌نام کرده و منتظر تایید شماست.`
+      : "یک کاربر جدید ثبت‌نام کرده و منتظر تایید شماست.";
   }
 
   return {

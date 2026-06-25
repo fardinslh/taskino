@@ -5,6 +5,10 @@ import { useState } from "react";
 import { CheckCircle2, ChevronLeft, CircleDashed, Repeat, X } from "lucide-react";
 
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
+import {
+  approvedDurationMinutes,
+  formatDurationMinutes,
+} from "../_lib/fixed-task-timing";
 import { formatDate, recurrenceLabel, statusLabel, userName } from "../_lib/task-helpers";
 
 const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "in_progress", "done"];
@@ -42,6 +46,7 @@ export function SelectedFixedTaskPanel({
     ? task.assignedTo[0]
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
+  const confirmedDuration = approvedDurationMinutes(task);
   const [approvedDuration, setApprovedDuration] = useState(
     String(task.actualDurationMinutes ?? ""),
   );
@@ -143,10 +148,10 @@ export function SelectedFixedTaskPanel({
             {task.startedAt && <MetaRow label="شروع تایمر" value={formatDate(task.startedAt)} />}
             {task.doneTime && <MetaRow label="پایان تایمر" value={formatDate(task.doneTime)} />}
             {task.actualDurationMinutes != null && (
-              <MetaRow label="مدت واقعی" value={`${task.actualDurationMinutes} دقیقه`} />
+              <MetaRow label="مدت واقعی" value={formatDurationMinutes(task.actualDurationMinutes)} />
             )}
-            {task.approvedDurationMinutes != null && (
-              <MetaRow label="مدت تأییدشده" value={`${task.approvedDurationMinutes} دقیقه`} />
+            {confirmedDuration != null && (
+              <MetaRow label="مدت تأییدشده" value={formatDurationMinutes(confirmedDuration)} />
             )}
             {currentStatus === "done" && (
               <MetaRow label="تأیید زمان‌بندی" value={timingStatusLabel} />

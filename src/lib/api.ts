@@ -459,6 +459,7 @@ export type FixedTask = {
   startedAt?: string | null;
   actualDurationMinutes?: number | null;
   approvedDurationMinutes?: number | null;
+  approvedDurationInMinutes?: number | null;
   timingApprovalStatus?: "pending" | "approved" | "rejected";
   timingApprovedBy?: string | User | null;
   timingApprovedAt?: string | null;
@@ -519,17 +520,31 @@ function extractErrorMessage(data: unknown, fallback: string) {
     try {
       return extractErrorMessage(JSON.parse(data), fallback);
     } catch {
-      return data || fallback;
+      return translateErrorMessage(data || fallback);
     }
   }
 
   if (data && typeof data === "object" && "message" in data) {
     const message = (data as { message?: string | string[] }).message;
     if (Array.isArray(message)) return message.join("، ");
-    if (message) return message;
+    if (message) return translateErrorMessage(message);
   }
 
   return fallback;
+}
+
+function translateErrorMessage(message: string) {
+  if (message === "User account is not active") {
+    return "حساب شما هنوز توسط مدیر تایید نشده است. لطفا منتظر تایید مدیر بمانید.";
+  }
+  if (message === "Failed to adjust specialist score") {
+    return "تغییر امتیاز متخصص ناموفق بود.";
+  }
+  if (message === "Failed to approve leave request") {
+    return "تایید درخواست مرخصی ناموفق بود.";
+  }
+
+  return message;
 }
 
 async function axiosErrorMessage(error: unknown, fallback: string) {
@@ -765,7 +780,7 @@ export const managerApi = {
   adjustSpecialistScore: (token: string, userId: string, score: number) =>
     unwrapAxios(
       apiClient.patch<User>(`/manager/users/${userId}/score`, { score }),
-      "Failed to adjust specialist score",
+      "تغییر امتیاز متخصص ناموفق بود",
     ),
   reviewFixedTaskTiming: (
     token: string,
@@ -835,7 +850,7 @@ export const managerApi = {
       apiClient.patch<LeaveRequest>(
         `/manager/leave-requests/${id}/approve`,
       ),
-      "Failed to approve leave request",
+      "تایید درخواست مرخصی ناموفق بود",
     ),
 };
 
@@ -957,9 +972,14 @@ export const fixedTaskApi = {
       "بروزرسانی گزارش ثابت ناموفق بود",
     ),
   // Assignee (specialist) may PATCH only the status field — board drag & drop.
-  updateStatus: (token: string, id: string, status: FixedTaskStatus) =>
+  updateStatus: (
+    token: string,
+    id: string,
+    status: FixedTaskStatus,
+    body?: Partial<Pick<FixedTask, "actualDurationMinutes">>,
+  ) =>
     unwrapAxios(
-      apiClient.patch<FixedTask>(`/fixed-tasks/${id}`, { status }),
+      apiClient.patch<FixedTask>(`/fixed-tasks/${id}`, { status, ...body }),
       "تغییر وضعیت گزارش ثابت ناموفق بود",
     ),
   startTimer: (token: string, id: string) =>

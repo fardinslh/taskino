@@ -16,6 +16,7 @@ import {
   type FixedTask,
   type FixedTaskStatus,
 } from "@/lib/api";
+import { elapsedDurationMinutes } from "../_lib/fixed-task-timing";
 
 type FixedTaskFormValues = {
   title: string;
@@ -320,7 +321,7 @@ export function useFixedTaskActions({
     const assignedId = getId(target?.assignedTo);
 
     if (assignedId && assignedId !== myId) {
-      setError("This fixed task is assigned to another user.");
+      setError("این گزارش به کاربر دیگری اختصاص داده شده است.");
       return;
     }
     const currentStatus = target?.status ?? "todo";
@@ -341,10 +342,14 @@ export function useFixedTaskActions({
       current.map((item) => (getId(item) === id ? { ...item, status } : item)),
     );
     try {
+      const statusBody =
+        status === "done"
+          ? { actualDurationMinutes: elapsedDurationMinutes(target?.startedAt) }
+          : undefined;
       const updated =
         status === "in_progress" && !target?.startedAt
           ? await fixedTaskApi.startTimer(token, id)
-          : await fixedTaskApi.updateStatus(token, id, status);
+          : await fixedTaskApi.updateStatus(token, id, status, statusBody);
       setFixedTasks((current) =>
         current.map((item) =>
           getId(item) === id ? { ...item, ...updated } : item,
