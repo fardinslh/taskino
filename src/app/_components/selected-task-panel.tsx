@@ -13,6 +13,7 @@ type SelectedTaskPanelProps = {
   onError: (message: string) => void;
   onStatusChange: (taskId: string, status: string) => void;
   onUpdate: (taskId: string, body: Record<string, unknown>) => void;
+  onUploadCompletionFile?: (taskId: string, file: File) => void;
   task: Task;
   token: string;
   users: User[];
@@ -27,6 +28,7 @@ export function SelectedTaskPanel({
   onError,
   onStatusChange,
   onUpdate,
+  onUploadCompletionFile,
   task,
   token,
   users,
@@ -40,6 +42,7 @@ export function SelectedTaskPanel({
       canEditAssignments={canEdit}
       canComment={canEdit}
       canClaim={canClaim && isUnassignedTask(task)}
+      canUploadCompletionFile={!!onUploadCompletionFile}
       onDownloadExcel={() => {
         const excel = task.excelFile;
         const excelId = typeof excel === "string" ? excel : getId(excel);
@@ -52,6 +55,7 @@ export function SelectedTaskPanel({
       onCommentChange={(comment) => onUpdate(taskId, { taskComment: comment })}
       onClaim={() => onClaim(taskId)}
       onStatusChange={(status) => onStatusChange(taskId, status)}
+      onUploadCompletionFile={(file) => onUploadCompletionFile?.(taskId, file)}
       onAssign={(userId) => onUpdate(taskId, { assignedTo: [userId] })}
       onDelete={() => onDelete(taskId)}
       onClose={onClose}

@@ -12,12 +12,15 @@ import {
   Loader2,
   Search,
   Target,
+  Timer,
   UserRound,
 } from "lucide-react";
 
 import {
   getId,
   managerApi,
+  type DailyDurationBalance,
+  type DailyDurationEntry,
   type WorkStatusCounts,
   type WorkStatusSummary,
   type WorkStatusSummaryUser,
@@ -74,6 +77,7 @@ export default function AnalyticsPage() {
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [summary, setSummary] = useState<WorkStatusSummary | null>(null);
+  const [durationBalance, setDurationBalance] = useState<DailyDurationBalance | null>(null);
   const [workTypeFilter, setWorkTypeFilter] = useState<WorkTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(false);
@@ -100,15 +104,15 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError("");
     try {
-      setSummary(
-        await managerApi.workStatusSummary(token, {
-          from,
-          to,
-          userId: effectiveUserId,
-        }),
-      );
+      const [summaryData, balanceData] = await Promise.all([
+        managerApi.workStatusSummary(token, { from, to, userId: effectiveUserId }),
+        managerApi.dailyDurationBalance(token, { from, to, userId: effectiveUserId }),
+      ]);
+      setSummary(summaryData);
+      setDurationBalance(balanceData);
     } catch (err) {
       setSummary(null);
+      setDurationBalance(null);
       setError(
         err instanceof Error ? err.message : "دریافت گزارش عملکرد ناموفق بود.",
       );
@@ -330,6 +334,12 @@ export default function AnalyticsPage() {
               </Panel>
             )}
           </div>
+
+          {durationBalance && (
+            <Panel icon={Timer} title="تراز مدت زمان روزانه گزارش‌های ثابت">
+              <DurationBalancePanel data={durationBalance} />
+            </Panel>
+          )}
         </>
       )}
     </section>
@@ -562,6 +572,134 @@ function StatusBreakdown({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function DurationBalancePanel({ data }: { data: any }) {
+  const entries = Array.isArray(data) ? data : (Array.isArray(data?.entries) ? data.entries : []);
+  const hasEntries = entries.length > 0;
+  const maxMinutes = hasEntries ? Math.max(
+    ...entries.map((e: any) => Math.max(e.expectedMinutes || 0, e.actualMinutes || 0, 1)),
+  ) : 1;
+
+  function fmt(minutes: number) {
+    if (minutes == null || isNaN(minutes)) return "0 دقیقه";
+    const h = Math.floor(Math.abs(minutes) / 60);
+    const m = Math.abs(minutes) % 60;
+    const sign = minutes < 0 ? "-" : "";
+    return h > 0 ? `${sign}${h} ساعت ${m} دقیقه` : `${sign}${m} دقیقه`;
+  }
+
+  // Normalize: support both old shape (totalExpected/totalActual/totalBalance)
+  // and new API shape (expectedDailyMinutes/totalActualDurationMinutes/remainingMinutes)
+  const totalExpected = data?.totalExpected ?? data?.expectedDailyMinutes ?? entries.reduce((sum: number, e: any) => sum + (e.expectedMinutes || 0), 0);
+  const totalActual = data?.totalActual ?? data?.totalActualDurationMinutes ?? entries.reduce((sum: number, e: any) => sum + (e.actualMinutes || 0), 0);
+  const totalBalance = data?.totalBalance ?? (data?.remainingMinutes != null ? -data.remainingMinutes : null) ?? entries.reduce((sum: number, e: any) => sum + (e.balance || 0), 0);
+  // remainingMinutes = expected - actual, so balance (actual - expected) = -remaining
+  const remaining = data?.remainingMinutes ?? (totalExpected - totalActual);
+
+  return (
+    <div className="space-y-5">
+      {/* Summary totals */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-[--surface-2] p-3 text-center">
+          <p className="text-[10px] font-bold text-[--text-3]">زمان مورد انتظار</p>
+          <p className="mt-1 text-xl font-black tabular-nums text-[#1f7a8c]">
+            {fmt(totalExpected)}
+          </p>
+        </div>
+        <div className="rounded-xl bg-[--surface-2] p-3 text-center">
+          <p className="text-[10px] font-bold text-[--text-3]">زمان واقعی</p>
+          <p className="mt-1 text-xl font-black tabular-nums text-violet-600 dark:text-violet-400">
+            {fmt(totalActual)}
+          </p>
+        </div>
+        <div
+          className={`rounded-xl p-3 text-center ${
+            remaining <= 0
+              ? "bg-emerald-50 dark:bg-emerald-950/30"
+              : "bg-red-50 dark:bg-red-950/30"
+          }`}
+        >
+          <p className="text-[10px] font-bold text-[--text-3]">باقیمانده</p>
+          <p
+            className={`mt-1 text-xl font-black tabular-nums ${
+              remaining <= 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-red-600 dark:text-red-400"
+            }`}
+          >
+            {fmt(remaining)}
+          </p>
+        </div>
+      </div>
+
+      {/* Per-day bar chart — only shown when entries exist */}
+      {hasEntries && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold text-[--text-3]">جزئیات روزانه</p>
+          <div className="space-y-1.5 overflow-x-auto">
+            {entries.map((entry: any) => {
+              const expectedPct = Math.round(((entry.expectedMinutes || 0) / maxMinutes) * 100);
+              const actualPct = Math.round(((entry.actualMinutes || 0) / maxMinutes) * 100);
+              const isPositive = (entry.balance || 0) >= 0;
+              const dateLabel = entry.date ? entry.date.slice(5) : ""; // MM-DD
+              return (
+                <div key={entry.date || Math.random()} className="flex items-center gap-3 text-xs">
+                  <span className="w-12 shrink-0 text-left font-mono text-[--text-3]">
+                    {dateLabel}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex h-2.5 overflow-hidden rounded-full bg-[--surface]">
+                      <div
+                        className="h-full rounded-full bg-[#1f7a8c]/70 transition-[width] duration-500"
+                        style={{ width: `${expectedPct}%` }}
+                      />
+                    </div>
+                    <div className="flex h-2.5 overflow-hidden rounded-full bg-[--surface]">
+                      <div
+                        className="h-full rounded-full bg-violet-500/70 transition-[width] duration-500"
+                        style={{ width: `${actualPct}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span
+                    className={`w-14 shrink-0 text-left font-mono font-bold tabular-nums ${
+                      isPositive
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-500 dark:text-red-400"
+                    }`}
+                  >
+                    {isPositive && (entry.balance || 0) > 0 ? "+" : ""}
+                    {fmt(entry.balance || 0)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex gap-4 pt-1 text-[10px] font-semibold text-[--text-3]">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-4 rounded-full bg-[#1f7a8c]/70" />
+              انتظار
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-4 rounded-full bg-violet-500/70" />
+              واقعی
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-4 rounded-full bg-emerald-500/70" />
+              تراز مثبت
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-4 rounded-full bg-red-500/70" />
+              تراز منفی
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

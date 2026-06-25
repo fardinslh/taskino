@@ -224,6 +224,26 @@ export function useTaskActions({
     }
   }
 
+  async function uploadTaskCompletionFile(taskId: string, file: File) {
+    try {
+      const updated = await taskApi.uploadCompletionFile(token, taskId, file);
+      setTasks((prev) =>
+        prev.map((t) => (getId(t) === taskId ? { ...t, ...updated } : t)),
+      );
+      if (selectedTask && getId(selectedTask) === taskId) {
+        setSelectedTask((prev) => (prev ? { ...prev, ...updated } : prev));
+      }
+      setMessage("فایل تکمیل پروژه آپلود شد.");
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "آپلود فایل تکمیل پروژه ناموفق بود",
+      );
+    }
+  }
+
   async function deleteTask(taskId: string) {
     try {
       await taskApi.delete(token, taskId);
@@ -374,6 +394,7 @@ export function useTaskActions({
     claimTask,
     moveTask,
     updateTask,
+    uploadTaskCompletionFile,
     deleteTask,
     taLookupTasks,
     taLookupTasksFromValues,

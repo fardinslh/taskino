@@ -74,6 +74,7 @@ export type Task = {
   isPublic?: boolean;
   projectType?: "specialist" | "general";
   file?: string;
+  completionFile?: string;
   excelFile?:
     | string
     | { _id?: string; id?: string; fileName?: string; originalName?: string };
@@ -412,6 +413,26 @@ export type WorkStatusSummary = {
   users: WorkStatusSummaryUser[];
 };
 
+export type DailyDurationEntry = {
+  date: string;
+  expectedMinutes: number;
+  actualMinutes: number;
+  balance: number;
+};
+
+export type DailyDurationBalance = {
+  userId: string;
+  from: string;
+  to: string;
+  expectedDailyMinutes?: number;
+  totalActualDurationMinutes?: number;
+  remainingMinutes?: number;
+  entries?: DailyDurationEntry[];
+  totalExpected?: number;
+  totalActual?: number;
+  totalBalance?: number;
+};
+
 export type ProjectMember = {
   _id?: string;
   id?: string;
@@ -736,6 +757,14 @@ export const taskApi = {
       apiClient.patch(`/tasks/${id}/status`, { status }),
       "تغییر وضعیت ناموفق بود",
     ),
+  uploadCompletionFile: (token: string, id: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return unwrapAxios<Task>(
+      apiClient.patch<Task>(`/tasks/${id}/completion-file`, form),
+      "آپلود فایل تکمیل پروژه ناموفق بود",
+    );
+  },
   completionStats: (token: string, body: Record<string, unknown>) =>
     unwrapAxios(
       apiClient.post<Record<string, unknown>>("/tasks/completion-stats", body),
@@ -838,6 +867,14 @@ export const managerApi = {
     unwrapAxios<WorkStatusSummary>(
       apiClient.get(`/manager/users/work-status-summary${qs(params)}`),
       "دریافت گزارش عملکرد کاربر ناموفق بود",
+    ),
+  dailyDurationBalance: (
+    token: string,
+    params: { userId: string; from: string; to: string },
+  ) =>
+    unwrapAxios<DailyDurationBalance>(
+      apiClient.get(`/manager/fixed-tasks/daily-duration-balance${qs(params)}`),
+      "دریافت تراز مدت زمان روزانه ناموفق بود",
     ),
   leaveRequests: (token: string, params?: Params) =>
     unwrapAxios(

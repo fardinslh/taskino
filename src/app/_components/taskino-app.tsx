@@ -76,6 +76,7 @@ export function TaskinoApp({
     token,
     unreadCount,
     updateTask,
+    uploadTaskCompletionFile,
     users,
     setActiveView,
   } = controller;
@@ -181,6 +182,11 @@ export function TaskinoApp({
             onError={setError}
             onStatusChange={(taskId, status) => void moveTask(taskId, status)}
             onUpdate={(taskId, body) => void updateTask(taskId, body)}
+            onUploadCompletionFile={
+              isSupervisor || isSpecialist
+                ? (taskId, file) => void uploadTaskCompletionFile(taskId, file)
+                : undefined
+            }
             task={selectedTask}
             token={token}
             users={users}

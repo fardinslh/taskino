@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, CircleDashed, Download, UserPlus, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, CircleDashed, Download, FileUp, UserPlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { getId, type Task, type User } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
@@ -8,13 +8,15 @@ import { formatDate, initials, nextStatus, statusLabel, userName } from "../_lib
 
 // ─── Task Detail Panel ────────────────────────────────────────────────────────
 export function TaskPanel({
-  task, users, canEditAssignments, canComment, canClaim, onDownloadExcel, onCommentChange, onStatusChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose,
+  task, users, canEditAssignments, canComment, canClaim, canUploadCompletionFile, onDownloadExcel, onUploadCompletionFile, onCommentChange, onStatusChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose,
 }: {
   task: Task; users: User[];
   canEditAssignments: boolean;
   canComment: boolean;
   canClaim: boolean;
+  canUploadCompletionFile?: boolean;
   onDownloadExcel: () => void;
+  onUploadCompletionFile?: (file: File) => void;
   onCommentChange: (c: string) => void;
   onStatusChange: (s: string) => void;
   onDescriptionChange?: (d: string) => void;
@@ -30,8 +32,10 @@ export function TaskPanel({
   const [comment, setComment] = useState(task.taskComment ?? "");
   const [commentEditing, setCommentEditing] = useState(false);
   const [assignSelect, setAssignSelect] = useState("");
+  const [completionFileName, setCompletionFileName] = useState("");
   const assignedIds = (task.assignedTo ?? []).map((u) => typeof u === "string" ? u : getId(u));
   const unassignedUsers = users.filter((u) => !assignedIds.includes(getId(u)));
+  const showCompletionUpload = canUploadCompletionFile && task.status === "done";
 
   return (
     <>
@@ -139,6 +143,35 @@ export function TaskPanel({
               >
                 <Download size={15} /> دانلود فایل اکسل
               </button>
+            </div>
+          )}
+
+          {/* Completion attachment */}
+          {showCompletionUpload && (
+            <div>
+              <p className="mb-2 text-xs font-semibold text-[--text-3]">فایل تکمیل پروژه</p>
+              <label className="flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#1f7a8c]/35 bg-[#1f7a8c]/5 px-3 py-2 text-sm font-semibold text-[#1f7a8c] transition hover:bg-[#1f7a8c]/10 active:scale-[0.96]">
+                <FileUp size={15} />
+                <span className="line-clamp-1">
+                  {completionFileName || "آپلود فایل تکمیل"}
+                </span>
+                <input
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    setCompletionFileName(file.name);
+                    onUploadCompletionFile?.(file);
+                    event.target.value = "";
+                  }}
+                  type="file"
+                />
+              </label>
+              {task.completionFile && !completionFileName && (
+                <p className="mt-1.5 text-[11px] text-[--text-3]">
+                  فایل تکمیل قبلا ثبت شده است.
+                </p>
+              )}
             </div>
           )}
 

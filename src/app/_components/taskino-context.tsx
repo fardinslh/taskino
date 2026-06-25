@@ -79,6 +79,7 @@ const taskKeys = [
   "claimTask",
   "deleteTask",
   "moveTask",
+  "uploadTaskCompletionFile",
   "taLookupFirst",
   "taLookupLast",
   "taLookupResult",
