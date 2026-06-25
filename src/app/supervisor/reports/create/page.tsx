@@ -38,6 +38,7 @@ export default function SupervisorCreateReportsPage() {
     openFixedTaskForm,
     closeFixedTaskForm,
     deleteFixedTask,
+    toggleFixedTaskActive,
   } = useFixedTaskContext();
 
   const form = useForm<FixedTaskFormValues>({
@@ -337,6 +338,7 @@ export default function SupervisorCreateReportsPage() {
                 canEdit
                 onEdit={() => openFixedTaskForm(task)}
                 onDelete={() => void deleteFixedTask(getId(task))}
+                onToggleActive={(active) => void toggleFixedTaskActive(task, active)}
               />
             ))
           )}

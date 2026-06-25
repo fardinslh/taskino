@@ -36,6 +36,7 @@ function FixedReportsPageContent() {
     saveFixedTaskFromValues,
     deleteFixedTask,
     seedFixedTasksFromExcel,
+    toggleFixedTaskActive,
   } = useFixedTaskContext();
 
   const form = useForm<FixedTaskFormValues>({
@@ -185,6 +186,7 @@ function FixedReportsPageContent() {
                 onClick={() => setSelectedFixedTask(task)}
                 onEdit={() => openFixedTaskForm(task)}
                 onDelete={() => void deleteFixedTask(getId(task))}
+                onToggleActive={(active) => void toggleFixedTaskActive(task, active)}
               />
             ))
           )}

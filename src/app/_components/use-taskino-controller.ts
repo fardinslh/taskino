@@ -311,7 +311,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     setFtTitle,
     showFixedTaskForm,
     activateFixedTask,
-    deactivateFixedTask,
+    toggleFixedTaskActive,
   } = useFixedTaskActions({
     fixedTasks,
     loadData,
@@ -654,7 +654,7 @@ export function useTaskinoController(initialView: View = "dashboard") {
     saveFixedTask,
     saveFixedTaskFromValues,
     activateFixedTask,
-    deactivateFixedTask,
+    toggleFixedTaskActive,
     deleteFixedTask,
     seedFixedTasksFromExcel,
     onDragEnd,

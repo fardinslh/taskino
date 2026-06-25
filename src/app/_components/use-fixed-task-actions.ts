@@ -251,18 +251,18 @@ export function useFixedTaskActions({
     }
   }
 
-  async function deactivateFixedTask(fixedTask: FixedTask) {
+  async function toggleFixedTaskActive(fixedTask: FixedTask, active: boolean) {
     if (!myId) return;
     try {
       const updated = await fixedTaskApi.update(token, getId(fixedTask), myId, {
-        isActive: false,
+        isActive: active,
       });
       setFixedTasks((current) =>
         current.map((item) =>
           getId(item) === getId(fixedTask) ? updated : item,
         ),
       );
-      setMessage(updated.isActive ? "الگو فعال شد." : "الگو غیرفعال شد.");
+      setMessage(updated.isActive !== false ? "الگو فعال شد." : "الگو غیرفعال شد.");
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "تغییر وضعیت الگو ناموفق بود",
@@ -394,7 +394,7 @@ export function useFixedTaskActions({
   return {
     activateFixedTask,
     closeFixedTaskForm,
-    deactivateFixedTask,
+    toggleFixedTaskActive,
     deleteFixedTask,
     editingFixedTask,
     fixedReportsTab,

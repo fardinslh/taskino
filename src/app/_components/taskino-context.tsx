@@ -181,7 +181,7 @@ const fixedTaskKeys = [
   "saveFixedTask",
   "saveFixedTaskFromValues",
   "activateFixedTask",
-  "deactivateFixedTask",
+  "toggleFixedTaskActive",
   "deleteFixedTask",
   "seedFixedTasksFromExcel",
   "onDragEnd",
