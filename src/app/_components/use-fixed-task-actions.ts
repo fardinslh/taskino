@@ -36,24 +36,28 @@ type FixedTaskActivationValues = {
 
 type FixedTaskActionsInput = {
   fixedTasks: FixedTask[];
+  isSupervisor: boolean;
   loadData: () => Promise<void>;
   loadManagerAnalytics: () => Promise<void>;
   myId: string;
   users?: User[];
   setError: Dispatch<SetStateAction<string>>;
   setFixedTasks: Dispatch<SetStateAction<FixedTask[]>>;
+  setSupervisorFixedTasks?: Dispatch<SetStateAction<FixedTask[]>>;
   setMessage: Dispatch<SetStateAction<string>>;
   token: string;
 };
 
 export function useFixedTaskActions({
   fixedTasks,
+  isSupervisor,
   loadData,
   loadManagerAnalytics,
   myId,
   users = [],
   setError,
   setFixedTasks,
+  setSupervisorFixedTasks,
   setMessage,
   token,
 }: FixedTaskActionsInput) {
@@ -389,6 +393,11 @@ export function useFixedTaskActions({
     approvedDurationMinutes?: number,
     taskComment?: string,
   ) {
+    if (!isSupervisor) {
+      setError("فقط سرپرست می‌تواند زمان گزارش ثابت را بررسی کند.");
+      return;
+    }
+
     try {
       const updated = await managerApi.reviewFixedTaskTiming(
         token,
@@ -398,6 +407,9 @@ export function useFixedTaskActions({
         taskComment,
       );
       setFixedTasks((current) =>
+        current.map((item) => (getId(item) === id ? updated : item)),
+      );
+      setSupervisorFixedTasks?.((current) =>
         current.map((item) => (getId(item) === id ? updated : item)),
       );
       setMessage(status === "approved" ? "زمان گزارش تأیید شد." : "زمان گزارش رد شد.");

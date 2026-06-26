@@ -314,12 +314,14 @@ export function useTaskinoController(initialView: View = "dashboard") {
     toggleFixedTaskActive,
   } = useFixedTaskActions({
     fixedTasks,
+    isSupervisor: currentUser?.roles === "supervisor",
     loadData,
     loadManagerAnalytics,
     myId,
     users,
     setError,
     setFixedTasks,
+    setSupervisorFixedTasks,
     setMessage,
     token,
   });
