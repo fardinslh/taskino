@@ -163,7 +163,7 @@ function TeamPageContent() {
             <Field label="موبایل" name="mobile" placeholder="اختیاری · 09xxxxxxxxx" registration={registerCreate("mobile")} />
             <Field label="رمز عبور *" name="password" required type="password" placeholder="حداقل ۶ کاراکتر" registration={registerCreate("password", { required: true, minLength: 6 })} />
             <Select label="حوزه کاری *" options={WORK_FIELDS} registration={registerCreate("workField", { required: true })} />
-            <Select label="نقش" options={[["specialist", "متخصص"], ["supervisor", "سرپرست"], ["manager", "مدیر"]]} registration={registerCreate("role")} />
+            <Select label="نقش" options={[["specialist", "کارشناس"], ["supervisor", "سرپرست"], ["manager", "مدیر"]]} registration={registerCreate("role")} />
             <div className="sm:col-span-2">
               <button className="h-10 rounded-lg bg-[#1f7a8c] px-5 text-sm font-semibold text-white disabled:opacity-50" disabled={isCreatingUser} type="submit">
                 ساخت کاربر
@@ -222,7 +222,7 @@ function TeamPageContent() {
                     value={user.roles ?? "specialist"}
                     onChange={(event) => void updateUserRole(getId(user), event.target.value)}
                   >
-                    <option value="specialist">متخصص</option>
+                    <option value="specialist">کارشناس</option>
                     <option value="supervisor">سرپرست</option>
                     <option value="manager">مدیر</option>
                   </select>

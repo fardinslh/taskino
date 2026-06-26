@@ -1,5 +1,6 @@
 import {
   getId,
+  type WorkField,
   type FixedTask,
   type IncompleteFixedTask,
   type Notification,
@@ -36,7 +37,7 @@ export function statusLabel(s?: string) {
 
 export function roleLabel(role?: string) {
   const m: Record<string, string> = {
-    specialist: "متخصص",
+    specialist: "کارشناس",
     supervisor: "سرپرست",
     manager: "مدیر",
   };
@@ -45,6 +46,11 @@ export function roleLabel(role?: string) {
 
 export function workFieldLabel(field?: string) {
   return WORK_FIELDS.find(([value]) => value === field)?.[1] ?? field ?? "عملیات";
+}
+
+export function appTitleForWorkField(field?: WorkField | string) {
+  if (field === "it") return "مدیریت واحد فناوری اطلاعات";
+  return "مدیریت واحد بهبود عملیات و برنامه ریزی";
 }
 
 export function nextStatus(s?: string) {

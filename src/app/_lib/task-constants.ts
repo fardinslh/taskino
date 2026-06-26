@@ -7,6 +7,7 @@ export type View =
   | "dashboard"
   | "tasks"
   | "tasks-admin"
+  | "manager-extra-projects"
   | "team"
   | "leave"
   | "excel"
@@ -24,6 +25,7 @@ export const VIEW_PATHS: Record<View, string> = {
   dashboard: "/dashboard",
   tasks: "/tasks",
   "tasks-admin": "/projects",
+  "manager-extra-projects": "/projects/extra",
   team: "/team",
   leave: "/leave",
   excel: "/excel",
@@ -47,9 +49,6 @@ export const TASK_PERIODS: Array<[TaskPeriod, string]> = [
 export const WORK_FIELDS: Array<[WorkField, string]> = [
   ["operations", "عملیات"],
   ["it", "فناوری اطلاعات"],
-  ["human_resources", "منابع انسانی"],
-  ["finance", "مالی"],
-  ["sales", "فروش"],
 ];
 
 export const COLUMNS = [

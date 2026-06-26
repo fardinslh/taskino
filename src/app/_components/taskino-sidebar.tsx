@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Eye,
   FolderKanban,
+  Layers3,
   LayoutDashboard,
   Plus,
   Settings,
@@ -221,9 +222,16 @@ export function TaskinoSidebar({
               <SideItem
                 active={activeView === "tasks-admin"}
                 collapsed={sidebarCollapsed}
-                icon={ClipboardList}
-                label="پروژه‌ها"
+                icon={FolderKanban}
+                label="پروژه مدیر"
                 onClick={() => handleSelect("tasks-admin")}
+              />
+              <SideItem
+                active={activeView === "manager-extra-projects"}
+                collapsed={sidebarCollapsed}
+                icon={Layers3}
+                label="پروژه مازاد"
+                onClick={() => handleSelect("manager-extra-projects")}
               />
               <SideItem
                 active={activeView === "team"}

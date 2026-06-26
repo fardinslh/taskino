@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   Bell,
   Loader2,
@@ -14,7 +15,12 @@ import {
 } from "lucide-react";
 
 import { getId, type Notification, type User } from "@/lib/api";
-import { initials, notificationText, userName } from "../_lib/task-helpers";
+import {
+  appTitleForWorkField,
+  initials,
+  notificationText,
+  userName,
+} from "../_lib/task-helpers";
 
 type TaskinoHeaderProps = {
   currentUser: User | null;
@@ -55,6 +61,12 @@ export function TaskinoHeader({
   sidebarCollapsed,
   unreadCount,
 }: TaskinoHeaderProps) {
+  const appTitle = appTitleForWorkField(currentUser?.workField);
+
+  useEffect(() => {
+    document.title = appTitle;
+  }, [appTitle]);
+
   return (
     <header className="sticky top-0 z-40 border-b border-[--border] bg-[--surface]/95 backdrop-blur-md">
       <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:gap-3">
@@ -71,7 +83,7 @@ export function TaskinoHeader({
           </div>
           {!sidebarCollapsed && (
             <span className="hidden max-w-[42vw] truncate font-bold tracking-tight sm:block lg:max-w-none">
-              مدیریت واحد بهبود عملیات و برنامه ریزی
+              {appTitle}
             </span>
           )}
         </div>
