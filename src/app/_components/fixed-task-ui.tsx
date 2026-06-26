@@ -9,6 +9,7 @@ import TimePicker from "react-multi-date-picker/plugins/time_picker";
 import { Trash2, X } from "lucide-react";
 
 import { getId } from "@/lib/api";
+import { effectiveTimingApprovalStatus } from "../_lib/fixed-task-timing";
 import { recurrenceLabel, userName } from "../_lib/task-helpers";
 import { formatDate } from "../_lib/task-helpers";
 import { Field, Select } from "./shared";
@@ -42,6 +43,7 @@ export function TemplateRow({
   onToggleActive?: (active: boolean) => void;
 }) {
   const active = task.isActive !== false;
+  const timingApprovalStatus = effectiveTimingApprovalStatus(task);
   return (
     <div
       className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 ${onClick ? "cursor-pointer transition hover:bg-[--surface-2]/60" : ""}`}
@@ -72,10 +74,10 @@ export function TemplateRow({
             {recurrenceLabel(task.recurrence ?? "daily")}
           </span>
           {task.status === "done" && (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${task.timingApprovalStatus === "approved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : task.timingApprovalStatus === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"}`}>
-              {task.timingApprovalStatus === "approved"
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${timingApprovalStatus === "approved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : timingApprovalStatus === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"}`}>
+              {timingApprovalStatus === "approved"
                 ? "زمان تأیید شده"
-                : task.timingApprovalStatus === "rejected"
+                : timingApprovalStatus === "rejected"
                   ? "زمان رد شده"
                   : "زمان در انتظار تأیید"}
             </span>

@@ -72,7 +72,7 @@ function ProjectsPageContent() {
   } = useNavigationContext();
   const { currentUser, isManager, isSupervisor, token } = useSessionContext();
   const { setError } = useFeedbackContext();
-  const { users } = useManagementContext();
+  const { supervisorTasks, users } = useManagementContext();
   const {
     tasks,
     taCompletionResult,
@@ -97,6 +97,7 @@ function ProjectsPageContent() {
   const specialistProgress = specialistTotalCount
     ? Math.round((specialistDoneCount / specialistTotalCount) * 100)
     : 0;
+  const visibleProjectTasks = isSupervisor ? supervisorTasks : tasks;
   const [supervisorWorkFieldUsers, setSupervisorWorkFieldUsers] = useState<
     any[]
   >([]);
@@ -507,20 +508,29 @@ function ProjectsPageContent() {
                 <div>
                   <h2 className="font-bold">همه پروژه‌ها</h2>
                   <p className="text-[11px] text-[--text-3]">
-                    {tasks.length} پروژه
+                    {visibleProjectTasks.length} پروژه
                   </p>
                 </div>
               </div>
               <div className="max-h-[420px] divide-y divide-[--border] overflow-y-auto">
-                {tasks.length === 0 ? (
+                {visibleProjectTasks.length === 0 ? (
                   <p className="py-8 text-center text-sm text-[--text-3]">
                     پروژه‌ای یافت نشد
                   </p>
                 ) : (
-                  tasks.map((task: any) => (
+                  visibleProjectTasks.map((task: any) => (
                     <div
                       key={getId(task)}
-                      className="flex items-center justify-between gap-3 px-5 py-3"
+                      className="flex cursor-pointer items-center justify-between gap-3 px-5 py-3 transition hover:bg-[--surface-2]"
+                      onClick={() => setSelectedTask(task)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedTask(task);
+                        }
+                      }}
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">
@@ -543,7 +553,10 @@ function ProjectsPageContent() {
                         </span>
                         <button
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40"
-                          onClick={() => void deleteTask(getId(task))}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void deleteTask(getId(task));
+                          }}
                           type="button"
                         >
                           <Trash2 size={14} />

@@ -9,6 +9,7 @@ import {
   taskApi,
   type Task,
 } from "@/lib/api";
+import { isTaskOverdue } from "../_lib/task-helpers";
 
 type TaskActionsInput = {
   token: string;
@@ -161,6 +162,14 @@ export function useTaskActions({
   async function moveTask(taskId: string, newStatus: string) {
     try {
       const currentTask = tasks.find((task) => getId(task) === taskId);
+      if (
+        currentTask &&
+        isTaskOverdue(currentTask) &&
+        (newStatus === "in_progress" || newStatus === "done")
+      ) {
+        setError("مهلت این پروژه گذشته است و امکان تغییر وضعیت به در حال انجام یا تکمیل شده وجود ندارد.");
+        return;
+      }
       const shouldClaimPublicTask =
         !!currentTask?.isPublic &&
         (newStatus === "in_progress" || newStatus === "done");
@@ -225,6 +234,11 @@ export function useTaskActions({
   }
 
   async function uploadTaskCompletionFile(taskId: string, file: File) {
+    if (!/\.(xlsx|xls)$/i.test(file.name)) {
+      setError("فقط فایل اکسل با فرمت xlsx یا xls قابل آپلود است.");
+      return;
+    }
+
     try {
       const updated = await taskApi.uploadCompletionFile(token, taskId, file);
       setTasks((prev) =>

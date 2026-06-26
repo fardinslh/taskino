@@ -7,9 +7,16 @@ import { CheckCircle2, ChevronLeft, CircleDashed, Repeat, X } from "lucide-react
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
 import {
   approvedDurationMinutes,
+  effectiveTimingApprovalStatus,
   formatDurationMinutes,
 } from "../_lib/fixed-task-timing";
-import { formatDate, recurrenceLabel, statusLabel, userName } from "../_lib/task-helpers";
+import {
+  formatDate,
+  isFixedTaskOverdue,
+  recurrenceLabel,
+  statusLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "in_progress", "done"];
 
@@ -47,6 +54,8 @@ export function SelectedFixedTaskPanel({
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
   const confirmedDuration = approvedDurationMinutes(task);
+  const timingApprovalStatus = effectiveTimingApprovalStatus(task);
+  const statusChangeBlocked = isFixedTaskOverdue(task);
   const [approvedDuration, setApprovedDuration] = useState(
     String(task.actualDurationMinutes ?? ""),
   );
@@ -55,12 +64,12 @@ export function SelectedFixedTaskPanel({
   const timingPending =
     canReviewTiming &&
     currentStatus === "done" &&
-    task.timingApprovalStatus === "pending" &&
+    timingApprovalStatus === "pending" &&
     !!task.actualDurationMinutes;
   const timingStatusLabel =
-    task.timingApprovalStatus === "approved"
+    timingApprovalStatus === "approved"
       ? "تأیید شده"
-      : task.timingApprovalStatus === "rejected"
+      : timingApprovalStatus === "rejected"
         ? "رد شده"
         : "در انتظار بررسی";
 
@@ -127,9 +136,13 @@ export function SelectedFixedTaskPanel({
                     currentStatus === status
                       ? "border-transparent bg-[#1f7a8c] text-white"
                       : "border-[--border] text-[--text-2] hover:bg-[--surface-2]"
-                  } ${!canChangeStatus ? "cursor-default opacity-60" : ""}`}
-                  disabled={!canChangeStatus}
-                  onClick={() => canChangeStatus && onStatusChange(taskId, status)}
+                  } ${!canChangeStatus || statusChangeBlocked ? "cursor-default opacity-60" : ""}`}
+                  disabled={!canChangeStatus || statusChangeBlocked}
+                  onClick={() =>
+                    canChangeStatus &&
+                    !statusChangeBlocked &&
+                    onStatusChange(taskId, status)
+                  }
                   type="button"
                 >
                   {statusLabel(status)}
@@ -160,7 +173,7 @@ export function SelectedFixedTaskPanel({
         </div>
 
         {((canEditTemplate || canDeleteTemplate) ||
-          (canChangeStatus && currentStatus !== "done") || timingPending) && (
+          (canChangeStatus && currentStatus !== "done" && !statusChangeBlocked) || timingPending) && (
           <div className="border-t border-[--border] p-4 space-y-2">
             {timingPending && (
               <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
@@ -218,7 +231,7 @@ export function SelectedFixedTaskPanel({
                 </div>
               </div>
             )}
-            {canChangeStatus && currentStatus !== "done" && (
+            {canChangeStatus && currentStatus !== "done" && !statusChangeBlocked && (
               <button
                 className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] active:scale-[0.98]"
                 onClick={() =>

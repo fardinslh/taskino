@@ -45,7 +45,6 @@ export function TaskinoApp({
     markAllNotificationsRead,
     markNotificationRead,
     message,
-    moveTask,
     myId,
     notifications,
     overdueTasks,
@@ -81,6 +80,14 @@ export function TaskinoApp({
     setActiveView,
   } = controller;
   const selectedFixedTaskAssigneeId = getId(selectedFixedTask?.assignedTo);
+  const selectedTaskAssigneeIds = (selectedTask?.assignedTo ?? []).map((user) =>
+    getId(user),
+  );
+  const canUploadTaskCompletionFile =
+    isSpecialist ||
+    (isSupervisor &&
+      activeView === "supervisor-my-projects" &&
+      selectedTaskAssigneeIds.includes(myId));
   const canSupervisorEditFixedTask =
     isSupervisor &&
     !!selectedFixedTask &&
@@ -175,15 +182,15 @@ export function TaskinoApp({
         {selectedTask && (
           <SelectedTaskPanel
             canClaim={isSpecialist}
+            canDownloadCompletionFile={isManager || isSupervisor}
             canEdit={isManager}
             onClaim={(taskId) => void claimTask(taskId)}
             onClose={() => setSelectedTask(null)}
             onDelete={(taskId) => void deleteTask(taskId)}
             onError={setError}
-            onStatusChange={(taskId, status) => void moveTask(taskId, status)}
             onUpdate={(taskId, body) => void updateTask(taskId, body)}
             onUploadCompletionFile={
-              isSupervisor || isSpecialist
+              canUploadTaskCompletionFile
                 ? (taskId, file) => void uploadTaskCompletionFile(taskId, file)
                 : undefined
             }

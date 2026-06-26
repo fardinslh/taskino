@@ -16,7 +16,11 @@ import {
   type FixedTask,
   type FixedTaskStatus,
 } from "@/lib/api";
-import { elapsedDurationMinutes } from "../_lib/fixed-task-timing";
+import {
+  approvedDurationMinutes,
+  elapsedDurationMinutes,
+} from "../_lib/fixed-task-timing";
+import { isFixedTaskOverdue } from "../_lib/task-helpers";
 
 type FixedTaskFormValues = {
   title: string;
@@ -326,6 +330,14 @@ export function useFixedTaskActions({
     }
     const currentStatus = target?.status ?? "todo";
     if (status === currentStatus) return target;
+    if (
+      target &&
+      isFixedTaskOverdue(target) &&
+      (status === "in_progress" || status === "done")
+    ) {
+      setError("مهلت این گزارش ثابت گذشته است و امکان تغییر وضعیت به در حال انجام یا تکمیل شده وجود ندارد.");
+      return;
+    }
     const validTransition =
       (currentStatus === "todo" && status === "in_progress") ||
       (currentStatus === "in_progress" && status === "done");
@@ -342,9 +354,13 @@ export function useFixedTaskActions({
       current.map((item) => (getId(item) === id ? { ...item, status } : item)),
     );
     try {
+      const confirmedDuration = target ? approvedDurationMinutes(target) : null;
       const statusBody =
         status === "done"
-          ? { actualDurationMinutes: elapsedDurationMinutes(target?.startedAt) }
+          ? {
+              actualDurationMinutes:
+                confirmedDuration ?? elapsedDurationMinutes(target?.startedAt),
+            }
           : undefined;
       const updated =
         status === "in_progress" && !target?.startedAt

@@ -13,7 +13,12 @@ import {
 
 import { getId, type Task } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
-import { formatDate, statusLabel, userName } from "../_lib/task-helpers";
+import {
+  formatDate,
+  isTaskOverdue,
+  statusLabel,
+  userName,
+} from "../_lib/task-helpers";
 import { AssigneeStack } from "./shared";
 import { TaskDeadlineCountdown } from "./task-deadline-countdown";
 
@@ -204,15 +209,19 @@ export function ProjectBoardSection({
                           columnTasks.map((task, index) => {
                             const taskId = getId(task);
                             const isDone = (task.status ?? "todo") === "done";
+                            const isOverdue = isTaskOverdue(task);
                             const canClaimPublicTask =
-                              !!task.isPublic && !isDone && !!onClaimTask;
+                              !!task.isPublic &&
+                              !isDone &&
+                              !isOverdue &&
+                              !!onClaimTask;
                             const deadline = task.dueDate ?? task.endDate;
 
                             return (
                               <Draggable
                                 draggableId={taskId}
                                 index={index}
-                                isDragDisabled={isDone}
+                                isDragDisabled={isDone || isOverdue}
                                 key={taskId}
                               >
                                 {(dragProvided, dragSnapshot) => (
@@ -220,7 +229,7 @@ export function ProjectBoardSection({
                                     ref={dragProvided.innerRef}
                                     {...dragProvided.draggableProps}
                                     {...dragProvided.dragHandleProps}
-                                    className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-all ${isDone ? "cursor-pointer" : "cursor-grab touch-none active:cursor-grabbing"} hover:-translate-y-0.5 hover:shadow-md ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                    className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-all ${isDone || isOverdue ? "cursor-pointer" : "cursor-grab touch-none active:cursor-grabbing"} hover:-translate-y-0.5 hover:shadow-md ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                     onClick={() => onSelectTask(task)}
                                   >
                                     <div className="flex items-start justify-between gap-2">
@@ -233,6 +242,11 @@ export function ProjectBoardSection({
                                         <span className="flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                                           <FileSpreadsheet size={10} />
                                           اکسل
+                                        </span>
+                                      )}
+                                      {isOverdue && (
+                                        <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                          مهلت گذشته
                                         </span>
                                       )}
                                     </div>

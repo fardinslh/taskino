@@ -1,24 +1,25 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, CircleDashed, Download, FileUp, UserPlus, X } from "lucide-react";
+import { CheckCircle2, CircleDashed, Download, FileUp, UserPlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { getId, type Task, type User } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
-import { formatDate, initials, nextStatus, statusLabel, userName } from "../_lib/task-helpers";
+import { formatDate, initials, statusLabel, userName } from "../_lib/task-helpers";
 
 // ─── Task Detail Panel ────────────────────────────────────────────────────────
 export function TaskPanel({
-  task, users, canEditAssignments, canComment, canClaim, canUploadCompletionFile, onDownloadExcel, onUploadCompletionFile, onCommentChange, onStatusChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose,
+  task, users, canEditAssignments, canComment, canClaim, canDownloadCompletionFile, canUploadCompletionFile, onDownloadExcel, onDownloadCompletionFile, onUploadCompletionFile, onCommentChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose,
 }: {
   task: Task; users: User[];
   canEditAssignments: boolean;
   canComment: boolean;
   canClaim: boolean;
+  canDownloadCompletionFile?: boolean;
   canUploadCompletionFile?: boolean;
   onDownloadExcel: () => void;
+  onDownloadCompletionFile?: () => void;
   onUploadCompletionFile?: (file: File) => void;
   onCommentChange: (c: string) => void;
-  onStatusChange: (s: string) => void;
   onDescriptionChange?: (d: string) => void;
   onAssign: (userId: string) => void;
   onUnassign?: (userId: string) => void;
@@ -35,7 +36,20 @@ export function TaskPanel({
   const [completionFileName, setCompletionFileName] = useState("");
   const assignedIds = (task.assignedTo ?? []).map((u) => typeof u === "string" ? u : getId(u));
   const unassignedUsers = users.filter((u) => !assignedIds.includes(getId(u)));
+  const isDone = task.status === "done";
+  const canManageAssignments = canEditAssignments && !isDone;
   const showCompletionUpload = canUploadCompletionFile && task.status === "done";
+  const completionExcelFile = task.completionExcelFile ?? task.completionFile;
+  const hasCompletionFile = !!(
+    typeof completionExcelFile === "string"
+      ? completionExcelFile
+      : completionExcelFile
+        ? getId(completionExcelFile)
+        : ""
+  );
+  const showCompletionDownload = canDownloadCompletionFile && hasCompletionFile;
+  const showCompletionAttachment =
+    showCompletionUpload || showCompletionDownload;
 
   return (
     <>
@@ -121,9 +135,8 @@ export function TaskPanel({
               {COLUMNS.map((col) => (
                 <button
                   key={col.status}
-                  disabled={!canEditAssignments}
-                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${task.status === col.status ? `${col.badge} border-transparent` : "border-[--border] text-[--text-2] hover:bg-[--surface-2]"} ${!canEditAssignments ? "cursor-default opacity-60" : ""}`}
-                  onClick={() => canEditAssignments && onStatusChange(col.status)}
+                  disabled
+                  className={`flex cursor-default items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold ${task.status === col.status ? `${col.badge} border-transparent` : "border-[--border] text-[--text-2] opacity-60"}`}
                   type="button"
                 >
                   <span className={`h-2 w-2 rounded-full ${col.dot}`} />
@@ -147,27 +160,44 @@ export function TaskPanel({
           )}
 
           {/* Completion attachment */}
-          {showCompletionUpload && (
+          {showCompletionAttachment && (
             <div>
               <p className="mb-2 text-xs font-semibold text-[--text-3]">فایل تکمیل پروژه</p>
-              <label className="flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#1f7a8c]/35 bg-[#1f7a8c]/5 px-3 py-2 text-sm font-semibold text-[#1f7a8c] transition hover:bg-[#1f7a8c]/10 active:scale-[0.96]">
-                <FileUp size={15} />
-                <span className="line-clamp-1">
-                  {completionFileName || "آپلود فایل تکمیل"}
-                </span>
-                <input
-                  className="sr-only"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    setCompletionFileName(file.name);
-                    onUploadCompletionFile?.(file);
-                    event.target.value = "";
-                  }}
-                  type="file"
-                />
-              </label>
-              {task.completionFile && !completionFileName && (
+              {showCompletionDownload && (
+                <button
+                  className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.96] dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
+                  onClick={onDownloadCompletionFile}
+                  type="button"
+                >
+                  <Download size={15} /> دانلود فایل تکمیل
+                </button>
+              )}
+              {showCompletionUpload && (
+                <label className="flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#1f7a8c]/35 bg-[#1f7a8c]/5 px-3 py-2 text-sm font-semibold text-[#1f7a8c] transition hover:bg-[#1f7a8c]/10 active:scale-[0.96]">
+                  <FileUp size={15} />
+                  <span className="line-clamp-1">
+                    {completionFileName || "آپلود فایل تکمیل"}
+                  </span>
+                  <input
+                    accept=".xlsx,.xls"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      if (!/\.(xlsx|xls)$/i.test(file.name)) {
+                        onUploadCompletionFile?.(file);
+                        event.target.value = "";
+                        return;
+                      }
+                      setCompletionFileName(file.name);
+                      onUploadCompletionFile?.(file);
+                      event.target.value = "";
+                    }}
+                    type="file"
+                  />
+                </label>
+              )}
+              {completionExcelFile && !completionFileName && (
                 <p className="mt-1.5 text-[11px] text-[--text-3]">
                   فایل تکمیل قبلا ثبت شده است.
                 </p>
@@ -205,14 +235,14 @@ export function TaskPanel({
 
           {/* Assignees */}
           <div>
-            <p className="mb-2 text-xs font-semibold text-[--text-3]">مسئولان</p>
-            {canClaim && (
+            <p className="mb-2 text-xs font-semibold text-[--text-3]">مسئول پروژه</p>
+            {canClaim && !isDone && (
               <button
                 className="mb-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#1f7a8c] text-xs font-semibold text-white transition hover:bg-[#196b7b]"
                 onClick={onClaim}
                 type="button"
               >
-                <UserPlus size={13} /> برداشتن این گزارش برای من
+                <UserPlus size={13} /> برداشتن این پروژه برای من
               </button>
             )}
             {task.assignedTo && task.assignedTo.length > 0 ? (
@@ -231,7 +261,7 @@ export function TaskPanel({
                           <p className="text-xs text-[--text-3]">{fullUser?.roles || "specialist"}</p>
                         </div>
                       </div>
-                      {canEditAssignments && onUnassign && (
+                      {canManageAssignments && onUnassign && (
                         <button
                           className="flex h-6 w-6 items-center justify-center rounded-md text-[--text-3] transition hover:bg-red-50 hover:text-red-500"
                           onClick={() => onUnassign(id)}
@@ -246,7 +276,7 @@ export function TaskPanel({
             ) : (
               <div className="rounded-xl border border-dashed border-[--border] p-3 text-center text-xs text-[--text-3]">بدون مسئول</div>
             )}
-            {canEditAssignments && unassignedUsers.length > 0 && (
+            {canManageAssignments && unassignedUsers.length > 0 && (
               <div className="mt-2 flex gap-2">
                 <select
                   className="h-9 flex-1 rounded-lg border border-[--border] bg-[--surface] px-2 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
@@ -287,19 +317,10 @@ export function TaskPanel({
           </div>
         </div>
 
-        {/* Panel footer — manager actions only */}
+        {/* Panel footer */}
         {canEditAssignments ? (
           <div className="border-t border-[--border] p-4 space-y-2">
-            {task.status !== "done" ? (
-              <button
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] active:scale-[0.98]"
-                onClick={() => { onStatusChange(nextStatus(task.status)); onClose(); }}
-                type="button"
-              >
-                {task.status === "todo" ? "شروع کار" : "تکمیل کردن"}
-                <ChevronLeft size={15} />
-              </button>
-            ) : (
+            {isDone && (
               <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 py-2.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 size={16} />تکمیل شده
               </div>

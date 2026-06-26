@@ -74,7 +74,14 @@ export type Task = {
   isPublic?: boolean;
   projectType?: "specialist" | "general";
   file?: string;
-  completionFile?: string;
+  completionExcelFile?:
+    | string
+    | { _id?: string; id?: string; fileName?: string; originalName?: string }
+    | null;
+  completionFile?:
+    | string
+    | { _id?: string; id?: string; fileName?: string; originalName?: string }
+    | null;
   excelFile?:
     | string
     | { _id?: string; id?: string; fileName?: string; originalName?: string };

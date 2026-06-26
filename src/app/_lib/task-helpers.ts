@@ -99,6 +99,16 @@ export function isUnassignedTask(task: Task) {
   return (task.assignedTo ?? []).length === 0;
 }
 
+export function isTaskOverdue(
+  task: Pick<Task, "dueDate" | "endDate" | "status">,
+) {
+  if (task.status === "done") return false;
+  const rawDate = task.dueDate || task.endDate;
+  if (!rawDate) return false;
+  const date = new Date(rawDate);
+  return !Number.isNaN(date.getTime()) && date < new Date();
+}
+
 export function fixedTaskDate(item: IncompleteFixedTask) {
   const rawDate = item.deadline || item.periodEnd || item.nextRunAt || item.createdAt;
   if (!rawDate) return null;
@@ -133,11 +143,12 @@ export function isFixedTaskInPeriod(item: IncompleteFixedTask, period: TaskPerio
 }
 
 export function isFixedTaskOverdue(
-  item: Pick<FixedTask, "endDate" | "status">,
+  item: Pick<FixedTask, "endDate" | "nextRunAt" | "status">,
 ) {
   if (item.status === "done") return false;
-  if (!item.endDate) return false;
-  const endDate = new Date(item.endDate);
+  const rawDate = item.endDate || item.nextRunAt;
+  if (!rawDate) return false;
+  const endDate = new Date(rawDate);
   return !Number.isNaN(endDate.getTime()) && endDate < new Date();
 }
 

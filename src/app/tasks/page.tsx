@@ -25,6 +25,7 @@ import {
 } from "../_components/taskino-context";
 import {
   approvedDurationMinutes,
+  effectiveTimingApprovalStatus,
   formatDurationMinutes,
 } from "../_lib/fixed-task-timing";
 import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
@@ -394,14 +395,21 @@ function TasksPageContent() {
                                   </p>
                                 </div>
                               ) : (
-                                items.map((ft: any, idx: number) => (
+                                items.map((ft: any, idx: number) => {
+                                  const fixedTaskOverdue =
+                                    isFixedTaskOverdue(ft);
+                                  const timingApprovalStatus =
+                                    effectiveTimingApprovalStatus(ft);
+
+                                  return (
                                   <Draggable
                                     key={getId(ft)}
                                     draggableId={getId(ft)}
                                     index={idx}
                                     isDragDisabled={
                                       !canMoveOwnFixedTasks ||
-                                      (ft.status ?? "todo") === "done"
+                                      (ft.status ?? "todo") === "done" ||
+                                      fixedTaskOverdue
                                     }
                                   >
                                     {(dragProvided: any, dragSnapshot: any) => (
@@ -409,7 +417,7 @@ function TasksPageContent() {
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
-                                        className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "hover:-translate-y-0.5 hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                        className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "hover:-translate-y-0.5 hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                         onClick={() => setSelectedFixedTask(ft)}
                                       >
                                         <div className="flex items-center justify-between gap-2">
@@ -417,7 +425,7 @@ function TasksPageContent() {
                                             ثابت ·{" "}
                                             {recurrenceLabel(ft.recurrence)}
                                           </span>
-                                          {isFixedTaskOverdue(ft) ? (
+                                          {fixedTaskOverdue ? (
                                             <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
                                               مهلت گذشته
                                             </span>
@@ -454,10 +462,10 @@ function TasksPageContent() {
                                           </div>
                                         )}
                                         {(ft.status ?? "todo") === "done" && (
-                                          <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-[10px] font-bold ${ft.timingApprovalStatus === "approved" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : ft.timingApprovalStatus === "rejected" ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"}`}>
-                                            {ft.timingApprovalStatus === "approved"
+                                          <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-[10px] font-bold ${timingApprovalStatus === "approved" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : timingApprovalStatus === "rejected" ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"}`}>
+                                            {timingApprovalStatus === "approved"
                                               ? "زمان تأیید شده"
-                                              : ft.timingApprovalStatus === "rejected"
+                                              : timingApprovalStatus === "rejected"
                                                 ? "زمان رد شده"
                                                 : "زمان در انتظار تأیید"}
                                           </span>
@@ -509,7 +517,8 @@ function TasksPageContent() {
                                       </article>
                                     )}
                                   </Draggable>
-                                ))
+                                  );
+                                })
                               )}
                               {dropProvided.placeholder}
                               {allItems.length > 8 && (

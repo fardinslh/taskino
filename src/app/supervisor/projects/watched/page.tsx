@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ClipboardList, RefreshCw, X } from "lucide-react";
+import { ClipboardList, Download, RefreshCw, X } from "lucide-react";
 
-import { getId, type Task } from "@/lib/api";
+import { excelApi, getId, type Task } from "@/lib/api";
 import { TaskDeadlineCountdown } from "../../../_components/task-deadline-countdown";
 import {
+  useFeedbackContext,
   useManagementContext,
   useNavigationContext,
   useSessionContext,
@@ -23,7 +24,8 @@ function SupervisorWatchedProjectsPageContent() {
     useState<TaskStatusFilter>("");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const { activeView } = useNavigationContext();
-  const { isSupervisor } = useSessionContext();
+  const { isSupervisor, token } = useSessionContext();
+  const { setError } = useFeedbackContext();
   const { loadSupervisorData, supervisorTasks } = useManagementContext();
 
   const filteredSupervisorTasks = useMemo(() => {
@@ -86,6 +88,8 @@ function SupervisorWatchedProjectsPageContent() {
         <TaskDetailDialog
           item={selectedTask}
           onClose={() => setSelectedTask(null)}
+          onError={setError}
+          token={token}
         />
       )}
     </section>
@@ -95,13 +99,39 @@ function SupervisorWatchedProjectsPageContent() {
 function TaskDetailDialog({
   item,
   onClose,
+  onError,
+  token,
 }: {
   item: Task;
   onClose: () => void;
+  onError: (message: string) => void;
+  token: string;
 }) {
   const assignee = Array.isArray(item.assignedTo)
     ? item.assignedTo[0]
     : item.assignedTo;
+  const completionExcelFile = item.completionExcelFile ?? item.completionFile;
+  const completionExcelFileId =
+    typeof completionExcelFile === "string"
+      ? completionExcelFile
+      : completionExcelFile
+        ? getId(completionExcelFile)
+        : "";
+  const completionFilename =
+    (completionExcelFile && typeof completionExcelFile === "object"
+      ? completionExcelFile.originalName || completionExcelFile.fileName
+      : undefined) || "completion-file.xlsx";
+
+  function downloadCompletionFile() {
+    if (!completionExcelFileId) return;
+    void excelApi
+      .download(token, completionExcelFileId, completionFilename)
+      .catch((error) => {
+        onError(
+          error instanceof Error ? error.message : "دانلود فایل ناموفق بود",
+        );
+      });
+  }
 
   return (
     <div
@@ -144,6 +174,22 @@ function TaskDetailDialog({
             <p className="mt-2 text-sm leading-6 text-[--text-2]">
               {item.description}
             </p>
+          </div>
+        )}
+
+        {completionExcelFileId && (
+          <div className="border-t border-[--border] px-5 py-4">
+            <p className="mb-2 text-xs font-semibold text-[--text-3]">
+              فایل تکمیل پروژه
+            </p>
+            <button
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.96] dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
+              onClick={downloadCompletionFile}
+              type="button"
+            >
+              <Download size={15} />
+              دانلود فایل تکمیل
+            </button>
           </div>
         )}
       </div>

@@ -4,6 +4,11 @@ export function approvedDurationMinutes(task: FixedTask) {
   return task.approvedDurationInMinutes ?? task.approvedDurationMinutes ?? null;
 }
 
+export function effectiveTimingApprovalStatus(task: FixedTask) {
+  if (approvedDurationMinutes(task) != null) return "approved";
+  return task.timingApprovalStatus;
+}
+
 export function elapsedDurationMinutes(startedAt?: string | null) {
   if (!startedAt) return undefined;
   const start = new Date(startedAt).getTime();
