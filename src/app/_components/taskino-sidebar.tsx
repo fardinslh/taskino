@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   ClipboardList,
   Eye,
   FolderKanban,
@@ -24,6 +25,7 @@ import type {
   User,
 } from "@/lib/api";
 import { type View } from "../_lib/task-constants";
+import { effectiveTimingApprovalStatus } from "../_lib/fixed-task-timing";
 import { initials, roleLabel, userName } from "../_lib/task-helpers";
 import { SideItem } from "./shared";
 
@@ -69,9 +71,14 @@ export function TaskinoSidebar({
   const pendingLeaves = leaveRequests.filter(
     (request) => request.status === "pending",
   ).length;
+  const pendingTimingReports = supervisorFixedTasks.filter(
+    (task) =>
+      (task.status ?? "todo") === "done" &&
+      effectiveTimingApprovalStatus(task) === "pending" &&
+      task.actualDurationMinutes != null,
+  ).length;
 
   void overdueTasks;
-  void supervisorFixedTasks;
   void supervisorStats;
   void supervisorTasks;
 
@@ -121,6 +128,7 @@ export function TaskinoSidebar({
                 active={
                   activeView === "tasks" ||
                   activeView === "supervisor-create-report" ||
+                  activeView === "supervisor-pending-reports" ||
                   activeView === "supervisor-projects"
                 }
                 collapsed={sidebarCollapsed}
@@ -149,6 +157,14 @@ export function TaskinoSidebar({
                   icon={FolderKanban}
                   label="گزارش‌های تحت نظر"
                   onClick={() => handleSelect("supervisor-projects")}
+                />
+                <SideItem
+                  active={activeView === "supervisor-pending-reports"}
+                  collapsed={sidebarCollapsed}
+                  icon={Clock3}
+                  label="گزارش‌های در انتظار"
+                  meta={pendingTimingReports || undefined}
+                  onClick={() => handleSelect("supervisor-pending-reports")}
                 />
               </div>
               <SideItem

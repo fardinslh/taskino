@@ -17,6 +17,7 @@ export type View =
   | "supervisor-projects"
   | "supervisor-team"
   | "supervisor-create-report"
+  | "supervisor-pending-reports"
   | "supervisor-create-project"
   | "supervisor-my-projects"
   | "supervisor-watched-projects";
@@ -35,6 +36,7 @@ export const VIEW_PATHS: Record<View, string> = {
   "supervisor-projects": "/supervisor/projects",
   "supervisor-team": "/supervisor/team",
   "supervisor-create-report": "/supervisor/reports/create",
+  "supervisor-pending-reports": "/supervisor/reports/pending",
   "supervisor-create-project": "/supervisor/projects/create",
   "supervisor-my-projects": "/supervisor/projects/mine",
   "supervisor-watched-projects": "/supervisor/projects/watched",
