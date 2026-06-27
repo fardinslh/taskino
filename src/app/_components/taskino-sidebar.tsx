@@ -25,7 +25,6 @@ import type {
   User,
 } from "@/lib/api";
 import { type View } from "../_lib/task-constants";
-import { effectiveTimingApprovalStatus } from "../_lib/fixed-task-timing";
 import { initials, roleLabel, userName } from "../_lib/task-helpers";
 import { SideItem } from "./shared";
 
@@ -73,8 +72,8 @@ export function TaskinoSidebar({
   ).length;
   const pendingTimingReports = supervisorFixedTasks.filter(
     (task) =>
-      (task.status ?? "todo") === "done" &&
-      effectiveTimingApprovalStatus(task) === "pending" &&
+      task.isActive === true &&
+      task.timingApprovalStatus === "pending" &&
       task.actualDurationMinutes != null,
   ).length;
 

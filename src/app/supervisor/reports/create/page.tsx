@@ -55,7 +55,10 @@ export default function SupervisorCreateReportsPage() {
   const [filterRecurrence, setFilterRecurrence] = useState("");
   const [filterSpecialist, setFilterSpecialist] = useState("");
   const [filterTitle, setFilterTitle] = useState("");
-  const visibleFixedTasks = useMemo(() => fixedTasks, [fixedTasks]);
+  const visibleFixedTasks = useMemo(
+    () => fixedTasks.filter((task) => task.isActive === true),
+    [fixedTasks],
+  );
 
   const filteredFixedTasks = useMemo(() => {
     const specialistQuery = filterSpecialist.trim().toLowerCase();

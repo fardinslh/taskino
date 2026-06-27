@@ -17,7 +17,6 @@ import {
   useSessionContext,
 } from "../../../_components/taskino-context";
 import {
-  effectiveTimingApprovalStatus,
   formatDurationMinutes,
 } from "../../../_lib/fixed-task-timing";
 import {
@@ -85,8 +84,8 @@ export default function SupervisorPendingReportsPage() {
     () =>
       fixedTasks.filter(
         (task) =>
-          (task.status ?? "todo") === "done" &&
-          effectiveTimingApprovalStatus(task) === "pending" &&
+          task.isActive === true &&
+          task.timingApprovalStatus === "pending" &&
           task.actualDurationMinutes != null,
       ),
     [fixedTasks],
