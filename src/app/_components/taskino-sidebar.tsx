@@ -5,7 +5,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   ClipboardList,
   Eye,
   FolderKanban,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 
 import type {
-  FixedTask,
   LeaveRequest,
   SupervisorStats,
   Task,
@@ -42,7 +40,6 @@ type TaskinoSidebarProps = {
   overdueTasks: Task[];
   sidebarCollapsed: boolean;
   statsUsers: number;
-  supervisorFixedTasks: FixedTask[];
   supervisorStats: SupervisorStats | null;
   supervisorTasks: Task[];
   tasks: Task[];
@@ -62,7 +59,6 @@ export function TaskinoSidebar({
   overdueTasks,
   sidebarCollapsed,
   statsUsers,
-  supervisorFixedTasks,
   supervisorStats,
   supervisorTasks,
   tasks,
@@ -70,13 +66,6 @@ export function TaskinoSidebar({
   const pendingLeaves = leaveRequests.filter(
     (request) => request.status === "pending",
   ).length;
-  const pendingTimingReports = supervisorFixedTasks.filter(
-    (task) =>
-      task.isActive === true &&
-      task.timingApprovalStatus === "pending" &&
-      task.actualDurationMinutes != null,
-  ).length;
-
   void overdueTasks;
   void supervisorStats;
   void supervisorTasks;
@@ -127,7 +116,6 @@ export function TaskinoSidebar({
                 active={
                   activeView === "tasks" ||
                   activeView === "supervisor-create-report" ||
-                  activeView === "supervisor-pending-reports" ||
                   activeView === "supervisor-projects"
                 }
                 collapsed={sidebarCollapsed}
@@ -157,20 +145,13 @@ export function TaskinoSidebar({
                   label="گزارش‌های تحت نظر"
                   onClick={() => handleSelect("supervisor-projects")}
                 />
-                <SideItem
-                  active={activeView === "supervisor-pending-reports"}
-                  collapsed={sidebarCollapsed}
-                  icon={Clock3}
-                  label="گزارش‌های در انتظار"
-                  meta={pendingTimingReports || undefined}
-                  onClick={() => handleSelect("supervisor-pending-reports")}
-                />
               </div>
               <SideItem
                 active={
                   activeView === "supervisor-create-project" ||
                   activeView === "supervisor-my-projects" ||
-                  activeView === "supervisor-watched-projects"
+                  activeView === "supervisor-watched-projects" ||
+                  activeView === "manager-extra-projects"
                 }
                 collapsed={sidebarCollapsed}
                 icon={FolderKanban}
@@ -198,6 +179,13 @@ export function TaskinoSidebar({
                   icon={Eye}
                   label="پروژه‌های تحت نظر"
                   onClick={() => handleSelect("supervisor-watched-projects")}
+                />
+                <SideItem
+                  active={activeView === "manager-extra-projects"}
+                  collapsed={sidebarCollapsed}
+                  icon={Layers3}
+                  label="پروژه‌های مازاد"
+                  onClick={() => handleSelect("manager-extra-projects")}
                 />
               </div>
               <SideItem
@@ -245,7 +233,7 @@ export function TaskinoSidebar({
                 active={activeView === "manager-extra-projects"}
                 collapsed={sidebarCollapsed}
                 icon={Layers3}
-                label="پروژه مازاد"
+                label="پروژه‌های مازاد"
                 onClick={() => handleSelect("manager-extra-projects")}
               />
               <SideItem
@@ -297,6 +285,13 @@ export function TaskinoSidebar({
                 label="پروژه‌ها"
                 meta={tasks.filter((task) => task.excelFile).length || undefined}
                 onClick={() => handleSelect("tasks-admin")}
+              />
+              <SideItem
+                active={activeView === "manager-extra-projects"}
+                collapsed={sidebarCollapsed}
+                icon={Layers3}
+                label="پروژه‌های مازاد"
+                onClick={() => handleSelect("manager-extra-projects")}
               />
               <SideItem
                 active={activeView === "leave"}

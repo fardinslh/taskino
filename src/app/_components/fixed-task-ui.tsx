@@ -9,7 +9,6 @@ import TimePicker from "react-multi-date-picker/plugins/time_picker";
 import { Trash2, X } from "lucide-react";
 
 import { getId } from "@/lib/api";
-import { effectiveTimingApprovalStatus } from "../_lib/fixed-task-timing";
 import { recurrenceLabel, userName } from "../_lib/task-helpers";
 import { formatDate } from "../_lib/task-helpers";
 import { Field, Select } from "./shared";
@@ -18,6 +17,7 @@ export type FixedTaskFormValues = {
   title: string;
   recurrence: "daily" | "weekly" | "monthly";
   assignedTo: string;
+  approvedDurationMinutes: number;
   description: string;
 };
 
@@ -43,7 +43,6 @@ export function TemplateRow({
   onToggleActive?: (active: boolean) => void;
 }) {
   const active = task.isActive !== false;
-  const timingApprovalStatus = effectiveTimingApprovalStatus(task);
   return (
     <div
       className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 ${onClick ? "cursor-pointer transition hover:bg-[--surface-2]/60" : ""}`}
@@ -73,15 +72,6 @@ export function TemplateRow({
           <span className="rounded-full bg-[--surface-2] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">
             {recurrenceLabel(task.recurrence ?? "daily")}
           </span>
-          {task.status === "done" && (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${timingApprovalStatus === "approved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400" : timingApprovalStatus === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"}`}>
-              {timingApprovalStatus === "approved"
-                ? "زمان تأیید شده"
-                : timingApprovalStatus === "rejected"
-                  ? "زمان رد شده"
-                  : "زمان در انتظار تأیید"}
-            </span>
-          )}
         </div>
         <p className="mt-0.5 text-xs text-[--text-3]">
           {task.assignedTo ? `مسئول: ${userName(task.assignedTo)}` : ""}
@@ -184,7 +174,7 @@ export function FixedTaskFormPanel({
         {editingFixedTask ? "ویرایش الگو" : "الگوی ثابت جدید"}
       </p>
       <form
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_180px_220px_auto]"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_150px_160px_220px_auto]"
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <Field
@@ -206,6 +196,25 @@ export function FixedTaskFormPanel({
             <option value="weekly">هفتگی</option>
             <option value="monthly">ماهانه</option>
           </select>
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
+            زمان مورد نیاز (دقیقه) *
+          </span>
+          <input
+            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-left text-sm tabular-nums text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+            dir="ltr"
+            min={1}
+            placeholder="مثلاً 90"
+            required
+            step={1}
+            type="number"
+            {...form.register("approvedDurationMinutes", {
+              min: 1,
+              required: true,
+              valueAsNumber: true,
+            })}
+          />
         </label>
         <Select
           label="مسئول * (هم‌حوزه)"

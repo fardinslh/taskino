@@ -1,15 +1,9 @@
 "use client";
 
-import { useState } from "react";
-
 import { CheckCircle2, ChevronLeft, CircleDashed, Repeat, X } from "lucide-react";
 
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
-import {
-  approvedDurationMinutes,
-  effectiveTimingApprovalStatus,
-  formatDurationMinutes,
-} from "../_lib/fixed-task-timing";
+import { formatDurationMinutes } from "../_lib/fixed-task-timing";
 import {
   formatDate,
   isFixedTaskOverdue,
@@ -24,28 +18,19 @@ export function SelectedFixedTaskPanel({
   canChangeStatus,
   canEditTemplate,
   canDeleteTemplate,
-  canReviewTiming,
   onClose,
   onDelete,
   onEdit,
   onStatusChange,
-  onReviewTiming,
   task,
 }: {
   canChangeStatus: boolean;
   canEditTemplate: boolean;
   canDeleteTemplate: boolean;
-  canReviewTiming: boolean;
   onClose: () => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: FixedTask) => void;
   onStatusChange: (taskId: string, status: FixedTaskStatus) => void;
-  onReviewTiming: (
-    taskId: string,
-    status: "approved" | "rejected",
-    approvedDurationMinutes?: number,
-    taskComment?: string,
-  ) => Promise<void>;
   task: FixedTask;
 }) {
   const taskId = getId(task);
@@ -53,25 +38,7 @@ export function SelectedFixedTaskPanel({
     ? task.assignedTo[0]
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
-  const confirmedDuration = approvedDurationMinutes(task);
-  const timingApprovalStatus = effectiveTimingApprovalStatus(task);
   const statusChangeBlocked = isFixedTaskOverdue(task);
-  const [approvedDuration, setApprovedDuration] = useState(
-    String(task.actualDurationMinutes ?? ""),
-  );
-  const [reviewing, setReviewing] = useState(false);
-  const [taskComment, setTaskComment] = useState(task.taskComment ?? "");
-  const timingPending =
-    canReviewTiming &&
-    currentStatus === "done" &&
-    timingApprovalStatus === "pending" &&
-    !!task.actualDurationMinutes;
-  const timingStatusLabel =
-    timingApprovalStatus === "approved"
-      ? "تأیید شده"
-      : timingApprovalStatus === "rejected"
-        ? "رد شده"
-        : "در انتظار بررسی";
 
   return (
     <>
@@ -163,74 +130,12 @@ export function SelectedFixedTaskPanel({
             {task.actualDurationMinutes != null && (
               <MetaRow label="مدت واقعی" value={formatDurationMinutes(task.actualDurationMinutes)} />
             )}
-            {confirmedDuration != null && (
-              <MetaRow label="مدت تأییدشده" value={formatDurationMinutes(confirmedDuration)} />
-            )}
-            {currentStatus === "done" && (
-              <MetaRow label="تأیید زمان‌بندی" value={timingStatusLabel} />
-            )}
           </div>
         </div>
 
         {((canEditTemplate || canDeleteTemplate) ||
-          (canChangeStatus && currentStatus !== "done" && !statusChangeBlocked) || timingPending) && (
+          (canChangeStatus && currentStatus !== "done" && !statusChangeBlocked)) && (
           <div className="border-t border-[--border] p-4 space-y-2">
-            {timingPending && (
-              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-300">بررسی زمان انجام گزارش</p>
-                <label className="mt-2 block text-[11px] text-amber-700 dark:text-amber-400">
-                  مدت تأییدشده (دقیقه)
-                  <input
-                    className="mt-1 h-9 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-[--text] outline-none focus:border-amber-500 dark:border-amber-900 dark:bg-[--surface]"
-                    min={1}
-                    onChange={(event) => setApprovedDuration(event.target.value)}
-                    type="number"
-                    value={approvedDuration}
-                  />
-                </label>
-                <label className="mt-2 block text-[11px] text-amber-700 dark:text-amber-400">
-                  نظر مدیر
-                  <textarea
-                    className="mt-1 min-h-20 w-full resize-none rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-[--text] outline-none focus:border-amber-500 dark:border-amber-900 dark:bg-[--surface]"
-                    onChange={(event) => setTaskComment(event.target.value)}
-                    placeholder="نظر خود را درباره زمان انجام گزارش بنویسید"
-                    value={taskComment}
-                  />
-                </label>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    className="h-9 rounded-lg bg-emerald-600 text-xs font-bold text-white disabled:opacity-50"
-                    disabled={reviewing || !Number(approvedDuration)}
-                    onClick={async () => {
-                      setReviewing(true);
-                      await onReviewTiming(
-                        taskId,
-                        "approved",
-                        Number(approvedDuration),
-                        taskComment,
-                      );
-                      setReviewing(false);
-                    }}
-                    type="button"
-                  >تأیید زمان</button>
-                  <button
-                    className="h-9 rounded-lg border border-red-200 text-xs font-bold text-red-600 disabled:opacity-50 dark:border-red-900"
-                    disabled={reviewing}
-                    onClick={async () => {
-                      setReviewing(true);
-                      await onReviewTiming(
-                        taskId,
-                        "rejected",
-                        undefined,
-                        taskComment,
-                      );
-                      setReviewing(false);
-                    }}
-                    type="button"
-                  >رد زمان</button>
-                </div>
-              </div>
-            )}
             {canChangeStatus && currentStatus !== "done" && !statusChangeBlocked && (
               <button
                 className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] active:scale-[0.98]"

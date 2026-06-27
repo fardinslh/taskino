@@ -23,11 +23,7 @@ import {
   useSessionContext,
   useTaskContext,
 } from "../_components/taskino-context";
-import {
-  approvedDurationMinutes,
-  effectiveTimingApprovalStatus,
-  formatDurationMinutes,
-} from "../_lib/fixed-task-timing";
+import { formatDurationMinutes } from "../_lib/fixed-task-timing";
 import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
 import {
   formatDate,
@@ -398,9 +394,6 @@ function TasksPageContent() {
                                 items.map((ft: any, idx: number) => {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
-                                  const timingApprovalStatus =
-                                    effectiveTimingApprovalStatus(ft);
-
                                   return (
                                   <Draggable
                                     key={getId(ft)}
@@ -453,22 +446,17 @@ function TasksPageContent() {
                                             {ft.description}
                                           </p>
                                         )}
-                                        {approvedDurationMinutes(ft) != null && (
-                                          <div className="mt-3 flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-2 text-xs text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-                                            <span className="font-semibold">مهلت انجام:</span>
+                                        {ft.approvedDurationMinutes != null && (
+                                          <div className="mt-3 flex items-center justify-between rounded-lg bg-sky-50 px-2.5 py-2 text-xs text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+                                            <span className="font-semibold">
+                                              زمان در دسترس:
+                                            </span>
                                             <span className="font-extrabold tabular-nums">
-                                              {formatDurationMinutes(approvedDurationMinutes(ft))}
+                                              {formatDurationMinutes(
+                                                ft.approvedDurationMinutes,
+                                              )}
                                             </span>
                                           </div>
-                                        )}
-                                        {(ft.status ?? "todo") === "done" && (
-                                          <span className={`mt-2 inline-flex rounded-md px-2 py-1 text-[10px] font-bold ${timingApprovalStatus === "approved" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" : timingApprovalStatus === "rejected" ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"}`}>
-                                            {timingApprovalStatus === "approved"
-                                              ? "زمان تأیید شده"
-                                              : timingApprovalStatus === "rejected"
-                                                ? "زمان رد شده"
-                                                : "زمان در انتظار تأیید"}
-                                          </span>
                                         )}
                                         {(ft.status ?? "todo") === "in_progress" && (
                                           <FixedTaskElapsedTimer

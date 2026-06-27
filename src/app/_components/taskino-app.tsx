@@ -67,7 +67,6 @@ export function TaskinoApp({
     showNotifications,
     sidebarCollapsed,
     statsUsers,
-    supervisorFixedTasks,
     supervisorStats,
     supervisorTasks,
     taskQuery,
@@ -142,7 +141,6 @@ export function TaskinoApp({
             overdueTasks={overdueTasks}
             sidebarCollapsed={sidebarCollapsed}
             statsUsers={statsUsers}
-            supervisorFixedTasks={supervisorFixedTasks}
             supervisorStats={supervisorStats}
             supervisorTasks={supervisorTasks}
             tasks={tasks}
@@ -204,7 +202,6 @@ export function TaskinoApp({
             canChangeStatus={isSpecialist || isSupervisor}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
-            canReviewTiming={isSupervisor}
             onClose={() => setSelectedFixedTask(null)}
             onDelete={(taskId) => void controller.deleteFixedTask(taskId)}
             onEdit={(task) => {
@@ -216,15 +213,6 @@ export function TaskinoApp({
             }}
             onStatusChange={async (taskId, status) => {
               const updated = await controller.moveFixedTask(taskId, status);
-              if (updated) setSelectedFixedTask(updated);
-            }}
-            onReviewTiming={async (taskId, status, duration, taskComment) => {
-              const updated = await controller.reviewFixedTaskTiming(
-                taskId,
-                status,
-                duration,
-                taskComment,
-              );
               if (updated) setSelectedFixedTask(updated);
             }}
             task={selectedFixedTask}

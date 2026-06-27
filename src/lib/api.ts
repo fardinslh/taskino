@@ -70,6 +70,7 @@ export type Task = {
   assignedTo?: Array<string | User>;
   projectId?: string | Project;
   status?: string;
+  isExtraTask?: boolean;
   taskComment?: string;
   isPublic?: boolean;
   projectType?: "specialist" | "general";
@@ -87,8 +88,11 @@ export type Task = {
     | { _id?: string; id?: string; fileName?: string; originalName?: string };
   recurrence?: string;
   startDate?: string;
+  startTime?: string;
   dueDate?: string;
   endDate?: string;
+  endTime?: string;
+  doneTime?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -752,6 +756,39 @@ export const taskApi = {
       apiClient.post<Task>("/tasks", toFormData(body, file)),
       "ساخت گزارش ناموفق بود",
     ),
+  createExtra: (
+    token: string,
+    body: {
+      title: string;
+      description?: string;
+      startDate?: string;
+      startTime?: string;
+    },
+  ) =>
+    unwrapAxios(
+      apiClient.post<Task>("/tasks/extra", body),
+      "ساخت پروژه مازاد ناموفق بود",
+    ),
+  extraByWorkField: (token: string, params?: Params) =>
+    unwrapAxios(
+      apiClient.get<{
+        data: Task[];
+        total: number;
+        page: number;
+        limit: number;
+      }>(`/tasks/extra/work-field${qs(params)}`),
+      "دریافت پروژه‌های مازاد حوزه کاری ناموفق بود",
+    ),
+  extraByUser: (token: string, userId: string, params?: Params) =>
+    unwrapAxios(
+      apiClient.get<{
+        data: Task[];
+        total: number;
+        page: number;
+        limit: number;
+      }>(`/tasks/extra/user/${userId}${qs(params)}`),
+      "دریافت پروژه‌های مازاد کاربر ناموفق بود",
+    ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
     unwrapAxios(
       apiClient.patch<Task>(`/tasks/${id}`, body),
@@ -761,7 +798,7 @@ export const taskApi = {
     unwrapAxios(apiClient.delete(`/tasks/${id}`), "حذف گزارش ناموفق بود"),
   updateStatus: (token: string, id: string, status: string) =>
     unwrapAxios(
-      apiClient.patch(`/tasks/${id}/status`, { status }),
+      apiClient.patch<Task>(`/tasks/${id}/status`, { status }),
       "تغییر وضعیت ناموفق بود",
     ),
   uploadCompletionFile: (token: string, id: string, file: File) => {

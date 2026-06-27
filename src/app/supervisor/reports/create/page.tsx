@@ -46,6 +46,7 @@ export default function SupervisorCreateReportsPage() {
       title: "",
       recurrence: "daily",
       assignedTo: "",
+      approvedDurationMinutes: undefined,
       description: "",
     },
   });
@@ -106,6 +107,8 @@ export default function SupervisorCreateReportsPage() {
       title: editingFixedTask?.title ?? "",
       recurrence: editingFixedTask?.recurrence ?? "daily",
       assignedTo: getId(editingFixedTask?.assignedTo),
+      approvedDurationMinutes:
+        editingFixedTask?.approvedDurationMinutes ?? undefined,
       description: editingFixedTask?.description ?? "",
     });
   }, [editingFixedTask, form, showFixedTaskForm]);
@@ -213,6 +216,7 @@ export default function SupervisorCreateReportsPage() {
       assignedTo: values.assignedTo,
       specialistName: specialistName || undefined,
       recurrence: values.recurrence,
+      approvedDurationMinutes: values.approvedDurationMinutes,
       description: values.description?.trim() || undefined,
       isActive: editingFixedTask?.isActive ?? true,
     };

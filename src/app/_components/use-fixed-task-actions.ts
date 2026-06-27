@@ -11,21 +11,18 @@ import {
 import {
   fixedTaskApi,
   getId,
-  managerApi,
   type User,
   type FixedTask,
   type FixedTaskStatus,
 } from "@/lib/api";
-import {
-  approvedDurationMinutes,
-  elapsedDurationMinutes,
-} from "../_lib/fixed-task-timing";
+import { elapsedDurationMinutes } from "../_lib/fixed-task-timing";
 import { isFixedTaskOverdue } from "../_lib/task-helpers";
 
 type FixedTaskFormValues = {
   title: string;
   assignedTo: string;
   recurrence: "daily" | "weekly" | "monthly";
+  approvedDurationMinutes: number;
   description?: string;
 };
 
@@ -36,28 +33,24 @@ type FixedTaskActivationValues = {
 
 type FixedTaskActionsInput = {
   fixedTasks: FixedTask[];
-  isSupervisor: boolean;
   loadData: () => Promise<void>;
   loadManagerAnalytics: () => Promise<void>;
   myId: string;
   users?: User[];
   setError: Dispatch<SetStateAction<string>>;
   setFixedTasks: Dispatch<SetStateAction<FixedTask[]>>;
-  setSupervisorFixedTasks?: Dispatch<SetStateAction<FixedTask[]>>;
   setMessage: Dispatch<SetStateAction<string>>;
   token: string;
 };
 
 export function useFixedTaskActions({
   fixedTasks,
-  isSupervisor,
   loadData,
   loadManagerAnalytics,
   myId,
   users = [],
   setError,
   setFixedTasks,
-  setSupervisorFixedTasks,
   setMessage,
   token,
 }: FixedTaskActionsInput) {
@@ -180,6 +173,7 @@ export function useFixedTaskActions({
       assignedTo: values.assignedTo,
       specialistName,
       recurrence: values.recurrence,
+      approvedDurationMinutes: values.approvedDurationMinutes,
       description: values.description?.trim() || undefined,
       isActive: editingFixedTask?.isActive ?? true,
     };
@@ -236,6 +230,7 @@ export function useFixedTaskActions({
         specialistName:
           fixedTask.specialistName || findSpecialistName(assignedTo),
         recurrence: fixedTask.recurrence,
+        approvedDurationMinutes: fixedTask.approvedDurationMinutes,
         description: fixedTask.description?.trim() || undefined,
         isActive: true,
         startDate: startDate.toISOString(),
@@ -358,12 +353,11 @@ export function useFixedTaskActions({
       current.map((item) => (getId(item) === id ? { ...item, status } : item)),
     );
     try {
-      const confirmedDuration = target ? approvedDurationMinutes(target) : null;
       const statusBody =
         status === "done"
           ? {
               actualDurationMinutes:
-                confirmedDuration ?? elapsedDurationMinutes(target?.startedAt),
+                elapsedDurationMinutes(target?.startedAt),
             }
           : undefined;
       const updated =
@@ -387,38 +381,6 @@ export function useFixedTaskActions({
     }
   }
 
-  async function reviewFixedTaskTiming(
-    id: string,
-    status: "approved" | "rejected",
-    approvedDurationMinutes?: number,
-    taskComment?: string,
-  ) {
-    if (!isSupervisor) {
-      setError("فقط سرپرست می‌تواند زمان گزارش ثابت را بررسی کند.");
-      return;
-    }
-
-    try {
-      const updated = await managerApi.reviewFixedTaskTiming(
-        token,
-        id,
-        status,
-        approvedDurationMinutes,
-        taskComment,
-      );
-      setFixedTasks((current) =>
-        current.map((item) => (getId(item) === id ? updated : item)),
-      );
-      setSupervisorFixedTasks?.((current) =>
-        current.map((item) => (getId(item) === id ? updated : item)),
-      );
-      setMessage(status === "approved" ? "زمان گزارش تأیید شد." : "زمان گزارش رد شد.");
-      return updated;
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "بررسی زمان گزارش ناموفق بود");
-    }
-  }
-
   return {
     activateFixedTask,
     closeFixedTaskForm,
@@ -433,7 +395,6 @@ export function useFixedTaskActions({
     ftRecurrence,
     ftTitle,
     moveFixedTask,
-    reviewFixedTaskTiming,
     onDragEnd,
     openFixedTaskForm,
     saveFixedTask,

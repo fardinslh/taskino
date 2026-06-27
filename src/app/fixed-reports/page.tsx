@@ -44,6 +44,7 @@ function FixedReportsPageContent() {
       title: "",
       recurrence: "daily",
       assignedTo: "",
+      approvedDurationMinutes: undefined,
       description: "",
     },
   });
@@ -79,6 +80,8 @@ function FixedReportsPageContent() {
       title: editingFixedTask?.title ?? "",
       recurrence: editingFixedTask?.recurrence ?? "daily",
       assignedTo: getId(editingFixedTask?.assignedTo),
+      approvedDurationMinutes:
+        editingFixedTask?.approvedDurationMinutes ?? undefined,
       description: editingFixedTask?.description ?? "",
     });
   }, [editingFixedTask, form, showFixedTaskForm]);
