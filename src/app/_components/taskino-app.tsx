@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 import { getId } from "@/lib/api";
 import type { View } from "../_lib/task-constants";
@@ -95,6 +96,7 @@ export function TaskinoApp({
 
   return (
     <TaskinoProvider value={controller}>
+      <MotionConfig reducedMotion="user">
       {!authHydrated || !token ? null : (
       <div className="min-h-screen bg-[--bg] text-[--text]">
         <Toast
@@ -150,7 +152,14 @@ export function TaskinoApp({
             className="min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-3 sm:p-4"
             onClick={() => showNotifications && setShowNotifications(false)}
           >
-            {children}
+            <motion.div
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              initial={{ opacity: 0, scale: 0.992, y: 14 }}
+              key={activeView}
+              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+            >
+              {children}
+            </motion.div>
           </main>
         </div>
 
@@ -177,8 +186,9 @@ export function TaskinoApp({
           />
         )}
 
-        {selectedTask && (
-          <SelectedTaskPanel
+        <AnimatePresence>
+          {selectedTask && (
+            <SelectedTaskPanel
             canClaim={isSpecialist}
             canDownloadCompletionFile={isManager || isSupervisor}
             canEdit={isManager}
@@ -195,10 +205,12 @@ export function TaskinoApp({
             task={selectedTask}
             token={token}
             users={users}
-          />
-        )}
-        {selectedFixedTask && (
-          <SelectedFixedTaskPanel
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {selectedFixedTask && (
+            <SelectedFixedTaskPanel
             canChangeStatus={isSpecialist || isSupervisor}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
@@ -216,10 +228,12 @@ export function TaskinoApp({
               if (updated) setSelectedFixedTask(updated);
             }}
             task={selectedFixedTask}
-          />
-        )}
+            />
+          )}
+        </AnimatePresence>
       </div>
       )}
+      </MotionConfig>
     </TaskinoProvider>
   );
 }

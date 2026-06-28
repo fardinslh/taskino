@@ -15,7 +15,6 @@ import {
 import { getId } from "@/lib/api";
 import { AssigneeStack } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
-import { FixedTaskElapsedTimer } from "../_components/fixed-task-elapsed-timer";
 import {
   useFixedTaskContext,
   useManagementContext,
@@ -457,12 +456,6 @@ function TasksPageContent() {
                                               )}
                                             </span>
                                           </div>
-                                        )}
-                                        {(ft.status ?? "todo") === "in_progress" && (
-                                          <FixedTaskElapsedTimer
-                                            className="mt-3"
-                                            startedAt={ft.startedAt}
-                                          />
                                         )}
                                         <TaskDeadlineCountdown
                                           className="mt-3"

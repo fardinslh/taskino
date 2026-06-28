@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, ChevronLeft, CircleDashed, Repeat, X } from "lucide-react";
+import { motion } from "motion/react";
 
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
 import { formatDurationMinutes } from "../_lib/fixed-task-timing";
@@ -42,11 +43,21 @@ export function SelectedFixedTaskPanel({
 
   return (
     <>
-      <div
+      <motion.div
+        animate={{ opacity: 1 }}
         className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm dark:bg-black/50"
+        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
         onClick={onClose}
+        transition={{ duration: 0.2 }}
       />
-      <div className="fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-[--surface] shadow-2xl">
+      <motion.div
+        animate={{ opacity: 1, x: 0 }}
+        className="fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-[--surface] shadow-2xl"
+        exit={{ opacity: 0, x: "-100%" }}
+        initial={{ opacity: 0, x: "-100%" }}
+        transition={{ type: "spring", duration: 0.36, bounce: 0 }}
+      >
         <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
           <h3 className="font-bold text-[--text]">جزئیات گزارش ثابت</h3>
           <button
@@ -176,7 +187,7 @@ export function SelectedFixedTaskPanel({
             )}
           </div>
         )}
-      </div>
+      </motion.div>
     </>
   );
 }

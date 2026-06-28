@@ -10,6 +10,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { motion } from "motion/react";
 import type { User } from "@/lib/api";
 import { initials, userName } from "../_lib/task-helpers";
 
@@ -84,16 +85,31 @@ export function SideItem({ active, icon: Icon, label, meta, collapsed, onClick }
   active?: boolean; icon: typeof LayoutDashboard; label: string; meta?: number; collapsed?: boolean; onClick?: () => void;
 }) {
   return (
-    <button
-      className={`flex w-full items-center rounded-lg px-2.5 py-2 text-sm font-medium transition-all ${active ? "bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]" : "text-[--text-2] hover:bg-[--surface-2] hover:text-[--text]"} ${collapsed ? "justify-center" : "justify-between"}`}
+    <motion.button
+      className={`relative flex w-full items-center overflow-hidden rounded-lg px-2.5 py-2 text-sm font-medium transition-colors duration-200 ${active ? "bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]" : "text-[--text-2] hover:bg-[--surface-2] hover:text-[--text]"} ${collapsed ? "justify-center" : "justify-between"}`}
       onClick={onClick} type="button"
       title={collapsed ? label : undefined}
+      whileTap={{ scale: 0.96 }}
     >
-      <span className="flex items-center gap-2.5"><Icon size={16} />{!collapsed && label}</span>
-      {!collapsed && meta !== undefined && (
-        <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${active ? "bg-[#1f7a8c]/12 text-[#1f7a8c] dark:text-[#4fc3d5]" : "bg-[--surface-2] text-[--text-3]"}`}>{meta}</span>
+      {active && (
+        <motion.span
+          animate={{ opacity: 1, scaleY: 1 }}
+          className="absolute inset-y-1 right-0 w-0.5 origin-center rounded-full bg-[#1f7a8c] dark:bg-[#4fc3d5]"
+          initial={{ opacity: 0, scaleY: 0.25 }}
+          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+        />
       )}
-    </button>
+      <motion.span
+        animate={{ x: active ? -2 : 0 }}
+        className="relative z-10 flex items-center gap-2.5"
+        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+      >
+        <Icon size={16} />{!collapsed && label}
+      </motion.span>
+      {!collapsed && meta !== undefined && (
+        <span className={`relative z-10 rounded-md px-2 py-0.5 text-[11px] font-semibold ${active ? "bg-[#1f7a8c]/12 text-[#1f7a8c] dark:text-[#4fc3d5]" : "bg-[--surface-2] text-[--text-3]"}`}>{meta}</span>
+      )}
+    </motion.button>
   );
 }
 
@@ -131,13 +147,18 @@ export function Toast({ message, type, onClose }: { message: string; type: "succ
   const ok = type === "success";
   return (
     <div className="fixed left-4 top-4 z-[60] w-[calc(100%-2rem)] max-w-sm" role="status" aria-live="polite">
-      <div className={`flex items-center gap-3 rounded-xl border bg-[--surface] px-4 py-3 shadow-xl ${ok ? "border-emerald-200 dark:border-emerald-900" : "border-red-200 dark:border-red-900"}`}>
+      <motion.div
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className={`flex items-center gap-3 rounded-xl border bg-[--surface] px-4 py-3 shadow-xl ${ok ? "border-emerald-200 dark:border-emerald-900" : "border-red-200 dark:border-red-900"}`}
+        initial={{ opacity: 0, scale: 0.96, y: -16 }}
+        transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+      >
         <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${ok ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400" : "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"}`}>
           {ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
         </div>
         <p className="flex-1 text-sm font-medium text-[--text]">{message}</p>
         <button className="flex h-7 w-7 items-center justify-center rounded-lg text-[--text-3] transition hover:bg-[--surface-2]" onClick={onClose} type="button"><X size={13} /></button>
-      </div>
+      </motion.div>
     </div>
   );
 }
