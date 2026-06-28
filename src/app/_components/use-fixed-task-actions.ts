@@ -16,12 +16,15 @@ import {
   type FixedTaskStatus,
 } from "@/lib/api";
 import { elapsedDurationMinutes } from "../_lib/fixed-task-timing";
+import { buildFixedTaskScheduleConfig } from "../_lib/fixed-task-schedule";
 import { isFixedTaskOverdue } from "../_lib/task-helpers";
 
 type FixedTaskFormValues = {
   title: string;
   assignedTo: string;
   recurrence: "daily" | "weekly" | "monthly";
+  weekdays: number[];
+  monthDays: number[];
   approvedDurationMinutes: number;
   description?: string;
 };
@@ -173,6 +176,11 @@ export function useFixedTaskActions({
       assignedTo: values.assignedTo,
       specialistName,
       recurrence: values.recurrence,
+      scheduleConfig: buildFixedTaskScheduleConfig(
+        values.recurrence,
+        values.weekdays,
+        values.monthDays,
+      ),
       approvedDurationMinutes: values.approvedDurationMinutes,
       description: values.description?.trim() || undefined,
       isActive: editingFixedTask?.isActive ?? true,
@@ -230,6 +238,7 @@ export function useFixedTaskActions({
         specialistName:
           fixedTask.specialistName || findSpecialistName(assignedTo),
         recurrence: fixedTask.recurrence,
+        scheduleConfig: fixedTask.scheduleConfig,
         approvedDurationMinutes: fixedTask.approvedDurationMinutes,
         description: fixedTask.description?.trim() || undefined,
         isActive: true,

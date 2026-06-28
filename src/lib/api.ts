@@ -59,6 +59,10 @@ export type WorkField =
   | "operations";
 export type FixedTaskRecurrence = "daily" | "weekly" | "monthly";
 export type FixedTaskStatus = "todo" | "in_progress" | "done";
+export type FixedTaskScheduleConfig = {
+  weekdays?: number[];
+  monthDays?: number[];
+};
 export type DeadlineStatus = "overdue" | "within_deadline";
 
 export type Task = {
@@ -483,6 +487,7 @@ export type FixedTask = {
   createdBy?: string | User;
   projectId?: string | Project;
   recurrence: FixedTaskRecurrence;
+  scheduleConfig?: FixedTaskScheduleConfig;
   description?: string;
   taskComment?: string | null;
   isActive?: boolean;
@@ -506,6 +511,22 @@ export type FixedTask = {
   sourceRow?: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type FixedTaskPayload = {
+  title: string;
+  assignedTo: string;
+  recurrence: FixedTaskRecurrence;
+  scheduleConfig?: FixedTaskScheduleConfig;
+  specialistName?: string;
+  description?: string;
+  isActive?: boolean;
+  approvedDurationMinutes?: number | null;
+  nextRunAt?: string;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
 };
 
 export type IncompleteFixedTask = FixedTask & {
@@ -1037,7 +1058,7 @@ export const fixedTaskApi = {
     ),
   get: (token: string, id: string) =>
     unwrapAxios(apiClient.get<FixedTask>(`/fixed-tasks/${id}`)),
-  create: (token: string, body: Record<string, unknown>) =>
+  create: (token: string, body: FixedTaskPayload) =>
     unwrapAxios(
       apiClient.post<FixedTask>("/fixed-tasks", body),
       "ساخت گزارش ثابت ناموفق بود",
@@ -1046,7 +1067,7 @@ export const fixedTaskApi = {
     token: string,
     id: string,
     userId: string,
-    body: Record<string, unknown>,
+    body: Partial<FixedTaskPayload>,
   ) =>
     unwrapAxios(
       apiClient.patch<FixedTask>(`/fixed-tasks/${id}${qs({ userId })}`, body),

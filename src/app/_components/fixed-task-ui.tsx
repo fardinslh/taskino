@@ -6,9 +6,15 @@ import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
 import TimePicker from "react-multi-date-picker/plugins/time_picker";
-import { Trash2, X } from "lucide-react";
+import { Clock3, Trash2, X } from "lucide-react";
 
 import { getId } from "@/lib/api";
+import {
+  DEFAULT_DAILY_WEEKDAYS,
+  DEFAULT_MONTH_DAYS,
+  DEFAULT_WEEKLY_WEEKDAYS,
+} from "../_lib/fixed-task-schedule";
+import { formatDurationMinutes } from "../_lib/fixed-task-timing";
 import { recurrenceLabel, userName } from "../_lib/task-helpers";
 import { formatDate } from "../_lib/task-helpers";
 import { Field, Select } from "./shared";
@@ -16,6 +22,8 @@ import { Field, Select } from "./shared";
 export type FixedTaskFormValues = {
   title: string;
   recurrence: "daily" | "weekly" | "monthly";
+  weekdays: number[];
+  monthDays: number[];
   assignedTo: string;
   approvedDurationMinutes: number;
   description: string;
@@ -43,6 +51,9 @@ export function TemplateRow({
   onToggleActive?: (active: boolean) => void;
 }) {
   const active = task.isActive !== false;
+  const requiredDuration = formatDurationMinutes(
+    task.approvedDurationMinutes ?? task.approvedDurationInMinutes,
+  );
   return (
     <div
       className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 ${onClick ? "cursor-pointer transition hover:bg-[--surface-2]/60" : ""}`}
@@ -58,7 +69,7 @@ export function TemplateRow({
       tabIndex={onClick ? 0 : undefined}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold">{task.title}</p>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -71,6 +82,10 @@ export function TemplateRow({
           </span>
           <span className="rounded-full bg-[--surface-2] px-2 py-0.5 text-[10px] font-semibold text-[--text-2]">
             {recurrenceLabel(task.recurrence ?? "daily")}
+          </span>
+          <span className="inline-flex min-h-7 items-center gap-1.5 rounded-lg bg-sky-100 px-2.5 text-[11px] font-bold tabular-nums text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+            <Clock3 aria-hidden="true" size={13} />
+            زمان مورد نیاز: {requiredDuration || "تعیین نشده"}
           </span>
         </div>
         <p className="mt-0.5 text-xs text-[--text-3]">
@@ -168,6 +183,17 @@ export function FixedTaskFormPanel({
   onClose: () => void;
   onSubmit: (values: FixedTaskFormValues) => Promise<void>;
 }) {
+  const recurrence = form.watch("recurrence");
+  const persianWeekdays = [
+    { value: 6, label: "شنبه" },
+    { value: 0, label: "یکشنبه" },
+    { value: 1, label: "دوشنبه" },
+    { value: 2, label: "سه‌شنبه" },
+    { value: 3, label: "چهارشنبه" },
+    { value: 4, label: "پنجشنبه" },
+    { value: 5, label: "جمعه" },
+  ];
+
   return (
     <div className="border-b border-[--border] bg-[--surface-2]/70 p-4">
       <p className="mb-3 text-sm font-bold">
@@ -190,7 +216,20 @@ export function FixedTaskFormPanel({
           </span>
           <select
             className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-            {...form.register("recurrence", { required: true })}
+            {...form.register("recurrence", {
+              required: true,
+              onChange: (event) => {
+                const nextRecurrence = event.target.value;
+                if (nextRecurrence === "daily") {
+                  form.setValue("weekdays", [...DEFAULT_DAILY_WEEKDAYS]);
+                } else if (nextRecurrence === "weekly") {
+                  form.setValue("weekdays", [...DEFAULT_WEEKLY_WEEKDAYS]);
+                } else if (!form.getValues("monthDays")?.length) {
+                  form.setValue("monthDays", [...DEFAULT_MONTH_DAYS]);
+                }
+                form.clearErrors(["weekdays", "monthDays"]);
+              },
+            })}
           >
             <option value="daily">روزانه</option>
             <option value="weekly">هفتگی</option>
@@ -257,6 +296,107 @@ export function FixedTaskFormPanel({
           registration={form.register("description")}
         />
       </div>
+      {(recurrence === "daily" || recurrence === "weekly") && (
+        <div className="mt-3" dir="rtl">
+          <p className="mb-2 text-xs font-semibold text-[--text-2]">
+            روزهای هفته
+          </p>
+          <Controller
+            control={form.control}
+            name="weekdays"
+            rules={{
+              validate: (value) =>
+                form.getValues("recurrence") === "monthly" ||
+                value.length > 0 || "حداقل یک روز هفته را انتخاب کنید.",
+            }}
+            render={({ field }) => (
+              <div className="flex flex-wrap gap-2">
+                {persianWeekdays.map((day) => {
+                  const selected = field.value?.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      aria-pressed={selected}
+                      className={`min-h-10 rounded-lg px-3 text-xs font-semibold transition-colors active:scale-[0.96] ${
+                        selected
+                          ? "bg-[#1f7a8c] text-white"
+                          : "border border-[--border] bg-[--surface] text-[--text-2] hover:bg-[--surface-2]"
+                      }`}
+                      onClick={() =>
+                        field.onChange(
+                          selected
+                            ? field.value.filter((value) => value !== day.value)
+                            : [...(field.value ?? []), day.value],
+                        )
+                      }
+                      type="button"
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          />
+          {form.formState.errors.weekdays?.message && (
+            <p className="mt-2 text-xs font-medium text-red-600">
+              {form.formState.errors.weekdays.message}
+            </p>
+          )}
+        </div>
+      )}
+      {recurrence === "monthly" && (
+        <div className="mt-3" dir="rtl">
+          <p className="mb-2 text-xs font-semibold text-[--text-2]">
+            روزهای ماه در تقویم فارسی
+          </p>
+          <Controller
+            control={form.control}
+            name="monthDays"
+            rules={{
+              validate: (value) =>
+                form.getValues("recurrence") !== "monthly" ||
+                value.length > 0 || "حداقل یک روز ماه را انتخاب کنید.",
+            }}
+            render={({ field }) => (
+              <div className="grid grid-cols-7 gap-2 sm:grid-cols-11">
+                {Array.from({ length: 31 }, (_, index) => index + 1).map(
+                  (day) => {
+                    const selected = field.value?.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        aria-label={`روز ${day.toLocaleString("fa-IR")} ماه`}
+                        aria-pressed={selected}
+                        className={`min-h-10 rounded-lg text-xs font-semibold tabular-nums transition-colors active:scale-[0.96] ${
+                          selected
+                            ? "bg-[#1f7a8c] text-white"
+                            : "border border-[--border] bg-[--surface] text-[--text-2] hover:bg-[--surface-2]"
+                        }`}
+                        onClick={() =>
+                          field.onChange(
+                            selected
+                              ? field.value.filter((value) => value !== day)
+                              : [...(field.value ?? []), day],
+                          )
+                        }
+                        type="button"
+                      >
+                        {day.toLocaleString("fa-IR")}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            )}
+          />
+          {form.formState.errors.monthDays?.message && (
+            <p className="mt-2 text-xs font-medium text-red-600">
+              {form.formState.errors.monthDays.message}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

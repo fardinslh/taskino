@@ -17,6 +17,7 @@ import {
   useNavigationContext,
   useSessionContext,
 } from "../_components/taskino-context";
+import { getFixedTaskScheduleValues } from "../_lib/fixed-task-schedule";
 import { userName } from "../_lib/task-helpers";
 
 export default function FixedReportsPage() {
@@ -43,6 +44,8 @@ function FixedReportsPageContent() {
     defaultValues: {
       title: "",
       recurrence: "daily",
+      weekdays: [6, 0, 1, 2, 3, 4],
+      monthDays: [1],
       assignedTo: "",
       approvedDurationMinutes: undefined,
       description: "",
@@ -76,9 +79,15 @@ function FixedReportsPageContent() {
 
   useEffect(() => {
     if (!showFixedTaskForm) return;
+    const recurrence = editingFixedTask?.recurrence ?? "daily";
+    const schedule = getFixedTaskScheduleValues(
+      recurrence,
+      editingFixedTask?.scheduleConfig,
+    );
     form.reset({
       title: editingFixedTask?.title ?? "",
-      recurrence: editingFixedTask?.recurrence ?? "daily",
+      recurrence,
+      ...schedule,
       assignedTo: getId(editingFixedTask?.assignedTo),
       approvedDurationMinutes:
         editingFixedTask?.approvedDurationMinutes ?? undefined,

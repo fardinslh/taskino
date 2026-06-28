@@ -24,6 +24,10 @@ import {
   useNavigationContext,
   useSessionContext,
 } from "../../../_components/taskino-context";
+import {
+  buildFixedTaskScheduleConfig,
+  getFixedTaskScheduleValues,
+} from "../../../_lib/fixed-task-schedule";
 
 export default function SupervisorCreateReportsPage() {
   const { activeView } = useNavigationContext();
@@ -45,6 +49,8 @@ export default function SupervisorCreateReportsPage() {
     defaultValues: {
       title: "",
       recurrence: "daily",
+      weekdays: [6, 0, 1, 2, 3, 4],
+      monthDays: [1],
       assignedTo: "",
       approvedDurationMinutes: undefined,
       description: "",
@@ -103,9 +109,15 @@ export default function SupervisorCreateReportsPage() {
 
   useEffect(() => {
     if (!showFixedTaskForm) return;
+    const recurrence = editingFixedTask?.recurrence ?? "daily";
+    const schedule = getFixedTaskScheduleValues(
+      recurrence,
+      editingFixedTask?.scheduleConfig,
+    );
     form.reset({
       title: editingFixedTask?.title ?? "",
-      recurrence: editingFixedTask?.recurrence ?? "daily",
+      recurrence,
+      ...schedule,
       assignedTo: getId(editingFixedTask?.assignedTo),
       approvedDurationMinutes:
         editingFixedTask?.approvedDurationMinutes ?? undefined,
@@ -216,6 +228,11 @@ export default function SupervisorCreateReportsPage() {
       assignedTo: values.assignedTo,
       specialistName: specialistName || undefined,
       recurrence: values.recurrence,
+      scheduleConfig: buildFixedTaskScheduleConfig(
+        values.recurrence,
+        values.weekdays,
+        values.monthDays,
+      ),
       approvedDurationMinutes: values.approvedDurationMinutes,
       description: values.description?.trim() || undefined,
       isActive: editingFixedTask?.isActive ?? true,
