@@ -59,6 +59,7 @@ export type WorkField =
   | "operations";
 export type FixedTaskRecurrence = "daily" | "weekly" | "monthly";
 export type FixedTaskStatus = "todo" | "in_progress" | "done";
+export type ExtraTaskApprovalStatus = "pending" | "approved" | "rejected";
 export type FixedTaskScheduleConfig = {
   weekdays?: number[];
   monthDays?: number[];
@@ -75,6 +76,9 @@ export type Task = {
   projectId?: string | Project;
   status?: string;
   isExtraTask?: boolean;
+  extraTaskApprovalStatus?: ExtraTaskApprovalStatus;
+  extraTaskApprovedBy?: string | User | null;
+  extraTaskApprovedAt?: string | null;
   taskComment?: string;
   isPublic?: boolean;
   projectType?: "specialist" | "general";
@@ -513,6 +517,13 @@ export type FixedTask = {
   updatedAt?: string;
 };
 
+export type PaginatedTasks = {
+  data: Task[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 export type FixedTaskPayload = {
   title: string;
   assignedTo: string;
@@ -792,22 +803,14 @@ export const taskApi = {
     ),
   extraByWorkField: (token: string, params?: Params) =>
     unwrapAxios(
-      apiClient.get<{
-        data: Task[];
-        total: number;
-        page: number;
-        limit: number;
-      }>(`/tasks/extra/work-field${qs(params)}`),
+      apiClient.get<PaginatedTasks>(`/tasks/extra/work-field${qs(params)}`),
       "دریافت پروژه‌های مازاد حوزه کاری ناموفق بود",
     ),
   extraByUser: (token: string, userId: string, params?: Params) =>
     unwrapAxios(
-      apiClient.get<{
-        data: Task[];
-        total: number;
-        page: number;
-        limit: number;
-      }>(`/tasks/extra/user/${userId}${qs(params)}`),
+      apiClient.get<PaginatedTasks>(
+        `/tasks/extra/user/${userId}${qs(params)}`,
+      ),
       "دریافت پروژه‌های مازاد کاربر ناموفق بود",
     ),
   update: (token: string, id: string, body: Record<string, unknown>) =>
@@ -875,6 +878,11 @@ export const managerApi = {
     unwrapAxios(
       apiClient.patch<User>(`/manager/users/${userId}/score`, { score }),
       "تغییر امتیاز متخصص ناموفق بود",
+    ),
+  extraTasks: (token: string, params?: Params) =>
+    unwrapAxios(
+      apiClient.get<PaginatedTasks>(`/manager/extra-tasks${qs(params)}`),
+      "دریافت همه پروژه‌های مازاد ناموفق بود",
     ),
   reviewFixedTaskTiming: (
     token: string,
@@ -991,6 +999,17 @@ export const supervisorApi = {
   workFieldSpecialists: (token: string) =>
     unwrapAxios(
       apiClient.get<ListResponse<User>>("/supervisor/work-field-specialists"),
+    ),
+  reviewExtraTask: (
+    token: string,
+    id: string,
+    status: Exclude<ExtraTaskApprovalStatus, "pending">,
+  ) =>
+    unwrapAxios(
+      apiClient.patch<Task>(`/supervisor/extra-tasks/${id}/approval`, {
+        status,
+      }),
+      "بررسی پروژه مازاد ناموفق بود",
     ),
   fixedTasks: (token: string, params?: BoolParams) =>
     unwrapAxios(

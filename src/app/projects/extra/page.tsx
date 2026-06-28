@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
@@ -19,13 +19,14 @@ import {
 
 import {
   getId,
+  managerApi,
+  supervisorApi,
   taskApi,
+  type ExtraTaskApprovalStatus,
   type Task,
-  type User,
 } from "@/lib/api";
 import {
   useFeedbackContext,
-  useManagementContext,
   useNavigationContext,
   useSessionContext,
 } from "../../_components/taskino-context";
@@ -35,56 +36,20 @@ const PAGE_SIZE = 10;
 
 export default function ExtraProjectsPage() {
   const { activeView } = useNavigationContext();
-  const { currentUser, isManager, isSpecialist, isSupervisor, myId, token } =
+  const { isManager, isSpecialist, isSupervisor, myId, token } =
     useSessionContext();
   const { setError, setMessage } = useFeedbackContext();
-  const { supervisorMembers, users } = useManagementContext();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
+  const [reviewingId, setReviewingId] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
-
-  const canReviewWorkField = isManager || isSupervisor;
-
-  const filterUsers = useMemo(() => {
-    const candidates: User[] = [
-      ...users,
-      ...supervisorMembers.map((member) => ({
-        ...member,
-        roles: member.role,
-      })),
-      ...tasks.flatMap((task) =>
-        (task.assignedTo ?? []).filter(
-          (assignee): assignee is User => typeof assignee !== "string",
-        ),
-      ),
-    ];
-    const uniqueUsers = new Map<string, User>();
-
-    candidates.forEach((user) => {
-      const id = getId(user);
-      if (!id || user.roles === "manager") return;
-      if (
-        currentUser?.workField &&
-        user.workField &&
-        user.workField !== currentUser.workField
-      ) {
-        return;
-      }
-      uniqueUsers.set(id, user);
-    });
-
-    return Array.from(uniqueUsers.values()).sort((a, b) =>
-      userName(a).localeCompare(userName(b), "fa"),
-    );
-  }, [currentUser, supervisorMembers, tasks, users]);
 
   const loadExtraTasks = useCallback(async () => {
     if (!token || !myId) return;
@@ -98,17 +63,18 @@ export default function ExtraProjectsPage() {
         });
         setTasks(response.data ?? []);
         setTotal(response.total ?? 0);
-      } else if (canReviewWorkField) {
-        const response = selectedUserId
-          ? await taskApi.extraByUser(token, selectedUserId, {
-              page,
-              limit: PAGE_SIZE,
-            })
-          : await taskApi.extraByWorkField(token, {
-              page,
-              limit: PAGE_SIZE,
-            });
-
+      } else if (isSupervisor) {
+        const response = await taskApi.extraByWorkField(token, {
+          page,
+          limit: PAGE_SIZE,
+        });
+        setTasks(response.data ?? []);
+        setTotal(response.total ?? 0);
+      } else if (isManager) {
+        const response = await managerApi.extraTasks(token, {
+          page,
+          limit: PAGE_SIZE,
+        });
         setTasks(response.data ?? []);
         setTotal(response.total ?? 0);
       }
@@ -124,11 +90,11 @@ export default function ExtraProjectsPage() {
       setLoading(false);
     }
   }, [
-    canReviewWorkField,
+    isManager,
     isSpecialist,
+    isSupervisor,
     myId,
     page,
-    selectedUserId,
     setError,
     token,
   ]);
@@ -212,9 +178,36 @@ export default function ExtraProjectsPage() {
     }
   }
 
+  async function reviewExtraTask(
+    task: Task,
+    status: Exclude<ExtraTaskApprovalStatus, "pending">,
+  ) {
+    if (!token || !isSupervisor) return;
+
+    const id = getId(task);
+    setReviewingId(id);
+    try {
+      const updated = await supervisorApi.reviewExtraTask(token, id, status);
+      setTasks((current) =>
+        current.map((item) => (getId(item) === id ? updated : item)),
+      );
+      setMessage(
+        status === "approved"
+          ? "پروژه مازاد تایید شد."
+          : "پروژه مازاد رد شد.",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "بررسی پروژه مازاد ناموفق بود",
+      );
+    } finally {
+      setReviewingId("");
+    }
+  }
+
   if (
     activeView !== "manager-extra-projects" ||
-    (!isSpecialist && !canReviewWorkField)
+    (!isSpecialist && !isSupervisor && !isManager)
   ) {
     return null;
   }
@@ -233,8 +226,10 @@ export default function ExtraProjectsPage() {
               <h1 className="font-bold text-[--text]">پروژه‌های مازاد</h1>
               <p className="mt-0.5 text-xs text-[--text-3]">
                 {isSpecialist
-                  ? "پروژه‌های مازاد خود را ثبت و پیگیری کنید"
-                  : "پروژه‌های مازاد کارشناسان حوزه کاری شما"}
+                  ? "پروژه‌های خود را ثبت کنید و وضعیت تایید آن‌ها را ببینید"
+                  : isSupervisor
+                    ? "پروژه‌های مازاد کارشناسان حوزه کاری خود را بررسی کنید"
+                    : "همه پروژه‌های مازاد و وضعیت تایید آن‌ها"}
               </p>
             </div>
           </div>
@@ -334,31 +329,6 @@ export default function ExtraProjectsPage() {
           </form>
         )}
 
-        {canReviewWorkField && (
-          <div className="border-b border-[--border] bg-[--surface-2]/40 px-5 py-4">
-            <label className="block max-w-sm">
-              <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-                فیلتر بر اساس کارشناس
-              </span>
-              <select
-                className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm outline-none transition-colors focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15"
-                onChange={(event) => {
-                  setSelectedUserId(event.target.value);
-                  setPage(1);
-                }}
-                value={selectedUserId}
-              >
-                <option value="">همه کارشناسان حوزه کاری</option>
-                {filterUsers.map((user) => (
-                  <option key={getId(user)} value={getId(user)}>
-                    {userName(user)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex min-h-64 items-center justify-center text-violet-600">
             <LoaderCircle className="animate-spin" size={30} />
@@ -374,6 +344,8 @@ export default function ExtraProjectsPage() {
           <div className="grid gap-3 p-4 lg:grid-cols-2">
             {tasks.map((task) => {
               const assignee = task.assignedTo?.[0];
+              const approvalStatus =
+                task.extraTaskApprovalStatus ?? "pending";
               const nextLabel =
                 task.status === "todo"
                   ? "شروع پروژه"
@@ -397,17 +369,26 @@ export default function ExtraProjectsPage() {
                         </p>
                       )}
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                        task.status === "done"
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                          : task.status === "in_progress"
-                            ? "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
-                            : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
-                      }`}
-                    >
-                      {statusLabel(task.status)}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                          approvalStatus === "approved"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            : approvalStatus === "rejected"
+                              ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                        }`}
+                      >
+                        {approvalStatus === "approved"
+                          ? "تاییدشده"
+                          : approvalStatus === "rejected"
+                            ? "ردشده"
+                            : "در انتظار تایید"}
+                      </span>
+                      <span className="rounded-full bg-[--surface-2] px-2.5 py-1 text-[10px] font-semibold text-[--text-2]">
+                        {statusLabel(task.status)}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[--text-3]">
@@ -431,7 +412,30 @@ export default function ExtraProjectsPage() {
                     )}
                   </div>
 
-                  {isSpecialist && nextLabel && (
+                  {isSupervisor && approvalStatus === "pending" && (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        className="h-10 rounded-lg border border-red-200 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950/40"
+                        disabled={reviewingId === getId(task)}
+                        onClick={() => void reviewExtraTask(task, "rejected")}
+                        type="button"
+                      >
+                        رد
+                      </button>
+                      <button
+                        className="h-10 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                        disabled={reviewingId === getId(task)}
+                        onClick={() => void reviewExtraTask(task, "approved")}
+                        type="button"
+                      >
+                        تایید
+                      </button>
+                    </div>
+                  )}
+
+                  {isSpecialist &&
+                    approvalStatus === "approved" &&
+                    nextLabel && (
                     <button
                       className="mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-semibold text-white transition-transform active:scale-[0.96] disabled:opacity-50"
                       disabled={updatingId === getId(task)}
@@ -442,6 +446,19 @@ export default function ExtraProjectsPage() {
                         ? "در حال بروزرسانی..."
                         : nextLabel}
                     </button>
+                  )}
+                  {isSpecialist && approvalStatus !== "approved" && (
+                    <p
+                      className={`mt-4 rounded-lg px-3 py-2 text-center text-xs font-semibold ${
+                        approvalStatus === "rejected"
+                          ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
+                          : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                      }`}
+                    >
+                      {approvalStatus === "rejected"
+                        ? "این پروژه توسط سرپرست رد شده است."
+                        : "پس از تایید سرپرست امکان شروع پروژه فعال می‌شود."}
+                    </p>
                   )}
                 </article>
               );
