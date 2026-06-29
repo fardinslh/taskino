@@ -21,7 +21,7 @@ const itemVariants: Variants = {
     y: 26,
   },
   visible: {
-    filter: "blur(0px)",
+    filter: "none",
     opacity: 1,
     scale: 1,
     transition: {

@@ -57,6 +57,14 @@ summary,
   cursor: pointer;
 }
 
+.rmdp-container {
+  z-index: 60;
+}
+
+.rmdp-calendar-container {
+  z-index: 70 !important;
+}
+
 button:disabled,
 select:disabled,
 [role="button"][aria-disabled="true"] {

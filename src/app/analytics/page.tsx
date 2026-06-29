@@ -275,7 +275,7 @@ export default function AnalyticsPage() {
   if (!isManager) return null;
 
   return (
-    <LandingPageEntrance className="space-y-5 pb-8">
+    <LandingPageEntrance className="space-y-5 pb-8 [&>div:nth-child(2)]:relative [&>div:nth-child(2)]:z-30">
       <ManagerSummaryBanner
         activeUsers={managerStats?.activeUsers ?? users.length}
         firstName={userName(currentUser ?? undefined).split(" ")[0]}
