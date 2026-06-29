@@ -17,6 +17,7 @@ import {
   type WorkField,
 } from "@/lib/api";
 import { LeaveRequestForm } from "../_components/leave-request-form";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { Field, Select } from "../_components/shared";
 import { WORK_FIELDS } from "../_lib/task-constants";
 import {
@@ -139,7 +140,7 @@ function TeamPageContent() {
   if (activeView !== "team") return null;
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-bold">اعضای تیم</h2>
@@ -256,6 +257,6 @@ function TeamPageContent() {
           </div>
         </div>
       )}
-    </section>
+    </LandingPageEntrance>
   );
 }

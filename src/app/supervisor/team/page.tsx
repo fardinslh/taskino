@@ -2,6 +2,7 @@
 
 import { Award, RefreshCw, UsersRound } from "lucide-react";
 
+import { LandingPageEntrance } from "../../_components/landing-page-entrance";
 import {
   useManagementContext,
   useNavigationContext,
@@ -20,7 +21,7 @@ function SupervisorTeamPageContent() {
   return (
     <>
 {isSupervisor && activeView === "supervisor-team" && (
-            <section className="space-y-4">
+            <LandingPageEntrance className="space-y-4">
               <div className="overflow-hidden rounded-2xl border border-violet-200 dark:border-violet-900 bg-[--surface]">
                 <div className="flex items-center justify-between gap-3 border-b border-violet-100 dark:border-violet-900/50 bg-gradient-to-l from-violet-50 to-white dark:from-violet-950/30 dark:to-transparent px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -81,7 +82,7 @@ function SupervisorTeamPageContent() {
                   </div>
                 )}
               </div>
-            </section>
+            </LandingPageEntrance>
           )}
 
           {/* ─── Manager Analytics ──────────────────────────────────────────────── */}

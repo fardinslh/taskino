@@ -17,6 +17,7 @@ import {
   TemplateRow,
   type FixedTaskFormValues,
 } from "../../../_components/fixed-task-ui";
+import { LandingPageEntrance } from "../../../_components/landing-page-entrance";
 import {
   useFeedbackContext,
   useFixedTaskContext,
@@ -268,7 +269,7 @@ export default function SupervisorCreateReportsPage() {
   if (!isSupervisor || activeView !== "supervisor-create-report") return null;
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
         <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
           <div className="flex items-center gap-3">
@@ -368,6 +369,6 @@ export default function SupervisorCreateReportsPage() {
           )}
         </div>
       </div>
-    </section>
+    </LandingPageEntrance>
   );
 }

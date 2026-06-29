@@ -11,6 +11,7 @@ import {
   TemplateRow,
   type FixedTaskFormValues,
 } from "../_components/fixed-task-ui";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import {
   useFixedTaskContext,
   useManagementContext,
@@ -104,7 +105,7 @@ function FixedReportsPageContent() {
   if (!isManager || activeView !== "fixed-reports") return null;
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
         <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
           <div className="flex items-center gap-3">
@@ -204,6 +205,6 @@ function FixedReportsPageContent() {
           )}
         </div>
       </div>
-    </section>
+    </LandingPageEntrance>
   );
 }

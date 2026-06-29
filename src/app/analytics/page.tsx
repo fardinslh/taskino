@@ -1,12 +1,23 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
+import { AnimatePresence, motion } from "motion/react";
 import {
+  AlertTriangle,
+  CalendarDays,
+  ChevronDown,
   CheckCircle2,
   Clock3,
+  FileSpreadsheet,
   FileText,
   FolderKanban,
   Loader2,
@@ -19,17 +30,24 @@ import {
 import {
   getId,
   managerApi,
+  normalizeList,
   type DailyDurationBalance,
-  type DailyDurationEntry,
+  type FixedTask,
+  type Task,
   type WorkStatusCounts,
-  type WorkStatusSummary,
   type WorkStatusSummaryUser,
 } from "@/lib/api";
 import {
+  useFeedbackContext,
   useManagementContext,
   useSessionContext,
 } from "../_components/taskino-context";
-import { userName } from "../_lib/task-helpers";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
+import {
+  formatDate,
+  recurrenceLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 const emptyCounts: WorkStatusCounts = {
   done: 0,
@@ -48,6 +66,14 @@ const statusRows = [
 
 type WorkTypeFilter = "all" | "projects" | "reports";
 type StatusFilter = "all" | (typeof statusRows)[number]["key"];
+type WorkDetailLists<T> = {
+  done: T[];
+  inProgress: T[];
+  overdue: T[];
+  todo: T[];
+};
+type FixedTaskLists = WorkDetailLists<FixedTask>;
+type TaskLists = WorkDetailLists<Task>;
 
 function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -67,35 +93,48 @@ function completionRate(counts: WorkStatusCounts) {
 
 export default function AnalyticsPage() {
   const { currentUser, isManager, token } = useSessionContext();
+  const { loadingData } = useFeedbackContext();
   const { managerStats, users } = useManagementContext();
   const initialRange = currentMonthRange();
   const selectableUsers = useMemo(
     () => users.filter((user) => getId(user) && user.roles !== "manager"),
     [users],
   );
-  const [selectedUserId, setSelectedUserId] = useState("");
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
-  const [summary, setSummary] = useState<WorkStatusSummary | null>(null);
-  const [durationBalance, setDurationBalance] = useState<DailyDurationBalance | null>(null);
+  const [summaries, setSummaries] = useState<WorkStatusSummaryUser[]>([]);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [durationBalances, setDurationBalances] = useState<
+    Record<string, DailyDurationBalance>
+  >({});
+  const [fixedTaskLists, setFixedTaskLists] = useState<
+    Record<string, FixedTaskLists>
+  >({});
+  const [taskLists, setTaskLists] = useState<Record<string, TaskLists>>({});
+  const [durationLoadingUserId, setDurationLoadingUserId] = useState<string | null>(
+    null,
+  );
+  const [detailsLoadingUserId, setDetailsLoadingUserId] = useState<string | null>(
+    null,
+  );
+  const [taskDetailsLoadingUserId, setTaskDetailsLoadingUserId] = useState<
+    string | null
+  >(null);
   const [workTypeFilter, setWorkTypeFilter] = useState<WorkTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(false);
+  const [hasLoadedSummaries, setHasLoadedSummaries] = useState(false);
   const [error, setError] = useState("");
+  const showInitialSkeleton =
+    summaries.length === 0 &&
+    !hasLoadedSummaries &&
+    (loadingData || loading || selectableUsers.length > 0);
+  const skeletonCount = selectableUsers.length
+    ? Math.min(Math.max(selectableUsers.length, 1), 4)
+    : 3;
 
-  const effectiveUserId = selectedUserId;
-  const summaryUser =
-    summary?.users.find((user) => user.userId === effectiveUserId) ??
-    summary?.users[0];
-  const projectCounts = summaryUser?.tasks ?? emptyCounts;
-  const reportCounts = summaryUser?.fixedTasks ?? emptyCounts;
-  const selectedStatus = statusRows.find((status) => status.key === statusFilter);
-  const showProjects = workTypeFilter === "all" || workTypeFilter === "projects";
-  const showReports = workTypeFilter === "all" || workTypeFilter === "reports";
-
-  async function loadSummary(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!effectiveUserId || !from || !to) return;
+  async function fetchSummaries() {
+    if (!from || !to || selectableUsers.length === 0) return;
     if (from > to) {
       setError("تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
       return;
@@ -104,27 +143,139 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError("");
     try {
-      const [summaryData, balanceData] = await Promise.all([
-        managerApi.workStatusSummary(token, { from, to, userId: effectiveUserId }),
-        managerApi.dailyDurationBalance(token, { from, to, userId: effectiveUserId }),
-      ]);
-      setSummary(summaryData);
-      setDurationBalance(balanceData);
+      const results = await Promise.all(
+        selectableUsers.map((user) =>
+          managerApi.workStatusSummary(token, {
+            from,
+            to,
+            userId: getId(user),
+          }),
+        ),
+      );
+      setSummaries(
+        results.flatMap((result) => result.users).filter((user) => user.userId),
+      );
+      setExpandedUserId(null);
+      setDurationBalances({});
+      setFixedTaskLists({});
+      setTaskLists({});
     } catch (err) {
-      setSummary(null);
-      setDurationBalance(null);
+      setSummaries([]);
       setError(
         err instanceof Error ? err.message : "دریافت گزارش عملکرد ناموفق بود.",
       );
     } finally {
+      setHasLoadedSummaries(true);
       setLoading(false);
     }
   }
 
+  async function loadSummary(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await fetchSummaries();
+  }
+
+  async function toggleUser(userId: string) {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(userId);
+    const needsDuration = !durationBalances[userId];
+    const needsDetails = !fixedTaskLists[userId];
+    const needsTaskDetails = !taskLists[userId];
+    if (!needsDuration && !needsDetails && !needsTaskDetails) return;
+
+    if (needsDuration) setDurationLoadingUserId(userId);
+    if (needsDetails) setDetailsLoadingUserId(userId);
+    if (needsTaskDetails) setTaskDetailsLoadingUserId(userId);
+
+    const [durationResult, detailsResult, taskDetailsResult] =
+      await Promise.allSettled([
+      needsDuration
+        ? managerApi.dailyDurationBalance(token, { from, to, userId })
+        : Promise.resolve(null),
+      needsDetails
+        ? Promise.all([
+            managerApi.overdueFixedTasks(token, { from, to, userId }),
+            managerApi.doneFixedTasks(token, { from, to, userId }),
+            managerApi.inProgressFixedTasks(token, { userId }),
+            managerApi.todoFixedTasks(token, { userId }),
+          ])
+        : Promise.resolve(null),
+      needsTaskDetails
+        ? Promise.all([
+            managerApi.overdueTasks(token, { from, to, userId }),
+            managerApi.doneTasks(token, { from, to, userId }),
+            managerApi.inProgressTasks(token, { from, to, userId }),
+            managerApi.todoTasks(token, { from, to, userId }),
+          ])
+        : Promise.resolve(null),
+      ]);
+
+    if (durationResult.status === "fulfilled" && durationResult.value) {
+      const durationBalance = durationResult.value;
+      setDurationBalances((current) => ({
+        ...current,
+        [userId]: durationBalance,
+      }));
+    }
+    if (detailsResult.status === "fulfilled" && detailsResult.value) {
+      const [overdue, done, inProgress, todo] = detailsResult.value;
+      setFixedTaskLists((current) => ({
+        ...current,
+        [userId]: {
+          done: normalizeList(done),
+          inProgress: normalizeList(inProgress),
+          overdue: normalizeList(overdue),
+          todo: normalizeList(todo),
+        },
+      }));
+    }
+    if (
+      taskDetailsResult.status === "fulfilled" &&
+      taskDetailsResult.value
+    ) {
+      const [overdue, done, inProgress, todo] = taskDetailsResult.value;
+      setTaskLists((current) => ({
+        ...current,
+        [userId]: {
+          done: done.data,
+          inProgress: inProgress.data,
+          overdue: overdue.data,
+          todo: todo.data,
+        },
+      }));
+    }
+
+    const rejectedResult = [
+      durationResult,
+      detailsResult,
+      taskDetailsResult,
+    ].find((result) => result.status === "rejected");
+    if (rejectedResult?.status === "rejected") {
+      setError(
+        rejectedResult.reason instanceof Error
+          ? rejectedResult.reason.message
+          : "دریافت جزئیات عملکرد کاربر ناموفق بود.",
+      );
+    }
+    setDurationLoadingUserId(null);
+    setDetailsLoadingUserId(null);
+    setTaskDetailsLoadingUserId(null);
+  }
+
+  const loadLatestSummaries = useEffectEvent(fetchSummaries);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => void loadLatestSummaries(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [selectableUsers, token]);
+
   if (!isManager) return null;
 
   return (
-    <section dir="rtl" className="space-y-5 pb-8">
+    <LandingPageEntrance className="space-y-5 pb-8">
       <ManagerSummaryBanner
         activeUsers={managerStats?.activeUsers ?? users.length}
         firstName={userName(currentUser ?? undefined).split(" ")[0]}
@@ -140,30 +291,9 @@ export default function AnalyticsPage() {
           </div>
 
           <form
-            className="grid gap-3 lg:grid-cols-[minmax(200px,1.15fr)_minmax(130px,.75fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,.75fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
             onSubmit={loadSummary}
           >
-            <label className="text-xs font-bold text-[--text-2]">
-              کاربر
-              <div className="relative mt-1.5">
-                <UserRound
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[--text-3]"
-                  size={16}
-                />
-                <select
-                  className="h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] pr-10 pl-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  onChange={(event) => setSelectedUserId(event.target.value)}
-                  value={effectiveUserId}
-                >
-                  <option value="">انتخاب کاربر</option>
-                  {selectableUsers.map((user) => (
-                    <option key={getId(user)} value={getId(user)}>
-                      {userName(user)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </label>
             <label className="text-xs font-bold text-[--text-2]">
               نوع
               <select
@@ -210,7 +340,7 @@ export default function AnalyticsPage() {
             />
             <button
               className="flex h-11 min-w-28 items-center justify-center gap-2 self-end rounded-xl bg-[#1f7a8c] px-4 text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/20 transition-transform duration-150 ease-out hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={loading || !effectiveUserId}
+              disabled={loading || selectableUsers.length === 0}
               type="submit"
             >
               {loading ? (
@@ -229,120 +359,765 @@ export default function AnalyticsPage() {
         )}
       </header>
 
-      {summary && effectiveUserId && (
-        <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {statusFilter === "all" ? (
-              <>
-                {showProjects && (
-                  <>
-                    <MetricCard
-                      icon={FolderKanban}
-                      label="کل پروژه‌ها"
-                      value={projectCounts.total}
-                      tone="project"
-                    />
-                    <MetricCard
-                      icon={CheckCircle2}
-                      label="پروژه‌های انجام‌شده"
-                      value={projectCounts.done}
-                      tone="done"
-                    />
-                  </>
-                )}
-                {showReports && (
-                  <>
-                    <MetricCard
-                      icon={FileText}
-                      label="کل گزارش‌ها"
-                      value={reportCounts.total}
-                      tone="report"
-                    />
-                    <MetricCard
-                      icon={Clock3}
-                      label="گزارش‌های در انتظار"
-                      value={reportCounts.todo}
-                      tone="todo"
-                    />
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                {showProjects && selectedStatus && (
-                  <MetricCard
-                    icon={FolderKanban}
-                    label={`پروژه‌های ${selectedStatus.label}`}
-                    value={projectCounts[selectedStatus.key]}
-                    tone="project"
-                  />
-                )}
-                {showReports && selectedStatus && (
-                  <MetricCard
-                    icon={FileText}
-                    label={`گزارش‌های ${selectedStatus.label}`}
-                    value={reportCounts[selectedStatus.key]}
-                    tone="report"
-                  />
-                )}
-              </>
-            )}
+      <AnimatePresence initial={false} mode="wait">
+        {showInitialSkeleton ? (
+          <motion.div
+            aria-label="در حال دریافت گزارش کاربران"
+            className="space-y-4"
+            exit={{
+              filter: "blur(4px)",
+              opacity: 0,
+              transition: { duration: 0.15, ease: "easeIn" },
+              y: -8,
+            }}
+            key="analytics-loading"
+            role="status"
+          >
+            {Array.from({ length: skeletonCount }, (_, index) => (
+              <AnalyticsCardSkeleton key={index} />
+            ))}
+          </motion.div>
+        ) : summaries.length > 0 ? (
+          <motion.div className="space-y-4" key="analytics-content">
+            {summaries.map((summaryUser, index) => (
+              <UserAnalyticsCard
+                durationBalance={durationBalances[summaryUser.userId]}
+                durationLoading={durationLoadingUserId === summaryUser.userId}
+                entranceIndex={index}
+                expanded={expandedUserId === summaryUser.userId}
+                fixedTaskDetails={fixedTaskLists[summaryUser.userId]}
+                fixedTaskDetailsLoading={
+                  detailsLoadingUserId === summaryUser.userId
+                }
+                key={summaryUser.userId}
+                onToggle={() => void toggleUser(summaryUser.userId)}
+                statusFilter={statusFilter}
+                summary={summaryUser}
+                taskDetails={taskLists[summaryUser.userId]}
+                taskDetailsLoading={
+                  taskDetailsLoadingUserId === summaryUser.userId
+                }
+                workTypeFilter={workTypeFilter}
+              />
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div
+            animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+            className="rounded-2xl bg-[--surface] px-5 py-12 text-center shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+            initial={{ filter: "blur(4px)", opacity: 0, y: 8 }}
+            key="analytics-empty"
+            transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+          >
+            <UserRound className="mx-auto text-[--text-3]" size={30} />
+            <p className="mt-3 text-sm font-bold text-[--text-2]">
+              اطلاعاتی برای نمایش پیدا نشد.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </LandingPageEntrance>
+  );
+}
+
+function AnalyticsCardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="overflow-hidden rounded-3xl bg-[--surface] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.05)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)] sm:p-5"
+    >
+      <div className="flex animate-pulse flex-col gap-5 motion-reduce:animate-none xl:flex-row xl:items-center">
+        <div className="flex items-center gap-3 xl:w-64">
+          <span className="h-12 w-12 shrink-0 rounded-2xl bg-[--border]" />
+          <span className="min-w-0 flex-1 space-y-2">
+            <span className="block h-4 w-28 rounded-full bg-[--border]" />
+            <span className="block h-3 w-40 max-w-full rounded-full bg-[--surface-2]" />
+          </span>
+        </div>
+        <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <span
+              className="h-[58px] rounded-xl bg-[--surface-2]"
+              key={index}
+            />
+          ))}
+        </div>
+        <span className="h-11 w-full shrink-0 rounded-xl bg-[--surface-2] xl:w-32" />
+      </div>
+    </div>
+  );
+}
+
+function UserAnalyticsCard({
+  durationBalance,
+  durationLoading,
+  entranceIndex,
+  expanded,
+  fixedTaskDetails,
+  fixedTaskDetailsLoading,
+  onToggle,
+  statusFilter,
+  summary,
+  taskDetails,
+  taskDetailsLoading,
+  workTypeFilter,
+}: {
+  durationBalance?: DailyDurationBalance;
+  durationLoading: boolean;
+  entranceIndex: number;
+  expanded: boolean;
+  fixedTaskDetails?: FixedTaskLists;
+  fixedTaskDetailsLoading: boolean;
+  onToggle: () => void;
+  statusFilter: StatusFilter;
+  summary: WorkStatusSummaryUser;
+  taskDetails?: TaskLists;
+  taskDetailsLoading: boolean;
+  workTypeFilter: WorkTypeFilter;
+}) {
+  const projectCounts = summary.tasks ?? emptyCounts;
+  const reportCounts = summary.fixedTasks ?? emptyCounts;
+  const showProjects = workTypeFilter === "all" || workTypeFilter === "projects";
+  const showReports = workTypeFilter === "all" || workTypeFilter === "reports";
+  const total = (showProjects ? projectCounts.total : 0) +
+    (showReports ? reportCounts.total : 0);
+  const done = (showProjects ? projectCounts.done : 0) +
+    (showReports ? reportCounts.done : 0);
+  const open = Math.max(total - done, 0);
+  const rate = total ? Math.round((done / total) * 100) : 0;
+  const displayName =
+    [summary.firstName, summary.lastName].filter(Boolean).join(" ") ||
+    summary.email ||
+    "کاربر";
+
+  return (
+    <motion.article
+      animate={{ filter: "blur(0px)", opacity: 1, scale: 1, y: 0 }}
+      initial={{ filter: "blur(8px)", opacity: 0, scale: 0.985, y: 18 }}
+      layout
+      transition={{
+        default: {
+          bounce: 0,
+          delay: Math.min(entranceIndex * 0.07, 0.35),
+          duration: 0.45,
+          type: "spring",
+        },
+        layout: { bounce: 0, duration: 0.3, type: "spring" },
+      }}
+      className="overflow-hidden rounded-3xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.05)] transition-[box-shadow] duration-200 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_14px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+    >
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
+          <div className="flex min-w-0 items-center gap-3 xl:w-64">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1f7a8c]/10 text-[#1f7a8c]">
+              <UserRound size={21} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-black text-[--text]">
+                {displayName}
+              </h2>
+              <p className="mt-0.5 truncate text-xs text-[--text-3]">
+                {summary.email || "عضو تیم"}
+              </p>
+            </div>
           </div>
 
-          {statusFilter === "all" && (
-            <div className="grid gap-5">
-              <Panel icon={Target} title="نرخ تکمیل">
-                <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+            <SummaryMetric label="کل موارد" value={total} />
+            <SummaryMetric label="انجام‌شده" tone="success" value={done} />
+            <SummaryMetric label="باز" tone="warning" value={open} />
+            <SummaryMetric label="نرخ تکمیل" tone="accent" value={`${rate}٪`} />
+          </div>
+
+          <button
+            aria-expanded={expanded}
+            className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1f7a8c]/10 pr-4 pl-3.5 text-sm font-black text-[#1f7a8c] transition-[background-color,transform] duration-150 hover:bg-[#1f7a8c]/15 active:scale-[0.96]"
+            onClick={onToggle}
+            type="button"
+          >
+            {expanded ? "بستن جزئیات" : "جزئیات بیشتر"}
+            <ChevronDown
+              className={`transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
+              size={17}
+            />
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            animate={{ height: "auto", opacity: 1 }}
+            className="overflow-hidden"
+            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+          >
+            <div className="border-t border-[--border] bg-[--surface-2]/50 p-4 sm:p-5">
+              {statusFilter === "all" && (
+                <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {showProjects && (
-                    <DonutChart
-                      color="#1f7a8c"
-                      label="پروژه"
-                      total={projectCounts.total}
-                      value={projectCounts.done}
-                    />
+                    <>
+                      <MetricCard
+                        icon={FolderKanban}
+                        label="کل پروژه‌ها"
+                        tone="project"
+                        value={projectCounts.total}
+                      />
+                      <MetricCard
+                        icon={CheckCircle2}
+                        label="پروژه‌های انجام‌شده"
+                        tone="done"
+                        value={projectCounts.done}
+                      />
+                    </>
                   )}
                   {showReports && (
-                    <DonutChart
-                      color="#7c3aed"
-                      label="گزارش"
-                      total={reportCounts.total}
-                      value={reportCounts.done}
-                    />
+                    <>
+                      <MetricCard
+                        icon={FileText}
+                        label="کل گزارش‌ها"
+                        tone="report"
+                        value={reportCounts.total}
+                      />
+                      <MetricCard
+                        icon={Clock3}
+                        label="گزارش‌های در انتظار"
+                        tone="todo"
+                        value={reportCounts.todo}
+                      />
+                    </>
                   )}
                 </div>
-              </Panel>
+              )}
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                {showProjects && (
+                  <Panel icon={FolderKanban} title="وضعیت پروژه‌ها">
+                    <StatusBreakdown
+                      accent="#1f7a8c"
+                      counts={projectCounts}
+                      statusFilter={statusFilter}
+                    />
+                  </Panel>
+                )}
+                {showReports && (
+                  <Panel icon={FileText} title="وضعیت گزارش‌ها">
+                    <StatusBreakdown
+                      accent="#7c3aed"
+                      counts={reportCounts}
+                      statusFilter={statusFilter}
+                    />
+                  </Panel>
+                )}
+              </div>
+
+              {statusFilter === "all" && (
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  <Panel icon={Target} title="نرخ تکمیل">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {showProjects && (
+                        <DonutChart
+                          color="#1f7a8c"
+                          label="پروژه"
+                          total={projectCounts.total}
+                          value={projectCounts.done}
+                        />
+                      )}
+                      {showReports && (
+                        <DonutChart
+                          color="#7c3aed"
+                          label="گزارش"
+                          total={reportCounts.total}
+                          value={reportCounts.done}
+                        />
+                      )}
+                    </div>
+                  </Panel>
+                  {showReports && (
+                    <Panel icon={Timer} title="تراز زمان گزارش‌های ثابت">
+                      {durationLoading ? (
+                        <div className="flex min-h-32 items-center justify-center">
+                          <Loader2 className="animate-spin text-[#1f7a8c]" size={24} />
+                        </div>
+                      ) : durationBalance ? (
+                        <DurationBalancePanel data={durationBalance} />
+                      ) : (
+                        <p className="py-10 text-center text-sm text-[--text-3]">
+                          اطلاعات زمان در دسترس نیست.
+                        </p>
+                      )}
+                    </Panel>
+                  )}
+                </div>
+              )}
+
+              {showReports && (
+                <div className="mt-4">
+                  <FixedTaskDetailsPanel
+                    data={fixedTaskDetails}
+                    loading={fixedTaskDetailsLoading}
+                    statusFilter={statusFilter}
+                  />
+                </div>
+              )}
+              {showProjects && (
+                <div className="mt-4">
+                  <TaskDetailsPanel
+                    data={taskDetails}
+                    loading={taskDetailsLoading}
+                    statusFilter={statusFilter}
+                  />
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.article>
+  );
+}
+
+function FixedTaskDetailsPanel({
+  data,
+  loading,
+  statusFilter,
+}: {
+  data?: FixedTaskLists;
+  loading: boolean;
+  statusFilter: StatusFilter;
+}) {
+  return (
+    <WorkDetailsPanel
+      data={data}
+      description="یک وضعیت را انتخاب کنید تا فهرست کامل گزارش‌های آن را ببینید."
+      itemLabel="گزارش"
+      loading={loading}
+      renderItem={(task, listKey) => (
+        <FixedTaskDetailRow listKey={listKey} task={task} />
+      )}
+      statusFilter={statusFilter}
+      title="جزئیات گزارش‌های ثابت"
+      titleIcon={FileText}
+      titleTone="bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+    />
+  );
+}
+
+function TaskDetailsPanel({
+  data,
+  loading,
+  statusFilter,
+}: {
+  data?: TaskLists;
+  loading: boolean;
+  statusFilter: StatusFilter;
+}) {
+  return (
+    <WorkDetailsPanel
+      data={data}
+      description="یک وضعیت را انتخاب کنید تا پروژه‌های این کاربر را با جزئیات ببینید."
+      itemLabel="پروژه"
+      loading={loading}
+      renderItem={(task, listKey) => (
+        <TaskDetailRow listKey={listKey} task={task} />
+      )}
+      statusFilter={statusFilter}
+      title="جزئیات پروژه‌ها"
+      titleIcon={FolderKanban}
+      titleTone="bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]"
+    />
+  );
+}
+
+function WorkDetailsPanel<T,>({
+  data,
+  description,
+  itemLabel,
+  loading,
+  renderItem,
+  statusFilter,
+  title,
+  titleIcon: TitleIcon,
+  titleTone,
+}: {
+  data?: WorkDetailLists<T>;
+  description: string;
+  itemLabel: string;
+  loading: boolean;
+  renderItem: (item: T, listKey: keyof WorkDetailLists<T>) => React.ReactNode;
+  statusFilter: StatusFilter;
+  title: string;
+  titleIcon: typeof FileText;
+  titleTone: string;
+}) {
+  const [selectedKey, setSelectedKey] =
+    useState<keyof WorkDetailLists<T>>("overdue");
+  const sections = [
+    {
+      emptySuffix: "معوقی",
+      key: "overdue" as const,
+      label: "معوق",
+      statusKey: "overdueUnfinished" as const,
+      activeTone:
+        "bg-red-50 text-red-800 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.18)] dark:bg-red-950/35 dark:text-red-200",
+      dot: "bg-red-500",
+    },
+    {
+      emptySuffix: "در حال انجامی",
+      key: "inProgress" as const,
+      label: "در حال انجام",
+      statusKey: "inProgress" as const,
+      activeTone:
+        "bg-sky-50 text-sky-800 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.18)] dark:bg-sky-950/35 dark:text-sky-200",
+      dot: "bg-sky-500",
+    },
+    {
+      emptySuffix: "در انتظاری",
+      key: "todo" as const,
+      label: "در انتظار",
+      statusKey: "todo" as const,
+      activeTone:
+        "bg-amber-50 text-amber-800 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)] dark:bg-amber-950/35 dark:text-amber-200",
+      dot: "bg-amber-500",
+    },
+    {
+      emptySuffix: "انجام‌شده‌ای",
+      key: "done" as const,
+      label: "انجام‌شده",
+      statusKey: "done" as const,
+      activeTone:
+        "bg-emerald-50 text-emerald-800 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18)] dark:bg-emerald-950/35 dark:text-emerald-200",
+      dot: "bg-emerald-500",
+    },
+  ];
+  const filteredSection = sections.find(
+    (section) => section.statusKey === statusFilter,
+  );
+  const activeSection =
+    statusFilter === "all"
+      ? (sections.find((section) => section.key === selectedKey) ?? sections[0])
+      : (filteredSection ?? sections[0]);
+  const activeTasks = data?.[activeSection.key] ?? [];
+
+  return (
+    <section className="overflow-hidden rounded-2xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_22px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <header className="flex items-start gap-3 border-b border-[--border] p-5">
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${titleTone}`}
+        >
+          <TitleIcon size={20} />
+        </span>
+        <div>
+          <h3 className="text-base font-black text-[--text]">
+            {title}
+          </h3>
+          <p className="mt-1 text-pretty text-sm leading-6 text-[--text-2]">
+            {description}
+          </p>
+        </div>
+      </header>
+
+      {loading ? (
+        <div
+          aria-label="در حال دریافت جزئیات گزارش‌ها"
+          className="space-y-4 p-5"
+          role="status"
+        >
+          <div className="grid animate-pulse grid-cols-2 gap-3 motion-reduce:animate-none lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div
+                className="h-14 rounded-xl bg-[--surface-2]"
+                key={index}
+              />
+            ))}
+          </div>
+          <div className="animate-pulse space-y-3 rounded-xl bg-[--surface-2] p-3 motion-reduce:animate-none">
+            <div className="h-24 rounded-xl bg-[--surface]" />
+            <div className="h-24 rounded-xl bg-[--surface]" />
+          </div>
+        </div>
+      ) : data ? (
+        <div className="p-5">
+          {statusFilter === "all" && (
+            <div
+              aria-label="فیلتر وضعیت گزارش‌های ثابت"
+              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+              role="group"
+            >
+              {sections.map((section) => {
+                const selected = activeSection.key === section.key;
+                return (
+                  <button
+                    aria-pressed={selected}
+                    className={`flex min-h-14 items-center justify-between gap-3 rounded-xl px-4 text-right transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.96] ${
+                      selected
+                        ? section.activeTone
+                        : "bg-[--surface-2] text-[--text-2] hover:bg-[--border]"
+                    }`}
+                    key={section.key}
+                    onClick={() => setSelectedKey(section.key)}
+                    type="button"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span
+                        className={`h-3 w-3 shrink-0 rounded-full ${section.dot}`}
+                      />
+                      <span className="text-sm font-black">{section.label}</span>
+                    </span>
+                    <span className="text-base font-black tabular-nums">
+                      {data[section.key].length}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          <div className="grid gap-5 xl:grid-cols-2">
-            {showProjects && (
-              <Panel icon={FolderKanban} title="پروژه‌ها">
-                <StatusBreakdown
-                  accent="#1f7a8c"
-                  counts={projectCounts}
-                  statusFilter={statusFilter}
+          <div className={statusFilter === "all" ? "mt-5" : ""}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`h-3 w-3 rounded-full ${activeSection.dot}`}
                 />
-              </Panel>
-            )}
-            {showReports && (
-              <Panel icon={FileText} title="گزارش‌ها">
-                <StatusBreakdown
-                  accent="#7c3aed"
-                  counts={reportCounts}
-                  statusFilter={statusFilter}
-                />
-              </Panel>
-            )}
-          </div>
+                <h4 className="text-base font-black text-[--text]">
+                  گزارش‌های {activeSection.label}
+                </h4>
+              </div>
+              <span className="rounded-lg bg-[--surface-2] px-3 py-1.5 text-sm font-black tabular-nums text-[--text-2]">
+                {activeTasks.length} مورد
+              </span>
+            </div>
 
-          {durationBalance && (
-            <Panel icon={Timer} title="تراز مدت زمان روزانه گزارش‌های ثابت">
-              <DurationBalancePanel data={durationBalance} />
-            </Panel>
-          )}
-        </>
+            <AnimatePresence initial={false} mode="wait">
+              <motion.div
+                animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                className="max-h-[520px] space-y-3 overflow-y-auto rounded-xl bg-[--surface-2] p-3"
+                exit={{
+                  filter: "blur(4px)",
+                  opacity: 0,
+                  transition: { duration: 0.15, ease: "easeIn" },
+                  y: -8,
+                }}
+                initial={{ filter: "blur(4px)", opacity: 0, y: 10 }}
+                key={activeSection.key}
+                transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+              >
+                {activeTasks.length > 0 ? (
+                  activeTasks.map((task, index) => (
+                    <div
+                      key={`${activeSection.key}-${index}`}
+                    >
+                      {renderItem(task, activeSection.key)}
+                    </div>
+                  ))
+                ) : (
+                  <p className="rounded-xl bg-[--surface] px-4 py-12 text-center text-sm font-bold text-[--text-3]">
+                    هیچ {itemLabel} {activeSection.emptySuffix} وجود ندارد.
+                  </p>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      ) : (
+        <p className="px-5 py-12 text-center text-sm font-bold text-[--text-3]">
+          جزئیات گزارش‌ها در دسترس نیست.
+        </p>
       )}
     </section>
+  );
+}
+
+function FixedTaskDetailRow({
+  listKey,
+  task,
+}: {
+  listKey: keyof FixedTaskLists;
+  task: FixedTask;
+}) {
+  const date =
+    listKey === "done"
+      ? task.doneTime || task.updatedAt
+      : task.endDate || task.nextRunAt;
+  const duration = formatTaskDuration(
+    task.actualDurationMinutes ??
+      task.approvedDurationMinutes ??
+      task.approvedDurationInMinutes,
+  );
+  const dateLabel = listKey === "done" ? "تاریخ تکمیل" : "مهلت انجام";
+  const durationLabel =
+    task.actualDurationMinutes != null ? "زمان ثبت‌شده" : "زمان مورد نیاز";
+  const borderTone = {
+    done: "border-r-emerald-500",
+    inProgress: "border-r-sky-500",
+    overdue: "border-r-red-500",
+    todo: "border-r-amber-500",
+  }[listKey];
+
+  return (
+    <article
+      className={`rounded-xl border-r-4 bg-[--surface] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.05),0_2px_6px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.07)] ${borderTone}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h5 className="text-base font-black leading-7 text-[--text]">
+            {task.title}
+          </h5>
+          {(task.description || task.taskComment) && (
+            <p className="mt-1.5 line-clamp-3 text-pretty text-sm leading-6 text-[--text-2]">
+              {task.description || task.taskComment}
+            </p>
+          )}
+        </div>
+        {listKey === "overdue" && (
+          <span className="flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg bg-red-50 px-3 text-xs font-black text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            <AlertTriangle size={14} />
+            مهلت گذشته
+          </span>
+        )}
+      </div>
+
+      <dl className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
+          <dt className="flex items-center gap-1.5 text-xs font-bold text-[--text-3]">
+            <CalendarDays size={14} />
+            {dateLabel}
+          </dt>
+          <dd className="mt-1 text-sm font-black text-[--text]">
+            {date ? formatDate(date) : "ثبت نشده"}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
+          <dt className="flex items-center gap-1.5 text-xs font-bold text-[--text-3]">
+            <Clock3 size={14} />
+            {durationLabel}
+          </dt>
+          <dd className="mt-1 text-sm font-black tabular-nums text-[--text]">
+            {duration || "تعیین نشده"}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
+          <dt className="text-xs font-bold text-[--text-3]">دوره تکرار</dt>
+          <dd className="mt-1 text-sm font-black text-[--text]">
+            {recurrenceLabel(task.recurrence)}
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
+function TaskDetailRow({
+  listKey,
+  task,
+}: {
+  listKey: keyof TaskLists;
+  task: Task;
+}) {
+  const date =
+    listKey === "done"
+      ? task.doneTime || task.updatedAt
+      : task.endDate || task.dueDate;
+  const dateLabel = listKey === "done" ? "تاریخ تکمیل" : "مهلت انجام";
+  const assignees =
+    task.assignedTo?.map((assignee) => userName(assignee)).join("، ") ||
+    "تعیین نشده";
+  const hasExcelFile = Boolean(task.excelFile || task.completionExcelFile);
+  const borderTone = {
+    done: "border-r-emerald-500",
+    inProgress: "border-r-sky-500",
+    overdue: "border-r-red-500",
+    todo: "border-r-amber-500",
+  }[listKey];
+
+  return (
+    <article
+      className={`rounded-xl border-r-4 bg-[--surface] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.05),0_2px_6px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.07)] ${borderTone}`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h5 className="text-base font-black leading-7 text-[--text]">
+            {task.title}
+          </h5>
+          {(task.description || task.taskComment) && (
+            <p className="mt-1.5 line-clamp-3 text-pretty text-sm leading-6 text-[--text-2]">
+              {task.description || task.taskComment}
+            </p>
+          )}
+        </div>
+        {listKey === "overdue" && (
+          <span className="flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg bg-red-50 px-3 text-xs font-black text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            <AlertTriangle size={14} />
+            مهلت گذشته
+          </span>
+        )}
+      </div>
+
+      <dl className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
+          <dt className="flex items-center gap-1.5 text-xs font-bold text-[--text-3]">
+            <CalendarDays size={14} />
+            {dateLabel}
+          </dt>
+          <dd className="mt-1 text-sm font-black text-[--text]">
+            {date ? formatDate(date) : "ثبت نشده"}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
+          <dt className="flex items-center gap-1.5 text-xs font-bold text-[--text-3]">
+            <UserRound size={14} />
+            مسئول پروژه
+          </dt>
+          <dd className="mt-1 truncate text-sm font-black text-[--text]">
+            {assignees}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
+          <dt className="flex items-center gap-1.5 text-xs font-bold text-[--text-3]">
+            <FileSpreadsheet size={14} />
+            فایل اکسل
+          </dt>
+          <dd className="mt-1 text-sm font-black text-[--text]">
+            {hasExcelFile ? "پیوست شده" : "بدون فایل"}
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
+function formatTaskDuration(minutes?: number | null) {
+  if (minutes == null) return "";
+  const total = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(total / 60);
+  const remainingMinutes = total % 60;
+  if (hours && remainingMinutes) return `${hours} ساعت و ${remainingMinutes} دقیقه`;
+  if (hours) return `${hours} ساعت`;
+  return `${remainingMinutes} دقیقه`;
+}
+
+function SummaryMetric({
+  label,
+  tone = "default",
+  value,
+}: {
+  label: string;
+  tone?: "default" | "success" | "warning" | "accent";
+  value: number | string;
+}) {
+  const tones = {
+    accent: "text-[#1f7a8c]",
+    default: "text-[--text]",
+    success: "text-emerald-600 dark:text-emerald-400",
+    warning: "text-amber-600 dark:text-amber-400",
+  };
+
+  return (
+    <div className="rounded-xl bg-[--surface-2] px-3 py-2.5">
+      <p className={`text-xl font-black tabular-nums ${tones[tone]}`}>{value}</p>
+      <p className="mt-0.5 text-[11px] font-bold text-[--text-3]">{label}</p>
+    </div>
   );
 }
 
@@ -640,13 +1415,13 @@ function DurationBalancePanel({ data }: { data: any }) {
         <div className="space-y-2">
           <p className="text-[11px] font-bold text-[--text-3]">جزئیات روزانه</p>
           <div className="space-y-1.5 overflow-x-auto">
-            {entries.map((entry: any) => {
+            {entries.map((entry: any, index: number) => {
               const expectedPct = Math.round(((entry.expectedMinutes || 0) / maxMinutes) * 100);
               const actualPct = Math.round(((entry.actualMinutes || 0) / maxMinutes) * 100);
               const isPositive = (entry.balance || 0) >= 0;
               const dateLabel = entry.date ? entry.date.slice(5) : ""; // MM-DD
               return (
-                <div key={entry.date || Math.random()} className="flex items-center gap-3 text-xs">
+                <div key={entry.date || index} className="flex items-center gap-3 text-xs">
                   <span className="w-12 shrink-0 text-left font-mono text-[--text-3]">
                     {dateLabel}
                   </span>

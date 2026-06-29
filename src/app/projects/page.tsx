@@ -19,6 +19,7 @@ import {
 
 import { getId, normalizeList, supervisorApi } from "@/lib/api";
 import { ProjectBoardSection } from "../_components/project-board-section";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { Field, Select } from "../_components/shared";
 import {
   useFeedbackContext,
@@ -276,7 +277,7 @@ function ProjectsPageContent() {
         (isSupervisor &&
           (activeView === "tasks-admin" ||
             activeView === "supervisor-create-project"))) && (
-        <section className="space-y-4">
+        <LandingPageEntrance className="space-y-4">
           <div className="overflow-hidden rounded-[28px] border border-[--border] bg-[--surface] shadow-sm">
             <div className="border-b border-[--border] bg-[radial-gradient(circle_at_top_left,_rgba(31,122,140,0.16),_transparent_42%),linear-gradient(135deg,rgba(31,122,140,0.10),transparent_50%)] px-5 py-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -821,7 +822,7 @@ function ProjectsPageContent() {
               </div>
             </div>
           </div>
-        </section>
+        </LandingPageEntrance>
       )}
     </>
   );

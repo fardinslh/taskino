@@ -432,6 +432,15 @@ export type WorkStatusSummary = {
   users: WorkStatusSummaryUser[];
 };
 
+export type ManagerTaskListResponse = {
+  from: string;
+  to: string;
+  evaluatedAt?: string;
+  total: number;
+  userId?: string;
+  data: Task[];
+};
+
 export type DailyDurationEntry = {
   date: string;
   expectedMinutes: number;
@@ -941,6 +950,38 @@ export const managerApi = {
       apiClient.get(`/manager/users/work-status-summary${qs(params)}`),
       "دریافت گزارش عملکرد کاربر ناموفق بود",
     ),
+  overdueTasks: (
+    token: string,
+    params: { userId?: string; from: string; to: string },
+  ) =>
+    unwrapAxios<ManagerTaskListResponse>(
+      apiClient.get(`/manager/tasks/overdue${qs(params)}`),
+      "دریافت پروژه‌های معوق ناموفق بود",
+    ),
+  doneTasks: (
+    token: string,
+    params: { userId?: string; from: string; to: string },
+  ) =>
+    unwrapAxios<ManagerTaskListResponse>(
+      apiClient.get(`/manager/tasks/done${qs(params)}`),
+      "دریافت پروژه‌های انجام‌شده ناموفق بود",
+    ),
+  inProgressTasks: (
+    token: string,
+    params: { userId?: string; from: string; to: string },
+  ) =>
+    unwrapAxios<ManagerTaskListResponse>(
+      apiClient.get(`/manager/tasks/in-progress${qs(params)}`),
+      "دریافت پروژه‌های در حال انجام ناموفق بود",
+    ),
+  todoTasks: (
+    token: string,
+    params: { userId?: string; from: string; to: string },
+  ) =>
+    unwrapAxios<ManagerTaskListResponse>(
+      apiClient.get(`/manager/tasks/todo${qs(params)}`),
+      "دریافت پروژه‌های در انتظار ناموفق بود",
+    ),
   dailyDurationBalance: (
     token: string,
     params: { userId: string; from: string; to: string },
@@ -948,6 +989,32 @@ export const managerApi = {
     unwrapAxios<DailyDurationBalance>(
       apiClient.get(`/manager/fixed-tasks/daily-duration-balance${qs(params)}`),
       "دریافت تراز مدت زمان روزانه ناموفق بود",
+    ),
+  overdueFixedTasks: (
+    token: string,
+    params: { userId?: string; from: string; to: string },
+  ) =>
+    unwrapAxios<ListResponse<FixedTask>>(
+      apiClient.get(`/manager/fixed-tasks/overdue${qs(params)}`),
+      "دریافت گزارش‌های ثابت معوق ناموفق بود",
+    ),
+  doneFixedTasks: (
+    token: string,
+    params: { userId?: string; from: string; to: string },
+  ) =>
+    unwrapAxios<ListResponse<FixedTask>>(
+      apiClient.get(`/manager/fixed-tasks/done${qs(params)}`),
+      "دریافت گزارش‌های ثابت انجام‌شده ناموفق بود",
+    ),
+  inProgressFixedTasks: (token: string, params?: { userId?: string }) =>
+    unwrapAxios<ListResponse<FixedTask>>(
+      apiClient.get(`/manager/fixed-tasks/in-progress${qs(params ?? {})}`),
+      "دریافت گزارش‌های ثابت در حال انجام ناموفق بود",
+    ),
+  todoFixedTasks: (token: string, params?: { userId?: string }) =>
+    unwrapAxios<ListResponse<FixedTask>>(
+      apiClient.get(`/manager/fixed-tasks/todo${qs(params ?? {})}`),
+      "دریافت گزارش‌های ثابت در انتظار ناموفق بود",
     ),
   leaveRequests: (token: string, params?: Params) =>
     unwrapAxios(

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Loader2, LogIn, Sparkles } from "lucide-react";
 import { authApi } from "@/lib/api";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { Field, Toast } from "../_components/shared";
 
 type LoginFormValues = {
@@ -69,7 +70,10 @@ export default function LoginPage() {
       <Toast message={error || message} type={error ? "error" : "success"} onClose={() => error ? setError("") : setMessage("")} />
       <AuthBrandPanel />
 
-      <section className="relative flex min-h-screen items-center justify-center px-6 py-12 lg:mr-[45%]">
+      <LandingPageEntrance
+        className="relative flex min-h-screen items-center justify-center px-6 py-12 lg:mr-[45%]"
+        itemClassName="flex w-full justify-center"
+      >
         <div className="w-full max-w-md">
           <MobileBrand />
           <h1 className="text-3xl font-bold">خوش برگشتی</h1>
@@ -95,7 +99,7 @@ export default function LoginPage() {
             حساب نداری؟ <Link className="font-semibold text-[#1f7a8c] hover:underline" href="/signup">ثبت‌نام کن</Link>
           </p>
         </div>
-      </section>
+      </LandingPageEntrance>
     </main>
   );
 }

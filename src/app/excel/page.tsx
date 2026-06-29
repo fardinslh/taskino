@@ -3,6 +3,7 @@
 import { Download, Loader2, Trash2, Upload } from "lucide-react";
 
 import { getId } from "@/lib/api";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import {
   useExcelContext,
   useNavigationContext,
@@ -31,7 +32,7 @@ function ExcelPageContent() {
   return (
     <>
 {activeView === "excel" && (
-            <section className="space-y-4">
+            <LandingPageEntrance className="space-y-4">
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                 {[
                   { label: "کل فایل‌ها", value: excelStats?.totalFiles ?? 0 },
@@ -96,7 +97,7 @@ function ExcelPageContent() {
                   )}
                 </div>
               </div>
-            </section>
+            </LandingPageEntrance>
           )}
 
           

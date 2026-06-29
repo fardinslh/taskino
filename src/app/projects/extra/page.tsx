@@ -30,6 +30,7 @@ import {
   useNavigationContext,
   useSessionContext,
 } from "../../_components/taskino-context";
+import { LandingPageEntrance } from "../../_components/landing-page-entrance";
 import { formatDate, statusLabel, userName } from "../../_lib/task-helpers";
 
 const PAGE_SIZE = 10;
@@ -215,7 +216,7 @@ export default function ExtraProjectsPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface] shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[--border] px-5 py-4">
           <div className="flex items-center gap-3">
@@ -492,6 +493,6 @@ export default function ExtraProjectsPage() {
           </div>
         )}
       </div>
-    </section>
+    </LandingPageEntrance>
   );
 }

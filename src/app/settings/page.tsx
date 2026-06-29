@@ -10,6 +10,7 @@ import {
   userApi,
 } from "@/lib/api";
 import { Field } from "../_components/shared";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import {
   useFeedbackContext,
   useNavigationContext,
@@ -243,7 +244,7 @@ function SettingsPageContent() {
   if (activeView !== "settings") return null;
 
   return (
-    <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+    <LandingPageEntrance className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
       <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
         <h2 className="font-bold">تنظیمات پروفایل</h2>
         <form
@@ -420,7 +421,7 @@ function SettingsPageContent() {
           </form>
         ) : null}
       </div>
-    </section>
+    </LandingPageEntrance>
   );
 }
 

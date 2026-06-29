@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { getId } from "@/lib/api";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { AssigneeStack } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
 import {
@@ -124,7 +125,7 @@ function TasksPageContent() {
       {((!isSupervisor &&
         (activeView === "dashboard" || activeView === "tasks")) ||
         (isSupervisor && activeView === "tasks")) && (
-        <>
+        <LandingPageEntrance className="space-y-4">
           {/* Welcome banner */}
           {!isManager && (
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-[#1a6b7c] via-[#1f7a8c] to-[#2491a5] px-6 py-5 text-white shadow-lg shadow-[#1f7a8c]/15">
@@ -525,7 +526,7 @@ function TasksPageContent() {
               </DragDropContext>
             </div>
           )}
-        </>
+        </LandingPageEntrance>
       )}
     </>
   );

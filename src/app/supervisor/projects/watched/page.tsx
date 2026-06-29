@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ClipboardList, Download, RefreshCw, X } from "lucide-react";
 
 import { excelApi, getId, type Task } from "@/lib/api";
+import { LandingPageEntrance } from "../../../_components/landing-page-entrance";
 import { TaskDeadlineCountdown } from "../../../_components/task-deadline-countdown";
 import {
   useFeedbackContext,
@@ -42,7 +43,7 @@ function SupervisorWatchedProjectsPageContent() {
     return null;
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       <div className="overflow-hidden rounded-2xl border border-violet-200 bg-[--surface] dark:border-violet-900">
         <div className="flex items-center justify-between gap-3 border-b border-violet-100 bg-gradient-to-l from-violet-50 to-white px-5 py-4 dark:border-violet-900/50 dark:from-violet-950/30 dark:to-transparent">
           <div className="flex items-center gap-3">
@@ -92,7 +93,7 @@ function SupervisorWatchedProjectsPageContent() {
           token={token}
         />
       )}
-    </section>
+    </LandingPageEntrance>
   );
 }
 

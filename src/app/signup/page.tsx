@@ -7,6 +7,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Loader2, Sparkles, UserPlus } from "lucide-react";
 import { authApi } from "@/lib/api";
 import type { WorkField } from "@/lib/api";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { Field, Toast } from "../_components/shared";
 import { WORK_FIELDS } from "../_lib/task-constants";
 import { appTitleForWorkField } from "../_lib/task-helpers";
@@ -76,7 +77,10 @@ export default function SignupPage() {
       <Toast message={error || message} type={error ? "error" : "success"} onClose={() => error ? setError("") : setMessage("")} />
       <AuthBrandPanel title={appTitle} />
 
-      <section className="relative flex min-h-screen items-center justify-center px-6 py-12 lg:mr-[45%]">
+      <LandingPageEntrance
+        className="relative flex min-h-screen items-center justify-center px-6 py-12 lg:mr-[45%]"
+        itemClassName="flex w-full justify-center"
+      >
         <div className="w-full max-w-md">
           <MobileBrand title={appTitle} />
           <h1 className="text-3xl font-bold">بریم شروع کنیم</h1>
@@ -113,7 +117,7 @@ export default function SignupPage() {
             قبلاً ثبت‌نام کردی؟ <Link className="font-semibold text-[#1f7a8c] hover:underline" href="/login">وارد شو</Link>
           </p>
         </div>
-      </section>
+      </LandingPageEntrance>
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { getId } from "@/lib/api";
 import { CalendarDays } from "lucide-react";
 
 import { LeaveRequestForm } from "../_components/leave-request-form";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import {
   useManagementContext,
   useNavigationContext,
@@ -49,7 +50,7 @@ function LeavePageContent() {
 
   if (!isManager && !isSupervisor) {
     return (
-      <section className="space-y-4">
+      <LandingPageEntrance className="space-y-4">
         <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
           <div className="flex items-center gap-2">
             <CalendarDays size={17} className="text-[#1f7a8c]" />
@@ -76,7 +77,7 @@ function LeavePageContent() {
             ))}
           </div>
         </div>
-      </section>
+      </LandingPageEntrance>
     );
   }
 
@@ -119,7 +120,7 @@ function LeavePageContent() {
   };
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       {isSupervisor && (
         <>
           <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
@@ -226,7 +227,7 @@ function LeavePageContent() {
           ))}
         </div>
       </div>
-    </section>
+    </LandingPageEntrance>
   );
 }
 

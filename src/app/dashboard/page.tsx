@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { getId, type MyProgressStats } from "@/lib/api";
+import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { AssigneeStack } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
 import {
@@ -165,7 +166,7 @@ function DashboardPageContent() {
   return (
     <>
       {isSupervisor && activeView === "dashboard" && (
-        <section className="space-y-4">
+        <LandingPageEntrance className="space-y-4">
           {/* Welcome banner */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-violet-700 via-violet-600 to-violet-500 px-6 py-5 text-white shadow-lg shadow-violet-500/15">
             <div className="pointer-events-none absolute -left-6 -top-6 h-36 w-36 rounded-full bg-white/5" />
@@ -291,7 +292,7 @@ function DashboardPageContent() {
             fallbackStatus={currentUser?.performanceStatus}
           />
 
-        </section>
+        </LandingPageEntrance>
       )}
 
       {/* ─── Supervisor Projects ─────────────────────────────────────────────── */}
@@ -299,7 +300,7 @@ function DashboardPageContent() {
       {((!isSupervisor &&
         (activeView === "dashboard" || activeView === "tasks")) ||
         (isSupervisor && activeView === "tasks")) && (
-        <>
+        <LandingPageEntrance className="space-y-4">
           {/* Welcome banner */}
           <div
             className={`relative overflow-hidden rounded-2xl px-4 py-5 text-white shadow-lg sm:px-6 ${isManager ? "bg-gradient-to-l from-indigo-700 via-indigo-600 to-indigo-500 shadow-indigo-500/15" : "bg-gradient-to-l from-[#1a6b7c] via-[#1f7a8c] to-[#2491a5] shadow-[#1f7a8c]/15"}`}
@@ -1001,7 +1002,7 @@ function DashboardPageContent() {
             </div>
           )}
 
-        </>
+        </LandingPageEntrance>
       )}
     </>
   );

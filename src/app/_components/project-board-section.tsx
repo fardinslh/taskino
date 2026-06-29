@@ -19,6 +19,7 @@ import {
   statusLabel,
   userName,
 } from "../_lib/task-helpers";
+import { LandingPageEntrance } from "./landing-page-entrance";
 import { AssigneeStack } from "./shared";
 import { TaskDeadlineCountdown } from "./task-deadline-countdown";
 
@@ -67,7 +68,7 @@ export function ProjectBoardSection({
   });
 
   return (
-    <section className="space-y-4">
+    <LandingPageEntrance className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {[
           {
@@ -307,6 +308,6 @@ export function ProjectBoardSection({
           </div>
         </DragDropContext>
       </div>
-    </section>
+    </LandingPageEntrance>
   );
 }
