@@ -25,9 +25,14 @@ Set the backend API URL in `.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
+GROQ_API_KEY=your_groq_api_key
 ```
 
 If it is not set, the application uses the URL above by default.
+
+Create a free Groq API key at [console.groq.com/keys](https://console.groq.com/keys).
+The key is used only by the server-side assistant route and is never exposed to
+the browser. You can optionally set `GROQ_MODEL` to another Groq model ID.
 
 ## Commands
 

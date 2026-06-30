@@ -6,6 +6,7 @@ import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 import { getId } from "@/lib/api";
 import type { View } from "../_lib/task-constants";
+import { AiAssistant } from "./ai-assistant";
 import { SelectedFixedTaskPanel } from "./selected-fixed-task-panel";
 import { SelectedTaskPanel } from "./selected-task-panel";
 import { TaskinoProvider, useTaskinoProviderValue } from "./taskino-context";
@@ -231,6 +232,7 @@ export function TaskinoApp({
             />
           )}
         </AnimatePresence>
+        <AiAssistant token={token} />
       </div>
       )}
       </MotionConfig>
