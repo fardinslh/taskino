@@ -63,7 +63,7 @@ export function AiAssistant({ token }: { token: string }) {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ messages: nextMessages.slice(-20) }),
+        body: JSON.stringify({ messages: nextMessages.slice(-40) }),
       });
       const data = (await response.json()) as {
         content?: string;
