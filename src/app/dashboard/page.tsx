@@ -4,6 +4,7 @@ import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import {
   Activity,
   AlertTriangle,
+  Award,
   BarChart2,
   CalendarDays,
   CheckCircle2,
@@ -11,11 +12,13 @@ import {
   ClipboardList,
   FileSpreadsheet,
   FolderKanban,
+  Gauge,
   Plus,
   TrendingUp,
   UserCheck,
   UsersRound,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 
 import { getId, type MyProgressStats } from "@/lib/api";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
@@ -853,88 +856,13 @@ function DashboardPageContent() {
 
           {/* Specialist performance */}
 
-          {isSpecialist &&
-            activeView === "dashboard" &&
-            (() => {
-              const rate =
-                specialistProgressStats?.progressPercentage ??
-                specialistProgress;
-              const ps =
-                specialistProgressStats?.performanceStatus ??
-                currentUser?.performanceStatus;
-              const psLabel =
-                ps === "good"
-                  ? "خوب"
-                  : ps === "weak"
-                    ? "ضعیف"
-                    : ps === "normal"
-                      ? "متوسط"
-                      : "—";
-              const psClass =
-                ps === "good"
-                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
-                  : ps === "weak"
-                    ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
-                    : "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
-              return (
-                <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={17} className="text-[#1f7a8c]" />
-                      <h2 className="font-bold">عملکرد من</h2>
-                    </div>
-                    <span
-                      className={`rounded-md px-2.5 py-1 text-xs font-bold ${psClass}`}
-                    >
-                      {psLabel}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[--border]">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-l from-[#1f7a8c] to-[#2a9db2] transition-all duration-700"
-                        style={{ width: `${rate}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-bold text-[#1f7a8c]">
-                      {rate}%
-                    </span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-center xl:grid-cols-4">
-                    {[
-                      {
-                        l: "امتیاز",
-                        v: specialistProgressStats?.score ?? 0,
-                        c: "text-amber-600",
-                      },
-                      {
-                        l: "پیشرفت کارها",
-                        v: `${specialistProgressStats?.taskProgressPercentage ?? 0}%`,
-                        c: "text-indigo-600",
-                      },
-                      {
-                        l: "پیشرفت کارهای ثابت",
-                        v: `${specialistProgressStats?.fixedTaskProgressPercentage ?? 0}%`,
-                        c: "text-[#1f7a8c]",
-                      },
-                      {
-                        l: "پیشرفت کلی",
-                        v: `${rate}%`,
-                        c: "text-emerald-600",
-                      },
-                    ].map((s: any) => (
-                      <div
-                        key={s.l}
-                        className="rounded-xl bg-[--surface-2] py-3"
-                      >
-                        <p className={`text-xl font-bold ${s.c}`}>{s.v}</p>
-                        <p className="text-[11px] text-[--text-3]">{s.l}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+          {isSpecialist && activeView === "dashboard" && (
+            <SpecialistPerformanceCard
+              fallbackProgress={specialistProgress}
+              fallbackStatus={currentUser?.performanceStatus}
+              stats={specialistProgressStats}
+            />
+          )}
 
           {isSpecialist && activeView === "dashboard" && tasks.length > 0 && (
             <div className="overflow-hidden rounded-2xl border border-indigo-200 dark:border-indigo-900 bg-[--surface] shadow-md shadow-indigo-500/8">
@@ -1005,6 +933,215 @@ function DashboardPageContent() {
         </LandingPageEntrance>
       )}
     </>
+  );
+}
+
+function SpecialistPerformanceCard({
+  stats,
+  fallbackProgress,
+  fallbackStatus,
+}: {
+  stats: MyProgressStats | null;
+  fallbackProgress: number;
+  fallbackStatus?: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const rate = Math.min(
+    100,
+    Math.max(0, Math.round(stats?.progressPercentage ?? fallbackProgress)),
+  );
+  const status = stats?.performanceStatus ?? fallbackStatus;
+  const statusDetails =
+    status === "good"
+      ? {
+          dot: "bg-emerald-500",
+          label: "خوب",
+          styles:
+            "bg-emerald-50 text-emerald-700 ring-emerald-600/10 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-400/15",
+        }
+      : status === "weak" || status === "bad"
+        ? {
+            dot: "bg-red-500",
+            label: "ضعیف",
+            styles:
+              "bg-red-50 text-red-700 ring-red-600/10 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-400/15",
+          }
+        : status === "normal"
+          ? {
+              dot: "bg-amber-500",
+              label: "متوسط",
+              styles:
+                "bg-amber-50 text-amber-700 ring-amber-600/10 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-400/15",
+            }
+          : {
+              dot: "bg-slate-400",
+              label: "—",
+              styles:
+                "bg-slate-100 text-slate-600 ring-slate-500/10 dark:bg-slate-800 dark:text-slate-300 dark:ring-white/10",
+            };
+  const metrics = [
+    {
+      Icon: Award,
+      iconStyles:
+        "bg-amber-50 text-amber-600 ring-amber-600/10 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-400/15",
+      label: "امتیاز",
+      value: stats?.score ?? 0,
+      valueStyles: "text-amber-600 dark:text-amber-400",
+    },
+    {
+      Icon: ClipboardList,
+      iconStyles:
+        "bg-indigo-50 text-indigo-600 ring-indigo-600/10 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-400/15",
+      label: "پیشرفت کارها",
+      value: `${stats?.taskProgressPercentage ?? 0}%`,
+      valueStyles: "text-indigo-600 dark:text-indigo-400",
+    },
+    {
+      Icon: CalendarDays,
+      iconStyles:
+        "bg-cyan-50 text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-cyan-950/40 dark:text-cyan-400 dark:ring-cyan-400/15",
+      label: "پیشرفت کارهای ثابت",
+      value: `${stats?.fixedTaskProgressPercentage ?? 0}%`,
+      valueStyles: "text-[#1f7a8c] dark:text-cyan-400",
+    },
+    {
+      Icon: Gauge,
+      iconStyles:
+        "bg-emerald-50 text-emerald-600 ring-emerald-600/10 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-400/15",
+      label: "پیشرفت کلی",
+      value: `${rate}%`,
+      valueStyles: "text-emerald-600 dark:text-emerald-400",
+    },
+  ];
+
+  return (
+    <section className="relative overflow-hidden rounded-2xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_1px_2px_-1px_rgba(15,23,42,0.06),0_12px_32px_-20px_rgba(31,122,140,0.45)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-[#1f7a8c] via-cyan-400 to-emerald-400" />
+
+      <div className="px-4 pb-5 pt-6 sm:px-5">
+        <motion.div
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start justify-between gap-4"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e8f4f7] text-[#1f7a8c] ring-1 ring-inset ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-cyan-400 dark:ring-cyan-400/15">
+              <TrendingUp size={19} strokeWidth={2.2} />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-balance font-bold text-[--text]">عملکرد من</h2>
+              <p className="mt-0.5 text-xs text-[--text-3]">
+                نمای کلی پیشرفت فعالیت‌ها
+              </p>
+            </div>
+          </div>
+
+          <span
+            className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ring-inset ${statusDetails.styles}`}
+          >
+            <span className={`size-1.5 rounded-full ${statusDetails.dot}`} />
+            {statusDetails.label}
+          </span>
+        </motion.div>
+
+        <motion.div
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-5"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          transition={{
+            delay: reduceMotion ? 0 : 0.08,
+            duration: 0.35,
+            ease: [0.2, 0, 0, 1],
+          }}
+        >
+          <div className="mb-2.5 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-[--text-2]">
+                روند پیشرفت
+              </p>
+              <p className="mt-0.5 text-[11px] text-[--text-3]">
+                مجموع کارها و فعالیت‌های ثابت
+              </p>
+            </div>
+            <div
+              className="flex items-baseline gap-1 text-[#1f7a8c] dark:text-cyan-400"
+              dir="ltr"
+            >
+              <strong className="text-2xl font-extrabold tabular-nums">
+                {rate}
+              </strong>
+              <span className="text-sm font-bold">%</span>
+            </div>
+          </div>
+
+          <div className="h-3 overflow-hidden rounded-full bg-slate-200/80 p-[3px] shadow-inner dark:bg-slate-800">
+            <div className="relative h-full overflow-hidden rounded-full">
+              <motion.div
+                animate={{ scaleX: rate / 100 }}
+                className="absolute inset-0 origin-right rounded-full bg-gradient-to-l from-[#176979] via-[#2493a8] to-cyan-400"
+                initial={reduceMotion ? false : { scaleX: 0 }}
+                transition={{
+                  bounce: 0,
+                  delay: reduceMotion ? 0 : 0.18,
+                  duration: 0.8,
+                  type: "spring",
+                }}
+              >
+                {!reduceMotion && rate > 0 && (
+                  <motion.span
+                    animate={{ x: "450%" }}
+                    className="absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-white/45 to-transparent"
+                    initial={{ x: "-150%" }}
+                    transition={{
+                      delay: 0.75,
+                      duration: 1.1,
+                      ease: [0.2, 0, 0, 1],
+                    }}
+                  />
+                )}
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="grid grid-cols-2 bg-[--surface-2]/65 xl:grid-cols-4">
+        {metrics.map((metric, index) => (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className={`flex min-w-0 items-center gap-3 px-4 py-4 ${
+              index >= 2 ? "border-t border-[--border]" : ""
+            } ${
+              index % 2 === 1 ? "border-s border-[--border]" : ""
+            } ${index > 0 ? "xl:border-s xl:border-[--border]" : "xl:border-s-0"} xl:border-t-0`}
+            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+            key={metric.label}
+            transition={{
+              delay: reduceMotion ? 0 : 0.18 + index * 0.07,
+              duration: 0.32,
+              ease: [0.2, 0, 0, 1],
+            }}
+          >
+            <div
+              className={`flex size-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ${metric.iconStyles}`}
+            >
+              <metric.Icon size={18} strokeWidth={2.1} />
+            </div>
+            <div className="min-w-0">
+              <p
+                className={`text-lg font-extrabold tabular-nums ${metric.valueStyles}`}
+              >
+                {metric.value}
+              </p>
+              <p className="truncate text-[11px] font-medium text-[--text-3]">
+                {metric.label}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
   );
 }
 
