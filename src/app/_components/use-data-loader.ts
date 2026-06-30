@@ -13,6 +13,7 @@ import {
   taskApi,
   userApi,
   type FixedTask,
+  type FixedTaskRecurrence,
   type LeaveRequest,
   type LeaveRequestStatistics,
   type ManagerAllTasks,
@@ -32,6 +33,14 @@ import {
   type UserProgress,
   type UserTaskCount,
 } from "@/lib/api";
+import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
+import { getCurrentFixedTaskPeriodRange } from "../_lib/fixed-task-period-range";
+
+const FIXED_TASK_RECURRENCES: FixedTaskRecurrence[] = [
+  "daily",
+  "weekly",
+  "monthly",
+];
 
 type DataLoaderInput = {
   activeView: string;
@@ -102,8 +111,12 @@ export function useDataLoader({
 }: DataLoaderInput) {
   function dedupeFixedTasks(items: FixedTask[]) {
     return items.filter((item, index, list) => {
-      const id = getId(item);
-      return !!id && list.findIndex((entry) => getId(entry) === id) === index;
+      const key = fixedTaskOccurrenceKey(item);
+      return (
+        !!key &&
+        list.findIndex((entry) => fixedTaskOccurrenceKey(entry) === key) ===
+          index
+      );
     });
   }
 
@@ -175,28 +188,48 @@ export function useDataLoader({
     userId: string,
   ) {
     if (!userId.trim()) return [];
-    const all: FixedTask[] = [];
-    const limit = 100;
-    for (let page = 1; page <= 50; page++) {
-      const response = await fixedTaskApi
-        .doneByUserId(authToken, userId, { page, limit })
-        .catch(() => null);
-      if (!response) break;
-      const list = normalizeList(
-        response as FixedTask[] | { data?: FixedTask[] },
-      );
-      all.push(...list);
-      const total =
-        response &&
-        typeof response === "object" &&
-        "total" in (response as Record<string, unknown>)
-          ? Number((response as Record<string, unknown>).total)
-          : all.length;
-      if (list.length === 0 || list.length < limit || all.length >= total) {
-        break;
-      }
-    }
-    return all;
+
+    const periodLists = await Promise.all(
+      FIXED_TASK_RECURRENCES.map(async (recurrence) => {
+        const all: FixedTask[] = [];
+        let fetched = 0;
+        const limit = 100;
+        const range = getCurrentFixedTaskPeriodRange(recurrence);
+
+        for (let page = 1; page <= 50; page++) {
+          const response = await fixedTaskApi
+            .doneByUserIdInRange(authToken, userId, {
+              ...range,
+              page,
+              limit,
+            })
+            .catch(() => null);
+          if (!response) break;
+          const responseList = normalizeList(
+            response as FixedTask[] | { data?: FixedTask[] },
+          );
+          fetched += responseList.length;
+          all.push(...responseList);
+          const total =
+            response &&
+            typeof response === "object" &&
+            "total" in (response as Record<string, unknown>)
+              ? Number((response as Record<string, unknown>).total)
+              : fetched;
+          if (
+            responseList.length === 0 ||
+            responseList.length < limit ||
+            fetched >= total
+          ) {
+            break;
+          }
+        }
+
+        return all;
+      }),
+    );
+
+    return dedupeFixedTasks(periodLists.flat());
   }
 
   async function fetchBoardFixedTasksByUserId(

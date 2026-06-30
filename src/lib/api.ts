@@ -1135,10 +1135,14 @@ export const fixedTaskApi = {
       ),
       "دریافت گزارش‌های فعال ناموفق بود",
     ),
-  doneByUserId: (token: string, userId: string, params?: Params) =>
+  doneByUserIdInRange: (
+    token: string,
+    userId: string,
+    params: { from: string; to: string; page?: number; limit?: number },
+  ) =>
     unwrapAxios(
       apiClient.get<ListResponse<FixedTask>>(
-        `/fixed-tasks/user/${userId}/done${qs(params)}`,
+        `/fixed-tasks/user/${userId}/done/range${qs(params)}`,
       ),
       "Ø¯Ø±ÛŒØ§ÙØª Ú¯Ø²Ø§Ø±Ø´â€ŒÙ‡Ø§ÛŒ ØªÚ©Ù…ÛŒÙ„â€ŒØ´Ø¯Ù‡ Ù†Ø§Ù…ÙˆÙÙ‚ Ø¨ÙˆØ¯",
     ),

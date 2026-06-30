@@ -32,6 +32,7 @@ import {
   useTaskContext,
 } from "../_components/taskino-context";
 import { formatDurationMinutes } from "../_lib/fixed-task-timing";
+import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
 import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
 import {
   formatDate,
@@ -721,10 +722,15 @@ function DashboardPageContent() {
                                 items.map((ft: any, idx: number) => {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
+                                  const boardItemId =
+                                    (ft.status === "done"
+                                      ? fixedTaskOccurrenceKey(ft)
+                                      : getId(ft)) ||
+                                    `${getId(ft)}:${idx}`;
                                   return (
                                   <Draggable
-                                    key={getId(ft)}
-                                    draggableId={getId(ft)}
+                                    key={boardItemId}
+                                    draggableId={boardItemId}
                                     index={idx}
                                     isDragDisabled={
                                       !isSpecialist ||

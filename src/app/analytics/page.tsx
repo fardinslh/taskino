@@ -43,6 +43,7 @@ import {
   useSessionContext,
 } from "../_components/taskino-context";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
+import { ManagerScoreCard } from "../_components/manager-score-card";
 import {
   formatDate,
   recurrenceLabel,
@@ -280,6 +281,8 @@ export default function AnalyticsPage() {
         activeUsers={managerStats?.activeUsers ?? users.length}
         firstName={userName(currentUser ?? undefined).split(" ")[0]}
       />
+
+      <ManagerScoreCard />
 
       <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">

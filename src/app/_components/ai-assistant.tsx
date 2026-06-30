@@ -131,10 +131,6 @@ export function AiAssistant({ token }: { token: string }) {
                   <h2 className="text-balance text-sm font-bold">
                     دستیار هوشمند تسکینو
                   </h2>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-cyan-50/80">
-                    <span className="size-1.5 rounded-full bg-emerald-300" />
-                    متصل به مدل رایگان
-                  </p>
                 </div>
               </div>
 
