@@ -1,6 +1,10 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import { useState } from "react";
+import DatePicker from "react-multi-date-picker";
+import jalali from "react-date-object/calendars/jalali";
+import persianFa from "react-date-object/locales/persian_fa";
 import {
   CalendarDays,
   CircleDashed,
@@ -13,6 +17,7 @@ import {
 
 import { getId, type Task } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
+import { isTaskVisibleOnDate } from "../_lib/task-date-filter";
 import {
   formatDate,
   isTaskOverdue,
@@ -50,7 +55,10 @@ export function ProjectBoardSection({
   onSearchChange,
   onSelectTask,
 }: ProjectBoardSectionProps) {
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const filteredTasks = tasks.filter((task) => {
+    if (!isTaskVisibleOnDate(task, selectedDate)) return false;
+
     const query = taskQuery.trim().toLowerCase();
     if (!query) return true;
 
@@ -127,18 +135,37 @@ export function ProjectBoardSection({
             <div>
               <h2 className="font-bold">برد پروژه‌ها</h2>
               <p className="text-[11px] text-[--text-3]">
-                {tasks.length} پروژه واگذارشده · {inProgressCount} در حال انجام
-                {" · "}
-                {doneCount} تکمیل شده
+                {filteredTasks.length} پروژه در تاریخ انتخاب‌شده
               </p>
             </div>
           </div>
-          <input
-            className="h-8 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c] sm:mr-auto sm:w-52"
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="جستجوی پروژه..."
-            value={taskQuery}
-          />
+          <div className="flex w-full flex-col gap-2 sm:mr-auto sm:w-auto sm:flex-row">
+            <div className="relative sm:w-44">
+              <CalendarDays
+                className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[--text-3]"
+                size={15}
+              />
+              <DatePicker
+                calendar={jalali}
+                calendarPosition="bottom-right"
+                containerClassName="w-full"
+                format="YYYY/MM/DD"
+                inputClass="h-10 w-full rounded-xl border border-[--border] bg-[--surface] pr-9 pl-3 text-xs font-semibold text-[--text] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                locale={persianFa}
+                onChange={(value) => {
+                  if (!value || Array.isArray(value)) return;
+                  setSelectedDate(value.toDate());
+                }}
+                value={selectedDate}
+              />
+            </div>
+            <input
+              className="h-10 w-full rounded-xl border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15 sm:w-52"
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="جستجوی پروژه..."
+              value={taskQuery}
+            />
+          </div>
         </div>
 
         <DragDropContext
