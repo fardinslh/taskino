@@ -84,7 +84,7 @@ export function useTaskinoDerivedData({
     : 0;
   const activeFixedTasks = fixedTasks.filter(
     (item) =>
-      (item.isActive !== false || item.status === "done") &&
+      item.isActive !== false &&
       (isManager || !myId || getId(item.assignedTo) === myId) &&
       (!isSpecialist || !isFixedTaskOverdue(item)),
   );
