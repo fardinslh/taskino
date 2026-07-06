@@ -318,6 +318,23 @@ export type MyProgressStats = {
   doneTasks?: number;
 };
 
+export type ProgressBucket = {
+  completed?: number;
+  completedTasks?: number;
+  done?: number;
+  doneTasks?: number;
+  progressPercentage?: number;
+  total?: number;
+  totalTasks?: number;
+};
+
+export type MyDailyProgressStats = MyProgressStats & {
+  fixedTasks?: ProgressBucket;
+  projects?: ProgressBucket;
+  reports?: ProgressBucket;
+  tasks?: ProgressBucket;
+};
+
 export type MyWorkSummary = {
   totalTasks?: number;
   completedTasks?: number;
@@ -778,6 +795,16 @@ export const userApi = {
     ),
   meProgress: (token: string) =>
     unwrapAxios(apiClient.get<MyProgressStats>("/users/me/progress")),
+  meDailyProgress: (
+    token: string,
+    params?: { from?: string; to?: string },
+  ) =>
+    unwrapAxios(
+      apiClient.get<MyDailyProgressStats>(
+        `/users/me/daily-progress${qs(params)}`,
+      ),
+      "دریافت عملکرد روزانه ناموفق بود",
+    ),
   meWorkSummary: (token: string) =>
     unwrapAxios(apiClient.get<MyWorkSummary>("/users/me/work-summary")),
 };

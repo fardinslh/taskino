@@ -1,6 +1,10 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import { useEffect, useState, type FormEvent } from "react";
+import DatePicker from "react-multi-date-picker";
+import jalali from "react-date-object/calendars/jalali";
+import persianFa from "react-date-object/locales/persian_fa";
 import {
   Activity,
   AlertTriangle,
@@ -20,7 +24,13 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
-import { getId, type MyProgressStats } from "@/lib/api";
+import {
+  getId,
+  userApi,
+  type MyDailyProgressStats,
+  type MyProgressStats,
+  type ProgressBucket,
+} from "@/lib/api";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { AssigneeStack } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
@@ -64,7 +74,7 @@ function DashboardPageContent() {
     taskQuery,
     specialistSearchQuery,
   } = useNavigationContext();
-  const { currentUser, isManager, isSpecialist, isSupervisor } =
+  const { currentUser, isManager, isSpecialist, isSupervisor, token } =
     useSessionContext();
   const {
     activeTasks,
@@ -867,6 +877,7 @@ function DashboardPageContent() {
               fallbackProgress={specialistProgress}
               fallbackStatus={currentUser?.performanceStatus}
               stats={specialistProgressStats}
+              token={token}
             />
           )}
 
@@ -942,21 +953,138 @@ function DashboardPageContent() {
   );
 }
 
+function dateParam(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function todayRange() {
+  const now = new Date();
+  const today = dateParam(now);
+  return {
+    from: today,
+    to: today,
+  };
+}
+
+function bucketRate(bucket?: ProgressBucket) {
+  if (!bucket) return undefined;
+  if (typeof bucket.progressPercentage === "number") {
+    return bucket.progressPercentage;
+  }
+
+  const completed =
+    bucket.completed ??
+    bucket.completedTasks ??
+    bucket.done ??
+    bucket.doneTasks ??
+    0;
+  const total = bucket.total ?? bucket.totalTasks ?? 0;
+  return total ? Math.round((completed / total) * 100) : undefined;
+}
+
+function boundedPercent(value?: number) {
+  return Math.min(100, Math.max(0, Math.round(value ?? 0)));
+}
+
 function SpecialistPerformanceCard({
   stats,
   fallbackProgress,
   fallbackStatus,
+  token,
 }: {
   stats: MyProgressStats | null;
   fallbackProgress: number;
   fallbackStatus?: string;
+  token: string;
 }) {
   const reduceMotion = useReducedMotion();
+  const initialRange = todayRange();
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
+  const [dailyStats, setDailyStats] = useState<MyDailyProgressStats | null>(
+    null,
+  );
+  const [loadingDailyStats, setLoadingDailyStats] = useState(false);
+  const [dailyStatsError, setDailyStatsError] = useState("");
   const rate = Math.min(
     100,
-    Math.max(0, Math.round(stats?.progressPercentage ?? fallbackProgress)),
+    Math.max(
+      0,
+      Math.round(
+        dailyStats?.progressPercentage ??
+          stats?.progressPercentage ??
+          fallbackProgress,
+      ),
+    ),
   );
-  const status = stats?.performanceStatus ?? fallbackStatus;
+  const status =
+    dailyStats?.performanceStatus ??
+    stats?.performanceStatus ??
+    fallbackStatus;
+  const projectProgress = boundedPercent(
+    dailyStats?.taskProgressPercentage ??
+      bucketRate(dailyStats?.tasks ?? dailyStats?.projects) ??
+      stats?.taskProgressPercentage,
+  );
+  const reportProgress = boundedPercent(
+    dailyStats?.fixedTaskProgressPercentage ??
+      bucketRate(dailyStats?.fixedTasks ?? dailyStats?.reports) ??
+      stats?.fixedTaskProgressPercentage,
+  );
+
+  async function loadDailyProgress() {
+    if (!token || !from || !to) return;
+    if (from > to) {
+      setDailyStatsError("تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.");
+      return;
+    }
+
+    setLoadingDailyStats(true);
+    setDailyStatsError("");
+    try {
+      const response = await userApi.meDailyProgress(token, { from, to });
+      setDailyStats(response);
+    } catch (error) {
+      setDailyStats(null);
+      setDailyStatsError(
+        error instanceof Error
+          ? error.message
+          : "دریافت عملکرد روزانه ناموفق بود.",
+      );
+    } finally {
+      setLoadingDailyStats(false);
+    }
+  }
+
+  function submitDailyProgressFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void loadDailyProgress();
+  }
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+    const range = todayRange();
+    userApi
+      .meDailyProgress(token, range)
+      .then((response) => {
+        if (!cancelled) setDailyStats(response);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setDailyStatsError(
+          error instanceof Error
+            ? error.message
+            : "دریافت عملکرد روزانه ناموفق بود.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   const statusDetails =
     status === "good"
       ? {
@@ -991,23 +1119,23 @@ function SpecialistPerformanceCard({
       iconStyles:
         "bg-amber-50 text-amber-600 ring-amber-600/10 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-400/15",
       label: "امتیاز",
-      value: stats?.score ?? 0,
+      value: dailyStats?.score ?? stats?.score ?? 0,
       valueStyles: "text-amber-600 dark:text-amber-400",
     },
     {
       Icon: ClipboardList,
       iconStyles:
         "bg-indigo-50 text-indigo-600 ring-indigo-600/10 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-400/15",
-      label: "پیشرفت کارها",
-      value: `${stats?.taskProgressPercentage ?? 0}%`,
+      label: "پیشرفت پروژه‌ها",
+      value: `${projectProgress}%`,
       valueStyles: "text-indigo-600 dark:text-indigo-400",
     },
     {
       Icon: CalendarDays,
       iconStyles:
         "bg-cyan-50 text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-cyan-950/40 dark:text-cyan-400 dark:ring-cyan-400/15",
-      label: "پیشرفت کارهای ثابت",
-      value: `${stats?.fixedTaskProgressPercentage ?? 0}%`,
+      label: "پیشرفت گزارش‌ها",
+      value: `${reportProgress}%`,
       valueStyles: "text-[#1f7a8c] dark:text-cyan-400",
     },
     {
@@ -1051,6 +1179,65 @@ function SpecialistPerformanceCard({
           </span>
         </motion.div>
 
+        <form
+          className="mt-4 grid items-end gap-2 rounded-xl bg-[--surface-2]/70 p-2.5 shadow-[inset_0_0_0_1px_var(--border)] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+          onSubmit={submitDailyProgressFilter}
+        >
+          <label className="block text-[11px] font-semibold text-[--text-2]">
+            از تاریخ
+            <DatePicker
+              calendar={jalali}
+              calendarPosition="bottom-right"
+              containerClassName="mt-1 w-full"
+              fixMainPosition
+              format="YYYY/MM/DD"
+              inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm font-semibold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+              locale={persianFa}
+              maxDate={to ? new Date(`${to}T00:00:00`) : undefined}
+              onChange={(date) => {
+                if (!date || Array.isArray(date)) return setFrom("");
+                setFrom(dateParam(date.toDate()));
+              }}
+              portal
+              value={from ? new Date(`${from}T00:00:00`) : ""}
+            />
+          </label>
+          <label className="block text-[11px] font-semibold text-[--text-2]">
+            تا تاریخ
+            <DatePicker
+              calendar={jalali}
+              calendarPosition="bottom-right"
+              containerClassName="mt-1 w-full"
+              fixMainPosition
+              format="YYYY/MM/DD"
+              inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm font-semibold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+              locale={persianFa}
+              minDate={from ? new Date(`${from}T00:00:00`) : undefined}
+              onChange={(date) => {
+                if (!date || Array.isArray(date)) return setTo("");
+                setTo(dateParam(date.toDate()));
+              }}
+              portal
+              value={to ? new Date(`${to}T00:00:00`) : ""}
+            />
+          </label>
+          <button
+            className="flex h-10 min-w-24 items-center justify-center rounded-lg bg-[#1f7a8c] px-4 text-xs font-bold text-white shadow-sm transition-[background-color,transform] hover:bg-[#196b7b] active:scale-[0.96] disabled:cursor-wait disabled:opacity-60"
+            disabled={loadingDailyStats || !from || !to}
+            type="submit"
+          >
+            {loadingDailyStats ? "در حال دریافت…" : "اعمال بازه"}
+          </button>
+          {dailyStatsError && (
+            <p
+              aria-live="polite"
+              className="text-[11px] font-medium text-red-600 sm:col-span-3 dark:text-red-400"
+            >
+              {dailyStatsError}
+            </p>
+          )}
+        </form>
+
         <motion.div
           animate={{ opacity: 1, y: 0 }}
           className="mt-5"
@@ -1067,7 +1254,7 @@ function SpecialistPerformanceCard({
                 روند پیشرفت
               </p>
               <p className="mt-0.5 text-[11px] text-[--text-3]">
-                مجموع کارها و فعالیت‌های ثابت
+                مجموع پروژه‌ها و گزارش‌ها
               </p>
             </div>
             <div
@@ -1179,12 +1366,12 @@ function PersonalPerformanceCard({
   const metrics = [
     { label: "امتیاز", value: stats?.score ?? 0, color: "text-amber-600" },
     {
-      label: "پیشرفت کارها",
+      label: "پیشرفت پروژه‌ها",
       value: `${stats?.taskProgressPercentage ?? 0}%`,
       color: "text-indigo-600",
     },
     {
-      label: "پیشرفت کارهای ثابت",
+      label: "پیشرفت گزارش‌ها",
       value: `${stats?.fixedTaskProgressPercentage ?? 0}%`,
       color: "text-[#1f7a8c]",
     },
