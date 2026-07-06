@@ -75,6 +75,7 @@ type WorkDetailLists<T> = {
 };
 type FixedTaskLists = WorkDetailLists<FixedTask>;
 type TaskLists = WorkDetailLists<Task>;
+type WorkDetailListKey<T> = keyof WorkDetailLists<T>;
 
 function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -90,6 +91,29 @@ function currentMonthRange() {
 
 function completionRate(counts: WorkStatusCounts) {
   return counts.total ? Math.round((counts.done / counts.total) * 100) : 0;
+}
+
+function parseDateBoundary(value: string, endOfDay = false) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date;
+}
+
+function fixedTaskDetailDate(
+  task: FixedTask,
+  listKey: WorkDetailListKey<FixedTask>,
+) {
+  return listKey === "done"
+    ? task.doneTime || task.updatedAt
+    : task.endDate || task.nextRunAt;
+}
+
+function taskDetailDate(task: Task, listKey: WorkDetailListKey<Task>) {
+  return listKey === "done"
+    ? task.doneTime || task.updatedAt
+    : task.endDate || task.dueDate;
 }
 
 export default function AnalyticsPage() {
@@ -693,6 +717,10 @@ function FixedTaskDetailsPanel({
   return (
     <WorkDetailsPanel
       data={data}
+      dateFilter={{
+        getItemDate: fixedTaskDetailDate,
+        title: "فیلتر بازه تاریخ گزارش‌ها",
+      }}
       description="یک وضعیت را انتخاب کنید تا فهرست کامل گزارش‌های آن را ببینید."
       itemLabel="گزارش"
       loading={loading}
@@ -719,6 +747,10 @@ function TaskDetailsPanel({
   return (
     <WorkDetailsPanel
       data={data}
+      dateFilter={{
+        getItemDate: taskDetailDate,
+        title: "فیلتر بازه تاریخ پروژه‌ها",
+      }}
       description="یک وضعیت را انتخاب کنید تا پروژه‌های این کاربر را با جزئیات ببینید."
       itemLabel="پروژه"
       loading={loading}
@@ -735,6 +767,7 @@ function TaskDetailsPanel({
 
 function WorkDetailsPanel<T,>({
   data,
+  dateFilter,
   description,
   itemLabel,
   loading,
@@ -745,17 +778,24 @@ function WorkDetailsPanel<T,>({
   titleTone,
 }: {
   data?: WorkDetailLists<T>;
+  dateFilter?: {
+    getItemDate: (item: T, listKey: WorkDetailListKey<T>) => string | undefined;
+    title: string;
+  };
   description: string;
   itemLabel: string;
   loading: boolean;
-  renderItem: (item: T, listKey: keyof WorkDetailLists<T>) => React.ReactNode;
+  renderItem: (item: T, listKey: WorkDetailListKey<T>) => React.ReactNode;
   statusFilter: StatusFilter;
   title: string;
   titleIcon: typeof FileText;
   titleTone: string;
 }) {
   const [selectedKey, setSelectedKey] =
-    useState<keyof WorkDetailLists<T>>("overdue");
+    useState<WorkDetailListKey<T>>("overdue");
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [detailFrom, setDetailFrom] = useState("");
+  const [detailTo, setDetailTo] = useState("");
   const sections = [
     {
       emptySuffix: "معوقی",
@@ -801,17 +841,51 @@ function WorkDetailsPanel<T,>({
     statusFilter === "all"
       ? (sections.find((section) => section.key === selectedKey) ?? sections[0])
       : (filteredSection ?? sections[0]);
-  const activeTasks = data?.[activeSection.key] ?? [];
+  const isDateFilterActive = Boolean(dateFilter && (detailFrom || detailTo));
+  const dateFilterError =
+    detailFrom && detailTo && detailFrom > detailTo
+      ? "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد."
+      : "";
+  const visibleData = useMemo(() => {
+    if (!data || !dateFilter || !isDateFilterActive || dateFilterError) {
+      return data;
+    }
+
+    const fromDate = parseDateBoundary(detailFrom);
+    const toDate = parseDateBoundary(detailTo, true);
+    const entries = (Object.keys(data) as WorkDetailListKey<T>[]).map((key) => [
+      key,
+      data[key].filter((item) => {
+        const rawDate = dateFilter.getItemDate(item, key);
+        if (!rawDate) return false;
+        const itemDate = new Date(rawDate);
+        if (Number.isNaN(itemDate.getTime())) return false;
+        if (fromDate && itemDate < fromDate) return false;
+        if (toDate && itemDate > toDate) return false;
+        return true;
+      }),
+    ]);
+
+    return Object.fromEntries(entries) as WorkDetailLists<T>;
+  }, [data, dateFilter, dateFilterError, detailFrom, detailTo, isDateFilterActive]);
+  const activeTasks = visibleData?.[activeSection.key] ?? [];
 
   return (
     <section className="overflow-hidden rounded-2xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_22px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-      <header className="flex items-start gap-3 border-b border-[--border] p-5">
+      <button
+        aria-expanded={detailsExpanded}
+        className={`flex w-full items-start gap-3 p-5 text-right transition-[background-color] hover:bg-[--surface-2] ${
+          detailsExpanded ? "border-b border-[--border]" : ""
+        }`}
+        onClick={() => setDetailsExpanded((expanded) => !expanded)}
+        type="button"
+      >
         <span
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${titleTone}`}
         >
           <TitleIcon size={20} />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="text-base font-black text-[--text]">
             {title}
           </h3>
@@ -819,115 +893,177 @@ function WorkDetailsPanel<T,>({
             {description}
           </p>
         </div>
-      </header>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[--surface-2] text-[--text-2]">
+          <ChevronDown
+            className={`transition-transform duration-150 ${
+              detailsExpanded ? "rotate-180" : ""
+            }`}
+            size={18}
+          />
+        </span>
+      </button>
 
-      {loading ? (
-        <div
-          aria-label="در حال دریافت جزئیات گزارش‌ها"
-          className="space-y-4 p-5"
-          role="status"
-        >
-          <div className="grid animate-pulse grid-cols-2 gap-3 motion-reduce:animate-none lg:grid-cols-4">
-            {Array.from({ length: 4 }, (_, index) => (
+      <AnimatePresence initial={false}>
+        {detailsExpanded && (
+          <motion.div
+            animate={{ height: "auto", opacity: 1 }}
+            className="overflow-hidden"
+            exit={{ height: 0, opacity: 0, transition: { duration: 0.18 } }}
+            initial={{ height: 0, opacity: 0 }}
+            key="details-body"
+            transition={{ bounce: 0, duration: 0.28, type: "spring" }}
+          >
+            {loading ? (
               <div
-                className="h-14 rounded-xl bg-[--surface-2]"
-                key={index}
-              />
-            ))}
-          </div>
-          <div className="animate-pulse space-y-3 rounded-xl bg-[--surface-2] p-3 motion-reduce:animate-none">
-            <div className="h-24 rounded-xl bg-[--surface]" />
-            <div className="h-24 rounded-xl bg-[--surface]" />
-          </div>
-        </div>
-      ) : data ? (
-        <div className="p-5">
-          {statusFilter === "all" && (
-            <div
-              aria-label="فیلتر وضعیت گزارش‌های ثابت"
-              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-              role="group"
-            >
-              {sections.map((section) => {
-                const selected = activeSection.key === section.key;
-                return (
-                  <button
-                    aria-pressed={selected}
-                    className={`flex min-h-14 items-center justify-between gap-3 rounded-xl px-4 text-right transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.96] ${
-                      selected
-                        ? section.activeTone
-                        : "bg-[--surface-2] text-[--text-2] hover:bg-[--border]"
-                    }`}
-                    key={section.key}
-                    onClick={() => setSelectedKey(section.key)}
-                    type="button"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <span
-                        className={`h-3 w-3 shrink-0 rounded-full ${section.dot}`}
-                      />
-                      <span className="text-sm font-black">{section.label}</span>
-                    </span>
-                    <span className="text-base font-black tabular-nums">
-                      {data[section.key].length}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className={statusFilter === "all" ? "mt-5" : ""}>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={`h-3 w-3 rounded-full ${activeSection.dot}`}
-                />
-                <h4 className="text-base font-black text-[--text]">
-                  گزارش‌های {activeSection.label}
-                </h4>
-              </div>
-              <span className="rounded-lg bg-[--surface-2] px-3 py-1.5 text-sm font-black tabular-nums text-[--text-2]">
-                {activeTasks.length} مورد
-              </span>
-            </div>
-
-            <AnimatePresence initial={false} mode="wait">
-              <motion.div
-                animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
-                className="max-h-[520px] space-y-3 overflow-y-auto rounded-xl bg-[--surface-2] p-3"
-                exit={{
-                  filter: "blur(4px)",
-                  opacity: 0,
-                  transition: { duration: 0.15, ease: "easeIn" },
-                  y: -8,
-                }}
-                initial={{ filter: "blur(4px)", opacity: 0, y: 10 }}
-                key={activeSection.key}
-                transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+                aria-label="در حال دریافت جزئیات گزارش‌ها"
+                className="space-y-4 p-5"
+                role="status"
               >
-                {activeTasks.length > 0 ? (
-                  activeTasks.map((task, index) => (
+                <div className="grid animate-pulse grid-cols-2 gap-3 motion-reduce:animate-none lg:grid-cols-4">
+                  {Array.from({ length: 4 }, (_, index) => (
                     <div
-                      key={`${activeSection.key}-${index}`}
-                    >
-                      {renderItem(task, activeSection.key)}
+                      className="h-14 rounded-xl bg-[--surface-2]"
+                      key={index}
+                    />
+                  ))}
+                </div>
+                <div className="animate-pulse space-y-3 rounded-xl bg-[--surface-2] p-3 motion-reduce:animate-none">
+                  <div className="h-24 rounded-xl bg-[--surface]" />
+                  <div className="h-24 rounded-xl bg-[--surface]" />
+                </div>
+              </div>
+            ) : data ? (
+              <div className="p-5">
+                {dateFilter && (
+                  <div className="mb-4 rounded-xl border border-[--border] bg-[--surface-2] p-3">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-black text-[--text]">
+                      <CalendarDays size={17} className="text-violet-600" />
+                      {dateFilter.title}
                     </div>
-                  ))
-                ) : (
-                  <p className="rounded-xl bg-[--surface] px-4 py-12 text-center text-sm font-bold text-[--text-3]">
-                    هیچ {itemLabel} {activeSection.emptySuffix} وجود ندارد.
-                  </p>
+                    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                      <DateField
+                        label="از تاریخ"
+                        maxDate={detailTo ? new Date(`${detailTo}T00:00:00`) : undefined}
+                        onChange={setDetailFrom}
+                        value={detailFrom}
+                      />
+                      <DateField
+                        label="تا تاریخ"
+                        minDate={detailFrom ? new Date(`${detailFrom}T00:00:00`) : undefined}
+                        onChange={setDetailTo}
+                        value={detailTo}
+                      />
+                      <button
+                        className="h-11 rounded-xl border border-[--border] bg-[--surface] px-4 text-sm font-black text-[--text-2] transition-[background-color,transform] hover:bg-[--border] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!isDateFilterActive}
+                        onClick={() => {
+                          setDetailFrom("");
+                          setDetailTo("");
+                        }}
+                        type="button"
+                      >
+                        پاک کردن
+                      </button>
+                    </div>
+                    {dateFilterError && (
+                      <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                        {dateFilterError}
+                      </p>
+                    )}
+                  </div>
                 )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-      ) : (
-        <p className="px-5 py-12 text-center text-sm font-bold text-[--text-3]">
-          جزئیات گزارش‌ها در دسترس نیست.
-        </p>
-      )}
+
+                {statusFilter === "all" && (
+                  <div
+                    aria-label="فیلتر وضعیت گزارش‌های ثابت"
+                    className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                    role="group"
+                  >
+                    {sections.map((section) => {
+                      const selected = activeSection.key === section.key;
+                      return (
+                        <button
+                          aria-pressed={selected}
+                          className={`flex min-h-14 items-center justify-between gap-3 rounded-xl px-4 text-right transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.96] ${
+                            selected
+                              ? section.activeTone
+                              : "bg-[--surface-2] text-[--text-2] hover:bg-[--border]"
+                          }`}
+                          key={section.key}
+                          onClick={() => setSelectedKey(section.key)}
+                          type="button"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span
+                              className={`h-3 w-3 shrink-0 rounded-full ${section.dot}`}
+                            />
+                            <span className="text-sm font-black">
+                              {section.label}
+                            </span>
+                          </span>
+                          <span className="text-base font-black tabular-nums">
+                            {visibleData?.[section.key].length ?? 0}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className={statusFilter === "all" ? "mt-5" : ""}>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`h-3 w-3 rounded-full ${activeSection.dot}`}
+                      />
+                      <h4 className="text-base font-black text-[--text]">
+                        گزارش‌های {activeSection.label}
+                      </h4>
+                    </div>
+                    <span className="rounded-lg bg-[--surface-2] px-3 py-1.5 text-sm font-black tabular-nums text-[--text-2]">
+                      {activeTasks.length} مورد
+                    </span>
+                  </div>
+
+                  <AnimatePresence initial={false} mode="wait">
+                    <motion.div
+                      animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                      className="max-h-[520px] space-y-3 overflow-y-auto rounded-xl bg-[--surface-2] p-3"
+                      exit={{
+                        filter: "blur(4px)",
+                        opacity: 0,
+                        transition: { duration: 0.15, ease: "easeIn" },
+                        y: -8,
+                      }}
+                      initial={{ filter: "blur(4px)", opacity: 0, y: 10 }}
+                      key={`${activeSection.key}-${detailFrom}-${detailTo}`}
+                      transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+                    >
+                      {activeTasks.length > 0 ? (
+                        activeTasks.map((task, index) => (
+                          <div
+                            key={`${activeSection.key}-${index}`}
+                          >
+                            {renderItem(task, activeSection.key)}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="rounded-xl bg-[--surface] px-4 py-12 text-center text-sm font-bold text-[--text-3]">
+                          هیچ {itemLabel} {activeSection.emptySuffix} وجود ندارد.
+                        </p>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+            ) : (
+              <p className="px-5 py-12 text-center text-sm font-bold text-[--text-3]">
+                جزئیات گزارش‌ها در دسترس نیست.
+              </p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
