@@ -21,29 +21,36 @@ import {
   FileText,
   FolderKanban,
   Loader2,
+  MessageSquareText,
   Search,
+  Star,
   Target,
   Timer,
   UserRound,
+  X,
 } from "lucide-react";
 
 import {
+  fixedTaskApi,
   getId,
   managerApi,
   normalizeList,
+  type DailyProgressEntry,
   type DailyDurationBalance,
   type FixedTask,
+  type MyDailyProgressStats,
   type Task,
   type WorkStatusCounts,
   type WorkStatusSummaryUser,
 } from "@/lib/api";
 import {
   useFeedbackContext,
+  useFixedTaskContext,
   useManagementContext,
   useSessionContext,
 } from "../_components/taskino-context";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
-import { ManagerScoreCard } from "../_components/manager-score-card";
+import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
 import {
   formatDate,
   recurrenceLabel,
@@ -81,16 +88,35 @@ function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function currentMonthRange() {
+function todayRange() {
   const now = new Date();
+  const today = dateParam(now);
   return {
-    from: dateParam(new Date(now.getFullYear(), now.getMonth(), 1)),
-    to: dateParam(now),
+    from: today,
+    to: today,
   };
 }
 
 function completionRate(counts: WorkStatusCounts) {
   return counts.total ? Math.round((counts.done / counts.total) * 100) : 0;
+}
+
+function averageDailyProgress(
+  entries: DailyProgressEntry[] | undefined,
+  field:
+    | "progressPercentage"
+    | "taskProgressPercentage"
+    | "fixedTaskProgressPercentage",
+) {
+  if (!entries?.length) return undefined;
+  return Math.round(
+    entries.reduce((sum, entry) => sum + (entry[field] ?? 0), 0) /
+      entries.length,
+  );
+}
+
+function boundedPercent(value?: number) {
+  return Math.min(100, Math.max(0, Math.round(value ?? 0)));
 }
 
 function parseDateBoundary(value: string, endOfDay = false) {
@@ -99,6 +125,16 @@ function parseDateBoundary(value: string, endOfDay = false) {
   if (Number.isNaN(date.getTime())) return null;
   date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
   return date;
+}
+
+function mergeFixedTasks(...lists: FixedTask[][]) {
+  return [
+    ...new Map(
+      lists
+        .flat()
+        .map((task) => [fixedTaskOccurrenceKey(task) || getId(task), task]),
+    ).values(),
+  ];
 }
 
 function fixedTaskDetailDate(
@@ -120,14 +156,24 @@ export default function AnalyticsPage() {
   const { currentUser, isManager, token } = useSessionContext();
   const { loadingData } = useFeedbackContext();
   const { managerStats, users } = useManagementContext();
-  const initialRange = currentMonthRange();
+  const { fixedTasks, setFixedTasks } = useFixedTaskContext();
+  const initialRange = todayRange();
   const selectableUsers = useMemo(
-    () => users.filter((user) => getId(user) && user.roles !== "manager"),
+    () =>
+      users.filter(
+        (user) =>
+          getId(user) &&
+          (user.roles === "supervisor" || user.roles === "specialist"),
+      ),
     [users],
   );
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [summaries, setSummaries] = useState<WorkStatusSummaryUser[]>([]);
+  const [dailyProgress, setDailyProgress] = useState<
+    Record<string, MyDailyProgressStats>
+  >({});
+  const [ratingTask, setRatingTask] = useState<FixedTask | null>(null);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [durationBalances, setDurationBalances] = useState<
     Record<string, DailyDurationBalance>
@@ -157,6 +203,30 @@ export default function AnalyticsPage() {
   const skeletonCount = selectableUsers.length
     ? Math.min(Math.max(selectableUsers.length, 1), 4)
     : 3;
+  const completedReportsByUser = useMemo(() => {
+    const rangeStart = parseDateBoundary(from);
+    const rangeEnd = parseDateBoundary(to, true);
+    const grouped = new Map<string, FixedTask[]>();
+    if (!rangeStart || !rangeEnd) return grouped;
+
+    for (const task of fixedTasks) {
+      if (task.status !== "done" || !task.doneTime) continue;
+      const doneAt = new Date(task.doneTime);
+      if (
+        Number.isNaN(doneAt.getTime()) ||
+        doneAt < rangeStart ||
+        doneAt > rangeEnd
+      ) {
+        continue;
+      }
+
+      const userId = getId(task.assignedTo);
+      if (!userId) continue;
+      grouped.set(userId, [...(grouped.get(userId) ?? []), task]);
+    }
+
+    return grouped;
+  }, [fixedTasks, from, to]);
 
   async function fetchSummaries() {
     if (!from || !to || selectableUsers.length === 0) return;
@@ -169,16 +239,24 @@ export default function AnalyticsPage() {
     setError("");
     try {
       const results = await Promise.all(
-        selectableUsers.map((user) =>
-          managerApi.workStatusSummary(token, {
-            from,
-            to,
-            userId: getId(user),
-          }),
-        ),
+        selectableUsers.map(async (user) => {
+          const userId = getId(user);
+          const [summary, progress] = await Promise.all([
+            managerApi.workStatusSummary(token, { from, to, userId }),
+            managerApi.userDailyProgress(token, userId, { from, to }),
+          ]);
+          return { progress, summary, userId };
+        }),
       );
       setSummaries(
-        results.flatMap((result) => result.users).filter((user) => user.userId),
+        results
+          .flatMap((result) => result.summary.users)
+          .filter((user) => user.userId),
+      );
+      setDailyProgress(
+        Object.fromEntries(
+          results.map((result) => [result.userId, result.progress]),
+        ),
       );
       setExpandedUserId(null);
       setDurationBalances({});
@@ -186,6 +264,7 @@ export default function AnalyticsPage() {
       setTaskLists({});
     } catch (err) {
       setSummaries([]);
+      setDailyProgress({});
       setError(
         err instanceof Error ? err.message : "دریافت گزارش عملکرد ناموفق بود.",
       );
@@ -250,7 +329,10 @@ export default function AnalyticsPage() {
       setFixedTaskLists((current) => ({
         ...current,
         [userId]: {
-          done: normalizeList(done),
+          done: mergeFixedTasks(
+            normalizeList(done),
+            completedReportsByUser.get(userId) ?? [],
+          ),
           inProgress: normalizeList(inProgress),
           overdue: normalizeList(overdue),
           todo: normalizeList(todo),
@@ -290,6 +372,31 @@ export default function AnalyticsPage() {
     setTaskDetailsLoadingUserId(null);
   }
 
+  function handleRatedTask(ratedTask: FixedTask) {
+    const ratedTaskId = getId(ratedTask);
+    setFixedTasks((current) =>
+      current.map((task) =>
+        getId(task) === ratedTaskId ? { ...task, ...ratedTask } : task,
+      ),
+    );
+    setFixedTaskLists((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([userId, lists]) => [
+          userId,
+          Object.fromEntries(
+            Object.entries(lists).map(([key, tasks]) => [
+              key,
+              tasks.map((task) =>
+                getId(task) === ratedTaskId ? { ...task, ...ratedTask } : task,
+              ),
+            ]),
+          ) as FixedTaskLists,
+        ]),
+      ),
+    );
+    setRatingTask(null);
+  }
+
   const loadLatestSummaries = useEffectEvent(fetchSummaries);
 
   useEffect(() => {
@@ -300,13 +407,12 @@ export default function AnalyticsPage() {
   if (!isManager) return null;
 
   return (
-    <LandingPageEntrance className="space-y-5 pb-8 [&>div:nth-child(2)]:relative [&>div:nth-child(2)]:z-30">
+    <>
+      <LandingPageEntrance className="space-y-5 pb-8 [&>div:nth-child(2)]:relative [&>div:nth-child(2)]:z-30">
       <ManagerSummaryBanner
         activeUsers={managerStats?.activeUsers ?? users.length}
         firstName={userName(currentUser ?? undefined).split(" ")[0]}
       />
-
-      <ManagerScoreCard />
 
       <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
@@ -408,6 +514,9 @@ export default function AnalyticsPage() {
           <motion.div className="space-y-4" key="analytics-content">
             {summaries.map((summaryUser, index) => (
               <UserAnalyticsCard
+                completedReports={
+                  completedReportsByUser.get(summaryUser.userId) ?? []
+                }
                 durationBalance={durationBalances[summaryUser.userId]}
                 durationLoading={durationLoadingUserId === summaryUser.userId}
                 entranceIndex={index}
@@ -417,7 +526,19 @@ export default function AnalyticsPage() {
                   detailsLoadingUserId === summaryUser.userId
                 }
                 key={summaryUser.userId}
+                onRateFixedTask={setRatingTask}
                 onToggle={() => void toggleUser(summaryUser.userId)}
+                progress={dailyProgress[summaryUser.userId]}
+                score={
+                  selectableUsers.find(
+                    (user) => getId(user) === summaryUser.userId,
+                  )?.score
+                }
+                role={
+                  selectableUsers.find(
+                    (user) => getId(user) === summaryUser.userId,
+                  )?.roles
+                }
                 statusFilter={statusFilter}
                 summary={summaryUser}
                 taskDetails={taskLists[summaryUser.userId]}
@@ -443,7 +564,19 @@ export default function AnalyticsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </LandingPageEntrance>
+      </LandingPageEntrance>
+      <AnimatePresence initial={false}>
+        {ratingTask && (
+          <FixedTaskRatingModal
+            key={getId(ratingTask)}
+            onClose={() => setRatingTask(null)}
+            onRated={handleRatedTask}
+            task={ratingTask}
+            token={token}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -476,26 +609,36 @@ function AnalyticsCardSkeleton() {
 }
 
 function UserAnalyticsCard({
+  completedReports,
   durationBalance,
   durationLoading,
   entranceIndex,
   expanded,
   fixedTaskDetails,
   fixedTaskDetailsLoading,
+  onRateFixedTask,
   onToggle,
+  progress,
+  role,
+  score,
   statusFilter,
   summary,
   taskDetails,
   taskDetailsLoading,
   workTypeFilter,
 }: {
+  completedReports: FixedTask[];
   durationBalance?: DailyDurationBalance;
   durationLoading: boolean;
   entranceIndex: number;
   expanded: boolean;
   fixedTaskDetails?: FixedTaskLists;
   fixedTaskDetailsLoading: boolean;
+  onRateFixedTask: (task: FixedTask) => void;
   onToggle: () => void;
+  progress?: MyDailyProgressStats;
+  role?: string;
+  score?: number;
   statusFilter: StatusFilter;
   summary: WorkStatusSummaryUser;
   taskDetails?: TaskLists;
@@ -503,7 +646,28 @@ function UserAnalyticsCard({
   workTypeFilter: WorkTypeFilter;
 }) {
   const projectCounts = summary.tasks ?? emptyCounts;
-  const reportCounts = summary.fixedTasks ?? emptyCounts;
+  const baseReportCounts = summary.fixedTasks ?? emptyCounts;
+  const completedFromDailyProgress =
+    progress?.data?.reduce(
+      (sum, day) => sum + (day.completedFixedTasks ?? 0),
+      0,
+    ) ?? 0;
+  const completedReportCount = Math.max(
+    baseReportCounts.done,
+    completedFromDailyProgress,
+    completedReports.length,
+  );
+  const reportCounts = {
+    ...baseReportCounts,
+    done: completedReportCount,
+    total: Math.max(
+      baseReportCounts.total,
+      completedReportCount +
+        baseReportCounts.inProgress +
+        baseReportCounts.todo +
+        baseReportCounts.overdueUnfinished,
+    ),
+  };
   const showProjects = workTypeFilter === "all" || workTypeFilter === "projects";
   const showReports = workTypeFilter === "all" || workTypeFilter === "reports";
   const total = (showProjects ? projectCounts.total : 0) +
@@ -512,10 +676,37 @@ function UserAnalyticsCard({
     (showReports ? reportCounts.done : 0);
   const open = Math.max(total - done, 0);
   const rate = total ? Math.round((done / total) * 100) : 0;
+  const projectProgress = boundedPercent(
+    progress?.averageTaskProgressPercentage ??
+      averageDailyProgress(progress?.data, "taskProgressPercentage") ??
+      progress?.taskProgressPercentage,
+  );
+  const reportProgress = boundedPercent(
+    progress?.averageFixedTaskProgressPercentage ??
+      averageDailyProgress(progress?.data, "fixedTaskProgressPercentage") ??
+      progress?.fixedTaskProgressPercentage,
+  );
+  const overallProgress = boundedPercent(
+    progress?.averageProgressPercentage ??
+      averageDailyProgress(progress?.data, "progressPercentage") ??
+      progress?.progressPercentage,
+  );
+  const roleLabel =
+    role === "supervisor"
+      ? "سرپرست"
+      : role === "specialist"
+        ? "کارشناس"
+        : "عضو تیم";
   const displayName =
     [summary.firstName, summary.lastName].filter(Boolean).join(" ") ||
     summary.email ||
     "کاربر";
+  const visibleFixedTaskDetails = fixedTaskDetails
+    ? {
+        ...fixedTaskDetails,
+        done: mergeFixedTasks(fixedTaskDetails.done, completedReports),
+      }
+    : fixedTaskDetails;
 
   return (
     <motion.article
@@ -544,7 +735,8 @@ function UserAnalyticsCard({
                 {displayName}
               </h2>
               <p className="mt-0.5 truncate text-xs text-[--text-3]">
-                {summary.email || "عضو تیم"}
+                {roleLabel}
+                {summary.email ? ` · ${summary.email}` : ""}
               </p>
             </div>
           </div>
@@ -568,6 +760,28 @@ function UserAnalyticsCard({
               size={17}
             />
           </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[--border] pt-4 sm:grid-cols-4">
+          <SummaryMetric
+            label="امتیاز"
+            tone="warning"
+            value={score ?? 0}
+          />
+          <SummaryMetric
+            label="پیشرفت پروژه‌ها"
+            value={`${projectProgress}٪`}
+          />
+          <SummaryMetric
+            label="پیشرفت گزارش‌ها"
+            tone="accent"
+            value={`${reportProgress}٪`}
+          />
+          <SummaryMetric
+            label="پیشرفت کلی"
+            tone="success"
+            value={`${overallProgress}٪`}
+          />
         </div>
       </div>
 
@@ -682,8 +896,9 @@ function UserAnalyticsCard({
               {showReports && (
                 <div className="mt-4">
                   <FixedTaskDetailsPanel
-                    data={fixedTaskDetails}
+                    data={visibleFixedTaskDetails}
                     loading={fixedTaskDetailsLoading}
+                    onRate={onRateFixedTask}
                     statusFilter={statusFilter}
                   />
                 </div>
@@ -708,10 +923,12 @@ function UserAnalyticsCard({
 function FixedTaskDetailsPanel({
   data,
   loading,
+  onRate,
   statusFilter,
 }: {
   data?: FixedTaskLists;
   loading: boolean;
+  onRate: (task: FixedTask) => void;
   statusFilter: StatusFilter;
 }) {
   return (
@@ -725,10 +942,10 @@ function FixedTaskDetailsPanel({
       itemLabel="گزارش"
       loading={loading}
       renderItem={(task, listKey) => (
-        <FixedTaskDetailRow listKey={listKey} task={task} />
+        <FixedTaskDetailRow listKey={listKey} onRate={onRate} task={task} />
       )}
       statusFilter={statusFilter}
-      title="جزئیات گزارش‌های ثابت"
+      title="جزئیات گزارش‌ها"
       titleIcon={FileText}
       titleTone="bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
     />
@@ -1068,11 +1285,216 @@ function WorkDetailsPanel<T,>({
   );
 }
 
+const ratingOptions = [0, 1, 2, 3, 4, 5] as const;
+
+function ratingLabel(score: number) {
+  if (score === 0) return "ضعیف";
+  if (score <= 3) return "متوسط";
+  return "خوب";
+}
+
+function FixedTaskRatingModal({
+  onClose,
+  onRated,
+  task,
+  token,
+}: {
+  onClose: () => void;
+  onRated: (task: FixedTask) => void;
+  task: FixedTask;
+  token: string;
+}) {
+  const [score, setScore] = useState<number | null>(task.ratingScore ?? null);
+  const [comment, setComment] = useState(task.ratingComment ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !submitting) onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onClose, submitting]);
+
+  async function submitRating(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const ratingComment = comment.trim();
+    if (score == null || !ratingComment) {
+      setError("انتخاب امتیاز و ثبت نظر الزامی است.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const ratedTask = await fixedTaskApi.rate(token, getId(task), {
+        ratingComment,
+        score,
+      });
+      onRated(ratedTask);
+    } catch (ratingError) {
+      setError(
+        ratingError instanceof Error
+          ? ratingError.message
+          : "ثبت امتیاز گزارش ناموفق بود.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <motion.div
+      animate={{ opacity: 1 }}
+      aria-label="امتیازدهی گزارش"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !submitting) onClose();
+      }}
+      role="presentation"
+      transition={{ duration: 0.18 }}
+    >
+      <motion.section
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        aria-labelledby="rating-modal-title"
+        aria-modal="true"
+        className="w-full max-w-xl overflow-hidden rounded-3xl bg-[--surface] shadow-[0_24px_80px_rgba(2,6,23,0.35),0_0_0_1px_rgba(255,255,255,0.08)]"
+        initial={{ opacity: 0, scale: 0.97, y: 14 }}
+        role="dialog"
+        transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+      >
+        <header className="flex items-start gap-3 border-b border-[--border] p-5">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+            <Star size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2
+              className="text-balance text-lg font-black text-[--text]"
+              id="rating-modal-title"
+            >
+              امتیازدهی گزارش
+            </h2>
+            <p className="mt-1 truncate text-sm text-[--text-2]">
+              {task.title}
+            </p>
+          </div>
+          <button
+            aria-label="بستن"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[--surface-2] text-[--text-2] transition-[background-color,transform] hover:bg-[--border] active:scale-[0.96]"
+            disabled={submitting}
+            onClick={onClose}
+            type="button"
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        <form className="space-y-5 p-5" onSubmit={submitRating}>
+          <fieldset>
+            <legend className="text-sm font-black text-[--text]">
+              امتیاز عملکرد
+            </legend>
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {ratingOptions.map((value) => {
+                const selected = score === value;
+                const displayValue = value.toLocaleString("fa-IR");
+                return (
+                  <button
+                    aria-label={`${displayValue} درصد، ${ratingLabel(value)}`}
+                    aria-pressed={selected}
+                    className={`min-h-16 rounded-xl px-2 py-2 text-center transition-[background-color,box-shadow,transform] active:scale-[0.96] ${
+                      selected
+                        ? "bg-[#1f7a8c] text-white shadow-lg shadow-[#1f7a8c]/20"
+                        : "bg-[--surface-2] text-[--text-2] shadow-[inset_0_0_0_1px_var(--border)] hover:bg-[--border]"
+                    }`}
+                    key={value}
+                    onClick={() => {
+                      setScore(value);
+                      setError("");
+                    }}
+                    type="button"
+                  >
+                    <span className="block text-lg font-black tabular-nums">
+                      {displayValue}٪
+                    </span>
+                    <span className="mt-0.5 block text-[10px] font-bold opacity-80">
+                      {ratingLabel(value)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <label className="block">
+            <span className="flex items-center gap-2 text-sm font-black text-[--text]">
+              <MessageSquareText size={16} className="text-[#1f7a8c]" />
+              نظر مدیر
+              <span className="text-red-500">*</span>
+            </span>
+            <textarea
+              autoFocus
+              className="mt-2 min-h-28 w-full resize-y rounded-xl border border-[--border] bg-[--surface-2] px-3 py-3 text-sm leading-6 text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+              maxLength={1000}
+              onChange={(event) => {
+                setComment(event.target.value);
+                setError("");
+              }}
+              placeholder="نظر خود درباره کیفیت انجام این گزارش را بنویسید…"
+              required
+              value={comment}
+            />
+          </label>
+
+          {error && (
+            <p
+              aria-live="polite"
+              className="rounded-xl bg-red-50 px-3 py-2.5 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300"
+            >
+              {error}
+            </p>
+          )}
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              className="h-11 rounded-xl bg-[--surface-2] px-5 text-sm font-black text-[--text-2] transition-[background-color,transform] hover:bg-[--border] active:scale-[0.96]"
+              disabled={submitting}
+              onClick={onClose}
+              type="button"
+            >
+              انصراف
+            </button>
+            <button
+              className="flex h-11 min-w-32 items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] px-5 text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/20 transition-[background-color,transform] hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={submitting || score == null || !comment.trim()}
+              type="submit"
+            >
+              {submitting && <Loader2 className="animate-spin" size={17} />}
+              ثبت امتیاز
+            </button>
+          </div>
+        </form>
+      </motion.section>
+    </motion.div>
+  );
+}
+
 function FixedTaskDetailRow({
   listKey,
+  onRate,
   task,
 }: {
   listKey: keyof FixedTaskLists;
+  onRate: (task: FixedTask) => void;
   task: FixedTask;
 }) {
   const date =
@@ -1094,9 +1516,31 @@ function FixedTaskDetailRow({
     todo: "border-r-amber-500",
   }[listKey];
 
+  const isDone = listKey === "done";
+  const ratingPercentage =
+    task.ratingScore == null ? null : Math.round(task.ratingScore);
+  const canRate = isDone && ratingPercentage == null;
+
+  function openRating() {
+    if (canRate) onRate(task);
+  }
+
   return (
     <article
-      className={`rounded-xl border-r-4 bg-[--surface] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.05),0_2px_6px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.07)] ${borderTone}`}
+      className={`rounded-xl border-r-4 bg-[--surface] p-4 shadow-[0_0_0_1px_rgba(15,23,42,0.05),0_2px_6px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.07)] ${borderTone} ${
+        canRate
+          ? "cursor-pointer transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(16,185,129,0.22),0_10px_24px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+          : ""
+      }`}
+      onClick={openRating}
+      onKeyDown={(event) => {
+        if (canRate && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          openRating();
+        }
+      }}
+      role={canRate ? "button" : undefined}
+      tabIndex={canRate ? 0 : undefined}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -1113,6 +1557,20 @@ function FixedTaskDetailRow({
           <span className="flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg bg-red-50 px-3 text-xs font-black text-red-700 dark:bg-red-950/40 dark:text-red-300">
             <AlertTriangle size={14} />
             مهلت گذشته
+          </span>
+        )}
+        {isDone && (
+          <span
+            className={`flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-black ${
+              canRate
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            }`}
+          >
+            <Star size={14} />
+            {ratingPercentage == null
+              ? "برای ثبت امتیاز کلیک کنید"
+              : `امتیاز ${ratingPercentage.toLocaleString("fa-IR")}٪`}
           </span>
         )}
       </div>
@@ -1310,6 +1768,7 @@ function DateField({
         calendar={jalali}
         calendarPosition="bottom-right"
         containerClassName="w-full"
+        fixMainPosition
         format="YYYY/MM/DD"
         inputClass="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
         locale={persianFa}
@@ -1319,7 +1778,9 @@ function DateField({
           if (!date || Array.isArray(date)) return onChange("");
           onChange(dateParam(date.toDate()));
         }}
+        portal
         value={value ? new Date(`${value}T00:00:00`) : ""}
+        zIndex={1000}
       />
     </label>
   );

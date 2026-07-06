@@ -33,7 +33,6 @@ import {
   type UserProgress,
   type UserTaskCount,
 } from "@/lib/api";
-import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
 import { getCurrentFixedTaskPeriodRange } from "../_lib/fixed-task-period-range";
 
 const FIXED_TASK_RECURRENCES: FixedTaskRecurrence[] = [
@@ -110,14 +109,14 @@ export function useDataLoader({
   setTeamPerformance,
 }: DataLoaderInput) {
   function dedupeFixedTasks(items: FixedTask[]) {
-    return items.filter((item, index, list) => {
-      const key = fixedTaskOccurrenceKey(item);
-      return (
-        !!key &&
-        list.findIndex((entry) => fixedTaskOccurrenceKey(entry) === key) ===
-          index
-      );
-    });
+    const uniqueItems = new Map<string, FixedTask>();
+
+    for (const item of items) {
+      const key = getId(item);
+      if (key) uniqueItems.set(key, item);
+    }
+
+    return [...uniqueItems.values()];
   }
 
   async function fetchAllFixedTasks(

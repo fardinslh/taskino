@@ -328,7 +328,28 @@ export type ProgressBucket = {
   totalTasks?: number;
 };
 
+export type DailyProgressEntry = {
+  date: string;
+  totalTasks?: number;
+  completedTasks?: number;
+  totalFixedTasks?: number;
+  completedFixedTasks?: number;
+  taskProgressPercentage?: number;
+  fixedTaskProgressPercentage?: number;
+  progressPercentage?: number;
+  performanceStatus?: "good" | "normal" | "weak" | "bad";
+  evaluatedAt?: string;
+};
+
 export type MyDailyProgressStats = MyProgressStats & {
+  averageProgressPercentage?: number;
+  averageTaskProgressPercentage?: number;
+  averageFixedTaskProgressPercentage?: number;
+  dayCount?: number;
+  from?: string;
+  to?: string;
+  total?: number;
+  data?: DailyProgressEntry[];
   fixedTasks?: ProgressBucket;
   projects?: ProgressBucket;
   reports?: ProgressBucket;
@@ -530,6 +551,9 @@ export type FixedTask = {
   timingApprovalStatus?: "pending" | "approved" | "rejected";
   timingApprovedBy?: string | User | null;
   timingApprovedAt?: string | null;
+  ratingScore?: number | null;
+  ratingStatus?: "weak" | "normal" | "good" | null;
+  ratingComment?: string | null;
   lastGeneratedAt?: string;
   nextRunAt?: string;
   startDate?: string;
@@ -905,6 +929,17 @@ export const managerApi = {
     unwrapAxios(
       apiClient.get<ListResponse<User>>(`/manager/users${qs(params)}`),
     ),
+  userDailyProgress: (
+    token: string,
+    userId: string,
+    params: { from: string; to: string },
+  ) =>
+    unwrapAxios(
+      apiClient.get<MyDailyProgressStats>(
+        `/manager/users/${encodeURIComponent(userId)}/daily-progress${qs(params)}`,
+      ),
+      "دریافت عملکرد روزانه کاربر ناموفق بود",
+    ),
   updateUserRole: (token: string, userId: string, role: string) =>
     unwrapAxios(
       apiClient.patch(`/manager/users/${userId}/role`, { role }),
@@ -1205,6 +1240,15 @@ export const fixedTaskApi = {
     unwrapAxios(
       apiClient.patch<FixedTask>(`/fixed-tasks/${id}/timer/start`),
       "شروع زمان‌سنج گزارش ثابت ناموفق بود",
+    ),
+  rate: (
+    token: string,
+    id: string,
+    body: { score: number; ratingComment: string },
+  ) =>
+    unwrapAxios(
+      apiClient.patch<FixedTask>(`/fixed-tasks/${id}/rating`, body),
+      "ثبت امتیاز گزارش ناموفق بود",
     ),
   delete: (token: string, id: string) =>
     unwrapAxios(

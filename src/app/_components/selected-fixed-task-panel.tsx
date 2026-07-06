@@ -1,6 +1,13 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, CircleDashed, Repeat, X } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  ChevronLeft,
+  CircleDashed,
+  Repeat,
+  X,
+} from "lucide-react";
 import { motion } from "motion/react";
 
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
@@ -40,6 +47,14 @@ export function SelectedFixedTaskPanel({
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
   const statusChangeBlocked = isFixedTaskOverdue(task);
+  const hasManagerRating =
+    task.ratingScore != null && Boolean(task.ratingComment?.trim());
+  const managerRatingLabel =
+    task.ratingScore === 0
+      ? "ضعیف"
+      : (task.ratingScore ?? 0) <= 3
+        ? "متوسط"
+        : "خوب";
 
   return (
     <>
@@ -100,6 +115,24 @@ export function SelectedFixedTaskPanel({
               <p className="mb-2 text-xs font-semibold text-[--text-3]">نظر مدیر</p>
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                 {task.taskComment}
+              </p>
+            </div>
+          )}
+
+          {hasManagerRating && (
+            <div className="rounded-xl bg-amber-50 p-3 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.16)] dark:bg-amber-950/25">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                  <Award size={14} />
+                  امتیاز مدیر
+                </span>
+                <strong className="text-sm font-black tabular-nums text-amber-700 dark:text-amber-300">
+                  {task.ratingScore?.toLocaleString("fa-IR")}٪ ·{" "}
+                  {managerRatingLabel}
+                </strong>
+              </div>
+              <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
+                {task.ratingComment}
               </p>
             </div>
           )}

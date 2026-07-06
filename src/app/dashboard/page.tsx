@@ -29,6 +29,7 @@ import {
   userApi,
   type MyDailyProgressStats,
   type MyProgressStats,
+  type DailyProgressEntry,
   type ProgressBucket,
 } from "@/lib/api";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
@@ -121,7 +122,9 @@ function DashboardPageContent() {
     if (!assigneeId || acc.some((user) => getId(user) === assigneeId)) {
       return acc;
     }
-    acc.push(users.find((user: any) => getId(user) === assigneeId) ?? ft.assignedTo);
+    acc.push(
+      users.find((user: any) => getId(user) === assigneeId) ?? ft.assignedTo,
+    );
     return acc;
   }, []);
   const specialistDoneCount =
@@ -305,7 +308,6 @@ function DashboardPageContent() {
             fallbackProgress={specialistProgress}
             fallbackStatus={currentUser?.performanceStatus}
           />
-
         </LandingPageEntrance>
       )}
 
@@ -735,113 +737,149 @@ function DashboardPageContent() {
                                   const boardItemId =
                                     (ft.status === "done"
                                       ? fixedTaskOccurrenceKey(ft)
-                                      : getId(ft)) ||
-                                    `${getId(ft)}:${idx}`;
+                                      : getId(ft)) || `${getId(ft)}:${idx}`;
+                                  const hasManagerRating =
+                                    ft.ratingScore != null &&
+                                    Boolean(ft.ratingComment?.trim());
+                                  const managerRatingLabel =
+                                    ft.ratingScore === 0
+                                      ? "ضعیف"
+                                      : ft.ratingScore <= 3
+                                        ? "متوسط"
+                                        : "خوب";
                                   return (
-                                  <Draggable
-                                    key={boardItemId}
-                                    draggableId={boardItemId}
-                                    index={idx}
-                                    isDragDisabled={
-                                      !isSpecialist ||
-                                      (ft.status ?? "todo") === "done" ||
-                                      fixedTaskOverdue
-                                    }
-                                  >
-                                    {(dragProvided: any, dragSnapshot: any) => (
-                                      <article
-                                        ref={dragProvided.innerRef}
-                                        {...dragProvided.draggableProps}
-                                        {...dragProvided.dragHandleProps}
-                                        className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
-                                        onClick={() => setSelectedFixedTask(ft)}
-                                      >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <span className="rounded-md border border-[#b8dfe8] bg-[#e8f4f7] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7a8c] dark:border-[#1f5060] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
-                                            ثابت ·{" "}
-                                            {recurrenceLabel(ft.recurrence)}
-                                          </span>
-                                          {fixedTaskOverdue ? (
-                                            <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
-                                              مهلت گذشته
+                                    <Draggable
+                                      key={boardItemId}
+                                      draggableId={boardItemId}
+                                      index={idx}
+                                      isDragDisabled={
+                                        !isSpecialist ||
+                                        (ft.status ?? "todo") === "done" ||
+                                        fixedTaskOverdue
+                                      }
+                                    >
+                                      {(
+                                        dragProvided: any,
+                                        dragSnapshot: any,
+                                      ) => (
+                                        <article
+                                          ref={dragProvided.innerRef}
+                                          {...dragProvided.draggableProps}
+                                          {...dragProvided.dragHandleProps}
+                                          className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "hover:-translate-y-0.5 hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                          onClick={() =>
+                                            setSelectedFixedTask(ft)
+                                          }
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="rounded-md border border-[#b8dfe8] bg-[#e8f4f7] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7a8c] dark:border-[#1f5060] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
+                                              ثابت ·{" "}
+                                              {recurrenceLabel(ft.recurrence)}
                                             </span>
-                                          ) : (
-                                            <span
-                                              className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ft.isActive !== false ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
-                                            >
-                                              {ft.isActive !== false
-                                                ? "فعال"
-                                                : "غیرفعال"}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="mt-2.5 flex items-start gap-2">
-                                          <ClipboardList
-                                            size={15}
-                                            className="mt-0.5 shrink-0 text-[#1f7a8c]"
-                                          />
-                                          <h4 className="text-sm font-semibold leading-snug">
-                                            {ft.title}
-                                          </h4>
-                                        </div>
-                                        {ft.description && (
-                                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
-                                            {ft.description}
-                                          </p>
-                                        )}
-                                        {ft.approvedDurationMinutes != null && (
-                                          <div className="mt-3 flex items-center justify-between rounded-lg bg-sky-50 px-2.5 py-2 text-xs text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
-                                            <span className="font-semibold">
-                                              زمان در دسترس:
-                                            </span>
-                                            <span className="font-extrabold tabular-nums">
-                                              {formatDurationMinutes(
-                                                ft.approvedDurationMinutes,
-                                              )}
-                                            </span>
+                                            {fixedTaskOverdue ? (
+                                              <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                مهلت گذشته
+                                              </span>
+                                            ) : (
+                                              <span
+                                                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ft.isActive !== false ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
+                                              >
+                                                {ft.isActive !== false
+                                                  ? "فعال"
+                                                  : "غیرفعال"}
+                                              </span>
+                                            )}
                                           </div>
-                                        )}
-                                        <TaskDeadlineCountdown
-                                          className="mt-3"
-                                          dueDate={ft.endDate ?? ft.nextRunAt}
-                                          status={ft.status}
-                                        />
-                                        <div className="mt-3 flex items-center justify-between gap-2">
-                                          <AssigneeStack
-                                            users={
-                                              ft.assignedTo
-                                                ? [ft.assignedTo]
-                                                : []
-                                            }
-                                          />
-                                          {ft.nextRunAt && (
-                                            <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
-                                              <CalendarDays size={10} />
-                                              {formatDate(ft.nextRunAt)}
+                                          <div className="mt-2.5 flex items-start gap-2">
+                                            <ClipboardList
+                                              size={15}
+                                              className="mt-0.5 shrink-0 text-[#1f7a8c]"
+                                            />
+                                            <h4 className="text-sm font-semibold leading-snug">
+                                              {ft.title}
+                                            </h4>
+                                          </div>
+                                          {ft.description && (
+                                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
+                                              {ft.description}
+                                            </p>
+                                          )}
+                                          {hasManagerRating && (
+                                            <div className="mt-3 rounded-xl bg-amber-50 p-3 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.16)] dark:bg-amber-950/25">
+                                              <div className="flex items-center justify-between gap-3">
+                                                <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                                                  <Award size={14} />
+                                                  امتیاز مدیر
+                                                </span>
+                                                <strong className="text-sm font-black tabular-nums text-amber-700 dark:text-amber-300">
+                                                  {ft.ratingScore.toLocaleString(
+                                                    "fa-IR",
+                                                  )}
+                                                  ٪ · {managerRatingLabel}
+                                                </strong>
+                                              </div>
+                                              <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
+                                                {ft.ratingComment}
+                                              </p>
                                             </div>
                                           )}
-                                        </div>
-                                        {isManager && ft.isActive !== false && (
-                                          <button
-                                            className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
-                                            onClick={(event) => {
-                                              event.stopPropagation();
-                                              if (
-                                                window.confirm(
-                                                  "این گزارش ثابت حذف شود؟",
-                                                )
-                                              ) {
-                                                void deleteFixedTask(getId(ft));
+                                          {ft.approvedDurationMinutes !=
+                                            null && (
+                                            <div className="mt-3 flex items-center justify-between rounded-lg bg-sky-50 px-2.5 py-2 text-xs text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+                                              <span className="font-semibold">
+                                                زمان در دسترس:
+                                              </span>
+                                              <span className="font-extrabold tabular-nums">
+                                                {formatDurationMinutes(
+                                                  ft.approvedDurationMinutes,
+                                                )}
+                                              </span>
+                                            </div>
+                                          )}
+                                          <TaskDeadlineCountdown
+                                            className="mt-3"
+                                            dueDate={ft.endDate ?? ft.nextRunAt}
+                                            status={ft.status}
+                                          />
+                                          <div className="mt-3 flex items-center justify-between gap-2">
+                                            <AssigneeStack
+                                              users={
+                                                ft.assignedTo
+                                                  ? [ft.assignedTo]
+                                                  : []
                                               }
-                                            }}
-                                            type="button"
-                                          >
-                                            حذف
-                                          </button>
-                                        )}
-                                      </article>
-                                    )}
-                                  </Draggable>
+                                            />
+                                            {ft.nextRunAt && (
+                                              <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
+                                                <CalendarDays size={10} />
+                                                {formatDate(ft.nextRunAt)}
+                                              </div>
+                                            )}
+                                          </div>
+                                          {isManager &&
+                                            ft.isActive !== false && (
+                                              <button
+                                                className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  if (
+                                                    window.confirm(
+                                                      "این گزارش ثابت حذف شود؟",
+                                                    )
+                                                  ) {
+                                                    void deleteFixedTask(
+                                                      getId(ft),
+                                                    );
+                                                  }
+                                                }}
+                                                type="button"
+                                              >
+                                                حذف
+                                              </button>
+                                            )}
+                                        </article>
+                                      )}
+                                    </Draggable>
                                   );
                                 })
                               )}
@@ -946,7 +984,6 @@ function DashboardPageContent() {
               </div>
             </div>
           )}
-
         </LandingPageEntrance>
       )}
     </>
@@ -986,6 +1023,20 @@ function boundedPercent(value?: number) {
   return Math.min(100, Math.max(0, Math.round(value ?? 0)));
 }
 
+function averageDailyProgress(
+  entries: DailyProgressEntry[] | undefined,
+  field:
+    | "progressPercentage"
+    | "taskProgressPercentage"
+    | "fixedTaskProgressPercentage",
+) {
+  if (!entries?.length) return undefined;
+  return Math.round(
+    entries.reduce((sum, entry) => sum + (entry[field] ?? 0), 0) /
+      entries.length,
+  );
+}
+
 function SpecialistPerformanceCard({
   stats,
   fallbackProgress,
@@ -1011,23 +1062,31 @@ function SpecialistPerformanceCard({
     Math.max(
       0,
       Math.round(
-        dailyStats?.progressPercentage ??
+        dailyStats?.averageProgressPercentage ??
+          averageDailyProgress(dailyStats?.data, "progressPercentage") ??
+          dailyStats?.progressPercentage ??
           stats?.progressPercentage ??
           fallbackProgress,
       ),
     ),
   );
+  const latestDailyEntry = dailyStats?.data?.at(-1);
   const status =
+    latestDailyEntry?.performanceStatus ??
     dailyStats?.performanceStatus ??
     stats?.performanceStatus ??
     fallbackStatus;
   const projectProgress = boundedPercent(
-    dailyStats?.taskProgressPercentage ??
+    dailyStats?.averageTaskProgressPercentage ??
+      averageDailyProgress(dailyStats?.data, "taskProgressPercentage") ??
+      dailyStats?.taskProgressPercentage ??
       bucketRate(dailyStats?.tasks ?? dailyStats?.projects) ??
       stats?.taskProgressPercentage,
   );
   const reportProgress = boundedPercent(
-    dailyStats?.fixedTaskProgressPercentage ??
+    dailyStats?.averageFixedTaskProgressPercentage ??
+      averageDailyProgress(dailyStats?.data, "fixedTaskProgressPercentage") ??
+      dailyStats?.fixedTaskProgressPercentage ??
       bucketRate(dailyStats?.fixedTasks ?? dailyStats?.reports) ??
       stats?.fixedTaskProgressPercentage,
   );
@@ -1164,7 +1223,9 @@ function SpecialistPerformanceCard({
               <TrendingUp size={19} strokeWidth={2.2} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-balance font-bold text-[--text]">عملکرد من</h2>
+              <h2 className="text-balance font-bold text-[--text]">
+                عملکرد من
+              </h2>
               <p className="mt-0.5 text-xs text-[--text-3]">
                 نمای کلی پیشرفت فعالیت‌ها
               </p>
@@ -1385,7 +1446,9 @@ function PersonalPerformanceCard({
           <TrendingUp size={17} className="text-violet-600" />
           <h2 className="font-bold">عملکرد من</h2>
         </div>
-        <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${statusClass}`}>
+        <span
+          className={`rounded-md px-2.5 py-1 text-xs font-bold ${statusClass}`}
+        >
           {statusLabel}
         </span>
       </div>
@@ -1401,7 +1464,9 @@ function PersonalPerformanceCard({
       <div className="mt-4 grid grid-cols-2 gap-2 text-center xl:grid-cols-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="rounded-xl bg-[--surface-2] py-3">
-            <p className={`text-xl font-bold ${metric.color}`}>{metric.value}</p>
+            <p className={`text-xl font-bold ${metric.color}`}>
+              {metric.value}
+            </p>
             <p className="text-[11px] text-[--text-3]">{metric.label}</p>
           </div>
         ))}
