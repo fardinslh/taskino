@@ -4,8 +4,14 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
-import { getId } from "@/lib/api";
+import {
+  fixedTaskApi,
+  getId,
+  taskApi,
+  type Notification,
+} from "@/lib/api";
 import type { View } from "../_lib/task-constants";
+import { notificationTarget } from "../_lib/task-helpers";
 import { AiAssistant } from "./ai-assistant";
 import { SelectedFixedTaskPanel } from "./selected-fixed-task-panel";
 import { SelectedTaskPanel } from "./selected-task-panel";
@@ -37,6 +43,7 @@ export function TaskinoApp({
     darkMode,
     deleteTask,
     error,
+    fixedTasks,
     isManager,
     isSpecialist,
     isSupervisor,
@@ -95,6 +102,74 @@ export function TaskinoApp({
     !!selectedFixedTaskAssigneeId &&
     selectedFixedTaskAssigneeId !== myId;
 
+  function findTaskByTitle(title?: string) {
+    if (!title) return null;
+    const normalizedTitle = title.trim().toLowerCase();
+    return (
+      tasks.find((task) => task.title.trim().toLowerCase() === normalizedTitle) ??
+      null
+    );
+  }
+
+  function findFixedTaskByTitle(title?: string) {
+    if (!title) return null;
+    const normalizedTitle = title.trim().toLowerCase();
+    return (
+      fixedTasks.find(
+        (task) => task.title.trim().toLowerCase() === normalizedTitle,
+      ) ?? null
+    );
+  }
+
+  async function openNotificationTarget(notification: Notification) {
+    setShowNotifications(false);
+
+    const target = notificationTarget(notification);
+    let opened = false;
+
+    try {
+      if (target?.kind === "fixedTask") {
+        const localTask =
+          (target.id
+            ? fixedTasks.find((task) => getId(task) === target.id)
+            : null) ?? findFixedTaskByTitle(target.title);
+        const fetchedTask =
+          !localTask && target.id
+            ? await fixedTaskApi.get(token, target.id).catch(() => null)
+            : null;
+        const task = localTask ?? fetchedTask;
+
+        if (task) {
+          setSelectedTask(null);
+          setSelectedFixedTask(task);
+          opened = true;
+        }
+      } else if (target?.kind === "task") {
+        const localTask =
+          (target.id
+            ? tasks.find((task) => getId(task) === target.id)
+            : null) ?? findTaskByTitle(target.title);
+        const fetchedTask =
+          !localTask && target.id
+            ? await taskApi.get(token, target.id).catch(() => null)
+            : null;
+        const task = localTask ?? fetchedTask;
+
+        if (task) {
+          setSelectedFixedTask(null);
+          setSelectedTask(task);
+          opened = true;
+        }
+      }
+
+      if (target && !opened) {
+        setError("گزارش مربوط به این اعلان پیدا نشد.");
+      }
+    } finally {
+      void markNotificationRead(getId(notification));
+    }
+  }
+
   return (
     <TaskinoProvider value={controller}>
       <MotionConfig reducedMotion="user">
@@ -114,7 +189,9 @@ export function TaskinoApp({
           onClearSearch={() => setTaskQuery("")}
           onLogout={logout}
           onMarkAllNotificationsRead={() => void markAllNotificationsRead()}
-          onMarkNotificationRead={(id) => void markNotificationRead(id)}
+          onNotificationClick={(notification) =>
+            void openNotificationTarget(notification)
+          }
           onRefresh={() => void loadData()}
           onSearchChange={setTaskQuery}
           onToggleMobileSidebar={() => setMobileSidebarOpen((value) => !value)}

@@ -30,7 +30,7 @@ type TaskinoHeaderProps = {
   onClearSearch: () => void;
   onLogout: () => void;
   onMarkAllNotificationsRead: () => void;
-  onMarkNotificationRead: (id: string) => void;
+  onNotificationClick: (notification: Notification) => void;
   onRefresh: () => void;
   onSearchChange: (value: string) => void;
   onToggleDarkMode: () => void;
@@ -50,7 +50,7 @@ export function TaskinoHeader({
   onClearSearch,
   onLogout,
   onMarkAllNotificationsRead,
-  onMarkNotificationRead,
+  onNotificationClick,
   onRefresh,
   onSearchChange,
   onToggleDarkMode,
@@ -174,7 +174,7 @@ export function TaskinoHeader({
                           key={getId(notification)}
                           className="flex w-full flex-col gap-0.5 border-b border-[--border] px-4 py-3 text-right transition hover:bg-[--surface-2]"
                           onClick={() =>
-                            onMarkNotificationRead(getId(notification))
+                            onNotificationClick(notification)
                           }
                           type="button"
                         >
