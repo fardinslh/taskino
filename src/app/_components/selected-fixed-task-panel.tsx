@@ -1,10 +1,13 @@
 "use client";
 
+import { FormEvent, useState } from "react";
 import {
   Award,
   CheckCircle2,
   ChevronLeft,
   CircleDashed,
+  Loader2,
+  MessageSquareText,
   Repeat,
   X,
 } from "lucide-react";
@@ -21,26 +24,41 @@ import {
 } from "../_lib/task-helpers";
 
 const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "in_progress", "done"];
+const RATING_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
+
+function ratingLabel(score: number) {
+  if (score === 0) return "ضعیف";
+  if (score <= 3) return "متوسط";
+  return "خوب";
+}
 
 export function SelectedFixedTaskPanel({
   canChangeStatus,
+  canRate,
   canEditTemplate,
   canDeleteTemplate,
   onClose,
   onDelete,
   onEdit,
+  onRate,
   onStatusChange,
   task,
 }: {
   canChangeStatus: boolean;
+  canRate: boolean;
   canEditTemplate: boolean;
   canDeleteTemplate: boolean;
   onClose: () => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: FixedTask) => void;
+  onRate: (taskId: string, score: number, ratingComment: string) => Promise<void>;
   onStatusChange: (taskId: string, status: FixedTaskStatus) => void;
   task: FixedTask;
 }) {
+  const [ratingScore, setRatingScore] = useState<number | null>(null);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState("");
   const taskId = getId(task);
   const assignee = Array.isArray(task.assignedTo)
     ? task.assignedTo[0]
@@ -49,12 +67,36 @@ export function SelectedFixedTaskPanel({
   const statusChangeBlocked = isFixedTaskOverdue(task);
   const hasManagerRating =
     task.ratingScore != null && Boolean(task.ratingComment?.trim());
+  const canSubmitRating = canRate && currentStatus === "done" && !hasManagerRating;
   const managerRatingLabel =
     task.ratingScore === 0
-      ? "ضعیف"
-      : (task.ratingScore ?? 0) <= 3
-        ? "متوسط"
-        : "خوب";
+      ? ratingLabel(0)
+      : ratingLabel(task.ratingScore ?? 0);
+
+  async function submitRating(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const comment = ratingComment.trim();
+    if (ratingScore == null || !comment) {
+      setRatingError("انتخاب امتیاز و ثبت نظر الزامی است.");
+      return;
+    }
+
+    setRatingSubmitting(true);
+    setRatingError("");
+    try {
+      await onRate(taskId, ratingScore, comment);
+      setRatingScore(null);
+      setRatingComment("");
+    } catch (error) {
+      setRatingError(
+        error instanceof Error
+          ? error.message
+          : "ثبت امتیاز گزارش ناموفق بود.",
+      );
+    } finally {
+      setRatingSubmitting(false);
+    }
+  }
 
   return (
     <>
@@ -135,6 +177,80 @@ export function SelectedFixedTaskPanel({
                 {task.ratingComment}
               </p>
             </div>
+          )}
+
+          {canSubmitRating && (
+            <form
+              className="rounded-xl bg-[--surface-2] p-3 shadow-[inset_0_0_0_1px_var(--border)]"
+              onSubmit={submitRating}
+            >
+              <div className="flex items-center gap-2 text-sm font-black text-[--text]">
+                <Award size={16} className="text-amber-600" />
+                امتیازدهی گزارش
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {RATING_OPTIONS.map((value) => {
+                  const selected = ratingScore === value;
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={`min-h-14 rounded-xl px-2 py-2 text-center transition-[background-color,box-shadow,transform] active:scale-[0.96] ${
+                        selected
+                          ? "bg-[#1f7a8c] text-white shadow-lg shadow-[#1f7a8c]/20"
+                          : "bg-[--surface] text-[--text-2] shadow-[inset_0_0_0_1px_var(--border)] hover:bg-[--border]"
+                      }`}
+                      disabled={ratingSubmitting}
+                      key={value}
+                      onClick={() => {
+                        setRatingScore(value);
+                        setRatingError("");
+                      }}
+                      type="button"
+                    >
+                      <span className="block text-base font-black tabular-nums">
+                        {value.toLocaleString("fa-IR")}٪
+                      </span>
+                      <span className="mt-0.5 block text-[10px] font-bold opacity-80">
+                        {ratingLabel(value)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="mt-3 block">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-[--text-2]">
+                  <MessageSquareText size={14} className="text-[#1f7a8c]" />
+                  نظر مدیر
+                </span>
+                <textarea
+                  className="mt-2 min-h-24 w-full resize-y rounded-xl border border-[--border] bg-[--surface] px-3 py-2.5 text-sm leading-6 text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                  disabled={ratingSubmitting}
+                  maxLength={1000}
+                  onChange={(event) => {
+                    setRatingComment(event.target.value);
+                    setRatingError("");
+                  }}
+                  placeholder="نظر خود درباره کیفیت انجام این گزارش را بنویسید..."
+                  required
+                  value={ratingComment}
+                />
+              </label>
+              {ratingError && (
+                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                  {ratingError}
+                </p>
+              )}
+              <button
+                className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/15 transition-[background-color,transform] hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  ratingSubmitting || ratingScore == null || !ratingComment.trim()
+                }
+                type="submit"
+              >
+                {ratingSubmitting && <Loader2 className="animate-spin" size={16} />}
+                ثبت امتیاز
+              </button>
+            </form>
           )}
 
           <div>

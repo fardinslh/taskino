@@ -302,6 +302,8 @@ export type StatusCounts = {
   inProgress?: number;
   in_progress?: number;
   done?: number;
+  overdue?: number;
+  overdueUnfinished?: number;
   pending?: number;
   completed?: number;
 };
@@ -1268,6 +1270,10 @@ export const fixedTaskApi = {
     ),
   statusCounts: (token: string) =>
     unwrapAxios(apiClient.get<StatusCounts>("/fixed-tasks/status-counts")),
+  scheduledStatusCounts: (token: string) =>
+    unwrapAxios(
+      apiClient.get<StatusCounts>("/fixed-tasks/me/scheduled-status-counts"),
+    ),
 };
 
 // ─── Leave Requests ──────────────────────────────────────────────────────────

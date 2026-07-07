@@ -70,15 +70,14 @@ export function TaskinoApp({
     setRejectReason,
     setSelectedFixedTask,
     setSelectedTask,
+    setFixedTasks,
     setShowNotifications,
     setSidebarCollapsed,
-    setTaskQuery,
     showNotifications,
     sidebarCollapsed,
     statsUsers,
     supervisorStats,
     supervisorTasks,
-    taskQuery,
     tasks,
     token,
     unreadCount,
@@ -170,6 +169,23 @@ export function TaskinoApp({
     }
   }
 
+  async function rateSelectedFixedTask(
+    taskId: string,
+    score: number,
+    ratingComment: string,
+  ) {
+    const ratedTask = await fixedTaskApi.rate(token, taskId, {
+      ratingComment,
+      score,
+    });
+
+    setFixedTasks((current) =>
+      current.map((task) => (getId(task) === taskId ? ratedTask : task)),
+    );
+    setSelectedFixedTask(ratedTask);
+    setMessage("امتیاز گزارش ثبت شد.");
+  }
+
   return (
     <TaskinoProvider value={controller}>
       <MotionConfig reducedMotion="user">
@@ -186,18 +202,15 @@ export function TaskinoApp({
           darkMode={darkMode}
           loadingData={loadingData}
           notifications={notifications}
-          onClearSearch={() => setTaskQuery("")}
           onLogout={logout}
           onMarkAllNotificationsRead={() => void markAllNotificationsRead()}
           onNotificationClick={(notification) =>
             void openNotificationTarget(notification)
           }
           onRefresh={() => void loadData()}
-          onSearchChange={setTaskQuery}
           onToggleMobileSidebar={() => setMobileSidebarOpen((value) => !value)}
           onToggleDarkMode={() => setDarkMode(!darkMode)}
           onToggleNotifications={() => setShowNotifications(!showNotifications)}
-          searchQuery={taskQuery}
           showNotifications={showNotifications}
           sidebarCollapsed={sidebarCollapsed}
           unreadCount={unreadCount}
@@ -231,10 +244,10 @@ export function TaskinoApp({
             onClick={() => showNotifications && setShowNotifications(false)}
           >
             <motion.div
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              initial={{ opacity: 0, scale: 0.992, y: 14 }}
+              animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
               key={activeView}
-              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+              transition={{ duration: 0.18 }}
             >
               {children}
             </motion.div>
@@ -292,6 +305,7 @@ export function TaskinoApp({
             canChangeStatus={isSpecialist || isSupervisor}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
+            canRate={isManager}
             onClose={() => setSelectedFixedTask(null)}
             onDelete={(taskId) => void controller.deleteFixedTask(taskId)}
             onEdit={(task) => {
@@ -305,6 +319,7 @@ export function TaskinoApp({
               const updated = await controller.moveFixedTask(taskId, status);
               if (updated) setSelectedFixedTask(updated);
             }}
+            onRate={rateSelectedFixedTask}
             task={selectedFixedTask}
             />
           )}

@@ -226,14 +226,14 @@ export function TaskinoSidebar({
                 active={activeView === "tasks-admin"}
                 collapsed={sidebarCollapsed}
                 icon={FolderKanban}
-                label="پروژه مدیر"
+                label="گزارشات محول به کارشناس"
                 onClick={() => handleSelect("tasks-admin")}
               />
               <SideItem
                 active={activeView === "manager-extra-projects"}
                 collapsed={sidebarCollapsed}
                 icon={Layers3}
-                label="پروژه‌های مازاد"
+                label="گزارشات مازاد کارشناس"
                 onClick={() => handleSelect("manager-extra-projects")}
               />
               <SideItem

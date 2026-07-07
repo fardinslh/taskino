@@ -8,10 +8,8 @@ import {
   Menu,
   Moon,
   RefreshCw,
-  Search,
   Sparkles,
   Sun,
-  X,
 } from "lucide-react";
 
 import { getId, type Notification, type User } from "@/lib/api";
@@ -27,16 +25,13 @@ type TaskinoHeaderProps = {
   darkMode: boolean;
   loadingData: boolean;
   notifications: Notification[];
-  onClearSearch: () => void;
   onLogout: () => void;
   onMarkAllNotificationsRead: () => void;
   onNotificationClick: (notification: Notification) => void;
   onRefresh: () => void;
-  onSearchChange: (value: string) => void;
   onToggleDarkMode: () => void;
   onToggleMobileSidebar: () => void;
   onToggleNotifications: () => void;
-  searchQuery: string;
   showNotifications: boolean;
   sidebarCollapsed: boolean;
   unreadCount: number;
@@ -47,16 +42,13 @@ export function TaskinoHeader({
   darkMode,
   loadingData,
   notifications,
-  onClearSearch,
   onLogout,
   onMarkAllNotificationsRead,
   onNotificationClick,
   onRefresh,
-  onSearchChange,
   onToggleDarkMode,
   onToggleMobileSidebar,
   onToggleNotifications,
-  searchQuery,
   showNotifications,
   sidebarCollapsed,
   unreadCount,
@@ -88,50 +80,7 @@ export function TaskinoHeader({
           )}
         </div>
 
-        <div className="order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
-          <div className="relative sm:hidden">
-            <Search
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[--text-3]"
-              size={15}
-            />
-            <input
-              className="h-9 w-full rounded-lg border border-[--border] bg-[--surface-2] pr-9 pl-8 text-sm outline-none transition-all placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:bg-[--surface] focus:ring-2 focus:ring-[#1f7a8c]/15"
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="جستجوی گزارش..."
-              value={searchQuery}
-            />
-            {searchQuery && (
-              <button
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[--text-3] hover:text-[--text-2]"
-                onClick={onClearSearch}
-                type="button"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-          <div className="relative hidden sm:block">
-            <Search
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[--text-3]"
-              size={15}
-            />
-            <input
-              className="h-9 w-44 rounded-lg border border-[--border] bg-[--surface-2] pr-9 pl-3 text-sm outline-none transition-all placeholder:text-[--text-3] focus:w-64 focus:border-[#1f7a8c] focus:bg-[--surface] focus:ring-2 focus:ring-[#1f7a8c]/15 lg:w-52 lg:focus:w-72"
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="جستجوی گزارش..."
-              value={searchQuery}
-            />
-            {searchQuery && (
-              <button
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[--text-3] hover:text-[--text-2]"
-                onClick={onClearSearch}
-                type="button"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-        </div>
+        <div className="order-3 hidden flex-1 sm:order-2 sm:block" />
 
         <div className="order-2 mr-auto flex items-center gap-2 sm:order-3 sm:mr-0">
           <div className="relative">

@@ -435,7 +435,7 @@ export function useDataLoader({
         ? await Promise.all([
             taskApi.statusCounts(authToken).catch(() => null),
             userIsSpecialist
-              ? Promise.resolve(null)
+              ? fixedTaskApi.scheduledStatusCounts(authToken).catch(() => null)
               : Promise.resolve(null),
             userApi.meProgress(authToken).catch(() => null),
             Promise.resolve(null),
@@ -527,7 +527,9 @@ export function useDataLoader({
                 },
                 { total: 0, todo: 0, pending: 0, inProgress: 0, in_progress: 0, done: 0, completed: 0 },
               );
-              setSpecialistFixedTaskCounts(counts);
+              if (!specialistFixedTaskCountsRes) {
+                setSpecialistFixedTaskCounts(counts);
+              }
             }
           })
           .catch(() => setFixedTasks([]));

@@ -1,7 +1,10 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
+import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
+  Award,
   BarChart2,
   CalendarDays,
   CircleDashed,
@@ -31,6 +34,20 @@ import {
   recurrenceLabel,
   userName,
 } from "../_lib/task-helpers";
+
+function DraggablePortal({
+  children,
+  enabled,
+}: {
+  children: ReactNode;
+  enabled: boolean;
+}) {
+  if (enabled && typeof document !== "undefined") {
+    return createPortal(children, document.body);
+  }
+
+  return children;
+}
 
 export default function TasksPage() {
   return <TasksPageContent />;
@@ -394,6 +411,9 @@ function TasksPageContent() {
                                 items.map((ft: any, idx: number) => {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
+                                  const hasManagerRating =
+                                    ft.ratingScore != null &&
+                                    Boolean(ft.ratingComment?.trim());
                                   return (
                                   <Draggable
                                     key={getId(ft)}
@@ -406,14 +426,17 @@ function TasksPageContent() {
                                     }
                                   >
                                     {(dragProvided: any, dragSnapshot: any) => (
-                                      <article
-                                        ref={dragProvided.innerRef}
-                                        {...dragProvided.draggableProps}
-                                        {...dragProvided.dragHandleProps}
-                                        className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-all ${isManager ? "hover:-translate-y-0.5 hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
-                                        onClick={() => setSelectedFixedTask(ft)}
+                                      <DraggablePortal
+                                        enabled={dragSnapshot.isDragging}
                                       >
-                                        <div className="flex items-center justify-between gap-2">
+                                        <article
+                                          ref={dragProvided.innerRef}
+                                          {...dragProvided.draggableProps}
+                                          {...dragProvided.dragHandleProps}
+                                          className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-[background-color,border-color,box-shadow] ${isManager ? "hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                          onClick={() => setSelectedFixedTask(ft)}
+                                        >
+                                        <div className="flex flex-wrap items-center justify-start gap-1.5">
                                           <span className="rounded-md border border-[#b8dfe8] bg-[#e8f4f7] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7a8c] dark:border-[#1f5060] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
                                             ثابت ·{" "}
                                             {recurrenceLabel(ft.recurrence)}
@@ -428,7 +451,16 @@ function TasksPageContent() {
                                             >
                                               {ft.isActive !== false
                                                 ? "فعال"
-                                                : "غیرفعال"}
+                                              : "غیرفعال"}
+                                            </span>
+                                          )}
+                                          {hasManagerRating && (
+                                            <span className="flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.18)] dark:bg-amber-950/35 dark:text-amber-300">
+                                              <Award size={11} />
+                                              {ft.ratingScore.toLocaleString(
+                                                "fa-IR",
+                                              )}
+                                              ٪
                                             </span>
                                           )}
                                         </div>
@@ -496,7 +528,8 @@ function TasksPageContent() {
                                             حذف
                                           </button>
                                         )}
-                                      </article>
+                                        </article>
+                                      </DraggablePortal>
                                     )}
                                   </Draggable>
                                   );
