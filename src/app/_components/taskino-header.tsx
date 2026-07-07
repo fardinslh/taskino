@@ -148,7 +148,7 @@ export function TaskinoHeader({
               )}
             </button>
             {showNotifications && (
-              <div className="absolute left-0 top-11 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-[--border] bg-[--surface] shadow-xl">
+              <div className="fixed left-3 right-3 top-14 z-50 overflow-hidden rounded-xl border border-[--border] bg-[--surface] shadow-xl sm:absolute sm:left-0 sm:right-auto sm:top-11 sm:w-[min(20rem,calc(100vw-1.5rem))]">
                 <div className="flex items-center justify-between border-b border-[--border] px-4 py-3">
                   <span className="text-sm font-bold">اعلان‌ها</span>
                   {unreadCount > 0 && (
