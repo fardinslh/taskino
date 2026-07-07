@@ -1780,7 +1780,7 @@ function DateField({
         }}
         portal
         value={value ? new Date(`${value}T00:00:00`) : ""}
-        zIndex={1000}
+        zIndex={10000}
       />
     </label>
   );

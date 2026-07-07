@@ -1294,6 +1294,7 @@ function SpecialistPerformanceCard({
               }}
               portal
               value={from ? new Date(`${from}T00:00:00`) : ""}
+              zIndex={10000}
             />
           </label>
           <label className="block text-[11px] font-semibold text-[--text-2]">
@@ -1313,6 +1314,7 @@ function SpecialistPerformanceCard({
               }}
               portal
               value={to ? new Date(`${to}T00:00:00`) : ""}
+              zIndex={10000}
             />
           </label>
           <button

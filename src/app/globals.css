@@ -58,11 +58,26 @@ summary,
 }
 
 .rmdp-container {
-  z-index: 60;
+  position: relative;
+  z-index: 10000;
 }
 
-.rmdp-calendar-container {
-  z-index: 70 !important;
+.rmdp-portal {
+  position: fixed !important;
+  inset: 0;
+  pointer-events: none;
+}
+
+.rmdp-portal,
+.rmdp-calendar-container,
+.rmdp-wrapper,
+.rmdp-calendar {
+  z-index: 10000 !important;
+}
+
+.rmdp-portal .rmdp-calendar-container,
+.rmdp-portal .rmdp-wrapper {
+  pointer-events: auto;
 }
 
 button:disabled,

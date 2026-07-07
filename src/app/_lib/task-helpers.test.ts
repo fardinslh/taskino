@@ -3,6 +3,19 @@ import { describe, expect, it } from "vitest";
 import { notificationTarget, notificationText } from "./task-helpers";
 
 describe("notification text localization", () => {
+  it("localizes task assignment notifications as projects", () => {
+    const localized = notificationText({
+      _id: "notification-project-assignment",
+      title: "Task Assigned",
+      message: "You have been assigned to the task ۵۵۵۵۵",
+    });
+
+    expect(localized).toEqual({
+      title: "پروژه جدید",
+      message: "پروژه «۵۵۵۵۵» به شما اختصاص داده شد.",
+    });
+  });
+
   it("localizes fixed task rating notifications", () => {
     const localized = notificationText({
       _id: "notification-1",

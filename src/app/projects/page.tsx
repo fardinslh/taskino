@@ -435,6 +435,7 @@ function ProjectsPageContent() {
                           name={name}
                           render={({ field }) => (
                             <DatePicker
+                              portal
                               value={field.value ? new Date(field.value) : ""}
                               onChange={(value) => {
                                 if (!value || Array.isArray(value)) {
@@ -454,6 +455,7 @@ function ProjectsPageContent() {
                               calendarPosition="bottom-right"
                               inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                               containerClassName="w-full"
+                              zIndex={10000}
                               placeholder={
                                 name === "startDate"
                                   ? "انتخاب تاریخ شروع"
@@ -681,6 +683,7 @@ function ProjectsPageContent() {
                       rules={{ required: true }}
                       render={({ field }) => (
                         <DatePicker
+                          portal
                           value={field.value ? new Date(field.value) : ""}
                           onChange={(value) => {
                             if (!value || Array.isArray(value)) {
@@ -696,6 +699,7 @@ function ProjectsPageContent() {
                           calendarPosition="bottom-right"
                           inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                           containerClassName="w-full"
+                          zIndex={10000}
                           placeholder="انتخاب تاریخ شروع"
                         />
                       )}
@@ -711,6 +715,7 @@ function ProjectsPageContent() {
                       rules={{ required: true }}
                       render={({ field }) => (
                         <DatePicker
+                          portal
                           value={field.value ? new Date(field.value) : ""}
                           onChange={(value) => {
                             if (!value || Array.isArray(value)) {
@@ -726,6 +731,7 @@ function ProjectsPageContent() {
                           calendarPosition="bottom-right"
                           inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                           containerClassName="w-full"
+                          zIndex={10000}
                           placeholder="انتخاب تاریخ پایان"
                         />
                       )}

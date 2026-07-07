@@ -13,6 +13,7 @@ import {
   FolderKanban,
   TrendingUp,
   UserCheck,
+  X,
 } from "lucide-react";
 
 import { getId, type Task } from "@/lib/api";
@@ -55,9 +56,9 @@ export function ProjectBoardSection({
   onSearchChange,
   onSelectTask,
 }: ProjectBoardSectionProps) {
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const filteredTasks = tasks.filter((task) => {
-    if (!isTaskVisibleOnDate(task, selectedDate)) return false;
+    if (selectedDate && !isTaskVisibleOnDate(task, selectedDate)) return false;
 
     const query = taskQuery.trim().toLowerCase();
     if (!query) return true;
@@ -135,7 +136,9 @@ export function ProjectBoardSection({
             <div>
               <h2 className="font-bold">برد پروژه‌ها</h2>
               <p className="text-[11px] text-[--text-3]">
-                {filteredTasks.length} پروژه در تاریخ انتخاب‌شده
+                {selectedDate
+                  ? `${filteredTasks.length} پروژه در تاریخ انتخاب‌شده`
+                  : `${filteredTasks.length} پروژه`}
               </p>
             </div>
           </div>
@@ -146,6 +149,7 @@ export function ProjectBoardSection({
                 size={15}
               />
               <DatePicker
+                portal
                 calendar={jalali}
                 calendarPosition="bottom-right"
                 containerClassName="w-full"
@@ -153,11 +157,26 @@ export function ProjectBoardSection({
                 inputClass="h-10 w-full rounded-xl border border-[--border] bg-[--surface] pr-9 pl-3 text-xs font-semibold text-[--text] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                 locale={persianFa}
                 onChange={(value) => {
-                  if (!value || Array.isArray(value)) return;
+                  if (!value || Array.isArray(value)) {
+                    setSelectedDate(null);
+                    return;
+                  }
                   setSelectedDate(value.toDate());
                 }}
-                value={selectedDate}
+                placeholder="فیلتر تاریخ"
+                value={selectedDate ?? ""}
+                zIndex={10000}
               />
+              {selectedDate && (
+                <button
+                  aria-label="حذف فیلتر تاریخ"
+                  className="absolute left-2 top-1/2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-[--text-3] transition-[background-color,color,transform] hover:bg-[--surface-2] hover:text-[--text] active:scale-[0.96]"
+                  onClick={() => setSelectedDate(null)}
+                  type="button"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
             <input
               className="h-10 w-full rounded-xl border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15 sm:w-52"

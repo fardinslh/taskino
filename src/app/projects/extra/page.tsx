@@ -277,6 +277,7 @@ export default function ExtraProjectsPage() {
                 زمان شروع
               </span>
               <DatePicker
+                portal
                 calendar={jalali}
                 calendarPosition="bottom-right"
                 containerClassName="w-full"
@@ -299,6 +300,7 @@ export default function ExtraProjectsPage() {
                   />,
                 ]}
                 value={startDate ? new Date(startDate) : ""}
+                zIndex={10000}
               />
             </label>
             <label className="block md:col-span-2">

@@ -191,7 +191,7 @@ export function notificationText(notification: Notification) {
   const message = notification.message?.trim() ?? "";
   const titleMap: Record<string, string> = {
     "Fixed Task Assigned": "گزارش ثابت جدید",
-    "Task Assigned": "گزارش جدید",
+    "Task Assigned": "پروژه جدید",
     "Task Status Updated": "وضعیت گزارش تغییر کرد",
     "Fixed Task Status Updated": "وضعیت گزارش ثابت تغییر کرد",
     "Task Completed": "گزارش تکمیل شد",
@@ -263,8 +263,8 @@ export function notificationText(notification: Notification) {
       : "یک گزارش ثابت به شما اختصاص داده شد.";
   } else if (taskAssignment) {
     localizedMessage = taskAssignment[1]
-      ? `گزارش «${taskAssignment[1]}» به شما اختصاص داده شد.`
-      : "یک گزارش به شما اختصاص داده شد.";
+      ? `پروژه «${taskAssignment[1]}» به شما اختصاص داده شد.`
+      : "یک پروژه به شما اختصاص داده شد.";
   } else if (fixedTaskStatusChanged) {
     const taskName = fixedTaskStatusChanged[1]?.trim();
     const status = statusLabel(fixedTaskStatusChanged[2]?.trim());

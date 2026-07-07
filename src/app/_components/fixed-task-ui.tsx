@@ -588,6 +588,7 @@ export function ActivationModal({
                     rules={{ required: true }}
                     render={({ field }) => (
                       <DatePicker
+                        portal
                         value={field.value ? new Date(field.value) : ""}
                         onChange={(value) => {
                           if (!value || Array.isArray(value)) { field.onChange(""); return; }
@@ -600,6 +601,7 @@ export function ActivationModal({
                         calendarPosition="bottom-right"
                         inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface-2] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                         containerClassName="w-full"
+                        zIndex={10000}
                         placeholder={name === "startDate" ? "انتخاب زمان شروع" : "انتخاب زمان پایان"}
                         plugins={[<TimePicker key="time-picker" position="bottom" hideSeconds />]}
                       />
@@ -626,6 +628,7 @@ export function ActivationModal({
                   const endValue = endDateValue ? new Date(endDateValue) : "";
                   return (
                     <DatePicker
+                      portal
                       value={
                         startValue && endValue
                           ? [startValue, endValue]
@@ -654,6 +657,7 @@ export function ActivationModal({
                       calendarPosition="bottom-right"
                       inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] dark:bg-[--surface] dark:text-[--text] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                       containerClassName="w-full"
+                      zIndex={10000}
                       placeholder="انتخاب بازه هفتگی"
                     />
                   );
@@ -678,6 +682,7 @@ export function ActivationModal({
                     rules={{ required: true }}
                     render={({ field }) => (
                       <DatePicker
+                        portal
                         value={field.value ? new Date(field.value) : ""}
                         onChange={(value) => {
                           if (!value || Array.isArray(value)) { field.onChange(""); return; }
@@ -695,6 +700,7 @@ export function ActivationModal({
                         calendarPosition="bottom-right"
                         inputClass="h-11 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition placeholder:text-[--text-3] dark:bg-[--surface] dark:text-[--text] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                         containerClassName="w-full"
+                        zIndex={10000}
                         placeholder={name === "startDate" ? "انتخاب ماه شروع" : "انتخاب ماه پایان"}
                       />
                     )}
