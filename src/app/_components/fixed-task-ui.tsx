@@ -411,7 +411,6 @@ export function FilterBar({
   onTitleChange,
   onClear,
   filteredCount,
-  totalCount,
 }: {
   filterRecurrence: string;
   filterSpecialist: string;
@@ -421,7 +420,6 @@ export function FilterBar({
   onTitleChange: (v: string) => void;
   onClear: () => void;
   filteredCount: number;
-  totalCount: number;
 }) {
   return (
     <div className="border-b border-[--border] bg-[--surface-2]/40 px-5 py-4">

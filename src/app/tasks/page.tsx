@@ -64,10 +64,7 @@ function TasksPageContent() {
     setSelectedFixedTask,
     setSelectedPeriodFilter,
     setSelectedStatusFilter,
-    setSelectedSpecialistId,
-    setSpecialistSearchQuery,
     setTaskQuery,
-    specialistSearchQuery,
     taskQuery,
   } = useNavigationContext();
   const { currentUser, isManager, isSpecialist, isSupervisor } =
@@ -75,14 +72,11 @@ function TasksPageContent() {
   const {
     activeTasks,
     doneTasks,
-    inProgressTasks,
     progress,
-    projects,
     tasks,
     specialistWorkSummary,
   } = useTaskContext();
-  const { managerStats, managerTaskStatus, statsUsers, users } =
-    useManagementContext();
+  const { managerStats, managerTaskStatus, statsUsers } = useManagementContext();
   const {
     filteredFixedTemplates,
     fixedDoneTasks,
@@ -95,7 +89,6 @@ function TasksPageContent() {
     openFixedTaskForm,
     deleteFixedTask,
   } = useFixedTaskContext();
-  const specialistUsers = users.filter((u: any) => u.roles === "specialist");
   const canMoveOwnFixedTasks = isSpecialist;
   const fixedStatusColumns = selectedStatusFilter
     ? COLUMNS.filter((col) => col.status === selectedStatusFilter)
@@ -113,30 +106,6 @@ function TasksPageContent() {
     setSelectedStatusFilter(status);
     setBoardShowAll(true);
   };
-  const specialistMatches = specialistSearchQuery.trim()
-    ? specialistUsers.filter((u: any) =>
-        userName(u)
-          .trim()
-          .toLowerCase()
-          .includes(specialistSearchQuery.trim().toLowerCase()),
-      )
-    : [];
-  const resolveSpecialistId = (value: string) => {
-    const query = value.trim().toLowerCase();
-    if (!query) return "";
-
-    const exactMatch = specialistUsers.find(
-      (u: any) => userName(u).trim().toLowerCase() === query,
-    );
-    if (exactMatch) return getId(exactMatch);
-
-    const partialMatches = specialistUsers.filter((u: any) =>
-      userName(u).trim().toLowerCase().includes(query),
-    );
-
-    return partialMatches.length === 1 ? getId(partialMatches[0]) : "";
-  };
-
   return (
     <>
       {((!isSupervisor &&

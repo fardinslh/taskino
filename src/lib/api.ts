@@ -706,7 +706,7 @@ export async function request<T>(
   try {
     const response = await apiClient.request<T>({
       url: path,
-      ...axiosConfig(opts),
+      ...axiosConfig(opts, token),
     });
     return response.data;
   } catch (error) {
@@ -1095,16 +1095,6 @@ export const managerApi = {
     ),
 };
 
-export type SupervisorTaskStatistics = {
-  total?: number;
-  inProgress?: number;
-  in_progress?: number;
-  done?: number;
-  completed?: number;
-  todo?: number;
-  pending?: number;
-};
-
 // ─── Supervisor ───────────────────────────────────────────────────────────────
 export const supervisorApi = {
   statistics: (token: string, recurrence?: FixedTaskRecurrence) =>
@@ -1112,10 +1102,6 @@ export const supervisorApi = {
       apiClient.get<SupervisorStats>(
         `/supervisor/statistics${qs(recurrence ? { recurrence } : {})}`,
       ),
-    ),
-  taskStatistics: (token: string) =>
-    unwrapAxios(
-      apiClient.get<SupervisorTaskStatistics>("/supervisor/statistics"),
     ),
   members: (token: string, params?: Params) =>
     unwrapAxios(

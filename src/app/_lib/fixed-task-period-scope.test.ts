@@ -34,7 +34,7 @@ describe("fixed-task request period scopes", () => {
   });
 
   it("uses recurrence for active items without request metadata", () => {
-    const activeTask = { ...task, status: "todo" };
+    const activeTask: FixedTask = { ...task, status: "todo" };
 
     expect(fixedTaskMatchesPeriodScope(activeTask, "daily")).toBe(true);
     expect(fixedTaskMatchesPeriodScope(activeTask, "weekly")).toBe(false);

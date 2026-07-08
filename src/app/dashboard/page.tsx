@@ -96,8 +96,6 @@ function DashboardPageContent() {
     activeTasks,
     claimTask,
     doneTasks,
-    inProgressTasks,
-    progress,
     projects,
     tasks,
     specialistFixedTaskCounts,
@@ -111,14 +109,7 @@ function DashboardPageContent() {
     managerTaskStatus,
     overdueTasks,
     statsUsers,
-    supervisorInProgressReports,
-    supervisorOwnDoneReports,
-    supervisorProjectDoneReports,
     supervisorStats,
-    supervisorTaskStatistics,
-    teamAssigneeCount,
-    teamAssignees,
-    teamPerformance,
     users,
   } = useManagementContext();
   const {
@@ -150,21 +141,11 @@ function DashboardPageContent() {
   const specialistTotalCount =
     (specialistTaskCounts?.total ?? 0) +
     (specialistFixedTaskCounts?.total ?? 0);
-  const specialistOpenCount =
-    (specialistTaskCounts?.todo ?? 0) +
-    (specialistTaskCounts?.inProgress ??
-      specialistTaskCounts?.in_progress ??
-      0) +
-    (specialistFixedTaskCounts?.todo ?? 0) +
-    (specialistFixedTaskCounts?.inProgress ??
-      specialistFixedTaskCounts?.in_progress ??
-      0);
   const specialistProgress =
     specialistProgressStats?.progressPercentage ??
     (specialistTotalCount
       ? Math.round((specialistDoneCount / specialistTotalCount) * 100)
       : 0);
-  const specialistScore = specialistProgressStats?.score ?? 0;
   const specialistMatches = specialistSearchQuery.trim()
     ? specialistUsers.filter((u: any) =>
         userName(u)
@@ -794,121 +775,123 @@ function DashboardPageContent() {
                                               setSelectedFixedTask(ft)
                                             }
                                           >
-                                          <div className="flex flex-wrap items-center justify-start gap-1.5">
-                                            <span className="rounded-md border border-[#b8dfe8] bg-[#e8f4f7] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7a8c] dark:border-[#1f5060] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
-                                              ثابت ·{" "}
-                                              {recurrenceLabel(ft.recurrence)}
-                                            </span>
-                                            {fixedTaskOverdue ? (
-                                              <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
-                                                مهلت گذشته
+                                            <div className="flex flex-wrap items-center justify-start gap-1.5">
+                                              <span className="rounded-md border border-[#b8dfe8] bg-[#e8f4f7] px-1.5 py-0.5 text-[10px] font-bold text-[#1f7a8c] dark:border-[#1f5060] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
+                                                ثابت ·{" "}
+                                                {recurrenceLabel(ft.recurrence)}
                                               </span>
-                                            ) : (
-                                              <span
-                                                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ft.isActive !== false ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
-                                              >
-                                                {ft.isActive !== false
-                                                  ? "فعال"
-                                                  : "غیرفعال"}
-                                              </span>
-                                            )}
-                                            {hasManagerRating && (
-                                              <span className="flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.18)] dark:bg-amber-950/35 dark:text-amber-300">
-                                                <Award size={11} />
-                                                {ft.ratingScore.toLocaleString(
-                                                  "fa-IR",
-                                                )}
-                                                ٪
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="mt-2.5 flex items-start gap-2">
-                                            <ClipboardList
-                                              size={15}
-                                              className="mt-0.5 shrink-0 text-[#1f7a8c]"
-                                            />
-                                            <h4 className="text-sm font-semibold leading-snug">
-                                              {ft.title}
-                                            </h4>
-                                          </div>
-                                          {ft.description && (
-                                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
-                                              {ft.description}
-                                            </p>
-                                          )}
-                                          {hasManagerRating && (
-                                            <div className="mt-3 rounded-xl bg-amber-50 p-3 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.16)] dark:bg-amber-950/25">
-                                              <div className="flex items-center justify-between gap-3">
-                                                <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
-                                                  <Award size={14} />
-                                                  امتیاز مدیر
+                                              {fixedTaskOverdue ? (
+                                                <span className="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                  مهلت گذشته
                                                 </span>
-                                                <strong className="text-sm font-black tabular-nums text-amber-700 dark:text-amber-300">
+                                              ) : (
+                                                <span
+                                                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${ft.isActive !== false ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
+                                                >
+                                                  {ft.isActive !== false
+                                                    ? "فعال"
+                                                    : "غیرفعال"}
+                                                </span>
+                                              )}
+                                              {hasManagerRating && (
+                                                <span className="flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.18)] dark:bg-amber-950/35 dark:text-amber-300">
+                                                  <Award size={11} />
                                                   {ft.ratingScore.toLocaleString(
                                                     "fa-IR",
                                                   )}
-                                                  ٪ · {managerRatingLabel}
-                                                </strong>
-                                              </div>
-                                              <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
-                                                {ft.ratingComment}
+                                                  ٪
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="mt-2.5 flex items-start gap-2">
+                                              <ClipboardList
+                                                size={15}
+                                                className="mt-0.5 shrink-0 text-[#1f7a8c]"
+                                              />
+                                              <h4 className="text-sm font-semibold leading-snug">
+                                                {ft.title}
+                                              </h4>
+                                            </div>
+                                            {ft.description && (
+                                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
+                                                {ft.description}
                                               </p>
-                                            </div>
-                                          )}
-                                          {ft.approvedDurationMinutes !=
-                                            null && (
-                                            <div className="mt-3 flex items-center justify-between rounded-lg bg-sky-50 px-2.5 py-2 text-xs text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
-                                              <span className="font-semibold">
-                                                زمان در دسترس:
-                                              </span>
-                                              <span className="font-extrabold tabular-nums">
-                                                {formatDurationMinutes(
-                                                  ft.approvedDurationMinutes,
-                                                )}
-                                              </span>
-                                            </div>
-                                          )}
-                                          <TaskDeadlineCountdown
-                                            className="mt-3"
-                                            dueDate={ft.endDate ?? ft.nextRunAt}
-                                            status={ft.status}
-                                          />
-                                          <div className="mt-3 flex items-center justify-between gap-2">
-                                            <AssigneeStack
-                                              users={
-                                                ft.assignedTo
-                                                  ? [ft.assignedTo]
-                                                  : []
-                                              }
-                                            />
-                                            {ft.nextRunAt && (
-                                              <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
-                                                <CalendarDays size={10} />
-                                                {formatDate(ft.nextRunAt)}
+                                            )}
+                                            {hasManagerRating && (
+                                              <div className="mt-3 rounded-xl bg-amber-50 p-3 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.16)] dark:bg-amber-950/25">
+                                                <div className="flex items-center justify-between gap-3">
+                                                  <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                                                    <Award size={14} />
+                                                    امتیاز مدیر
+                                                  </span>
+                                                  <strong className="text-sm font-black tabular-nums text-amber-700 dark:text-amber-300">
+                                                    {ft.ratingScore.toLocaleString(
+                                                      "fa-IR",
+                                                    )}
+                                                    ٪ · {managerRatingLabel}
+                                                  </strong>
+                                                </div>
+                                                <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
+                                                  {ft.ratingComment}
+                                                </p>
                                               </div>
                                             )}
-                                          </div>
-                                          {isManager &&
-                                            ft.isActive !== false && (
-                                              <button
-                                                className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
-                                                onClick={(event) => {
-                                                  event.stopPropagation();
-                                                  if (
-                                                    window.confirm(
-                                                      "این گزارش ثابت حذف شود؟",
-                                                    )
-                                                  ) {
-                                                    void deleteFixedTask(
-                                                      getId(ft),
-                                                    );
-                                                  }
-                                                }}
-                                                type="button"
-                                              >
-                                                حذف
-                                              </button>
+                                            {ft.approvedDurationMinutes !=
+                                              null && (
+                                              <div className="mt-3 flex items-center justify-between rounded-lg bg-sky-50 px-2.5 py-2 text-xs text-sky-700 dark:bg-sky-950/30 dark:text-sky-300">
+                                                <span className="font-semibold">
+                                                  زمان در دسترس:
+                                                </span>
+                                                <span className="font-extrabold tabular-nums">
+                                                  {formatDurationMinutes(
+                                                    ft.approvedDurationMinutes,
+                                                  )}
+                                                </span>
+                                              </div>
                                             )}
+                                            <TaskDeadlineCountdown
+                                              className="mt-3"
+                                              dueDate={
+                                                ft.endDate ?? ft.nextRunAt
+                                              }
+                                              status={ft.status}
+                                            />
+                                            <div className="mt-3 flex items-center justify-between gap-2">
+                                              <AssigneeStack
+                                                users={
+                                                  ft.assignedTo
+                                                    ? [ft.assignedTo]
+                                                    : []
+                                                }
+                                              />
+                                              {ft.nextRunAt && (
+                                                <div className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] text-[--text-3]">
+                                                  <CalendarDays size={10} />
+                                                  {formatDate(ft.nextRunAt)}
+                                                </div>
+                                              )}
+                                            </div>
+                                            {isManager &&
+                                              ft.isActive !== false && (
+                                                <button
+                                                  className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+                                                  onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    if (
+                                                      window.confirm(
+                                                        "این گزارش ثابت حذف شود؟",
+                                                      )
+                                                    ) {
+                                                      void deleteFixedTask(
+                                                        getId(ft),
+                                                      );
+                                                    }
+                                                  }}
+                                                  type="button"
+                                                >
+                                                  حذف
+                                                </button>
+                                              )}
                                           </article>
                                         </DraggablePortal>
                                       )}

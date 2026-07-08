@@ -135,7 +135,6 @@ const managementKeys = [
   "teamSearching",
   "setTeamSearching",
   "supervisorStats",
-  "supervisorTaskStatistics",
   "supervisorTasks",
   "supervisorFixedTasks",
   "supervisorMembers",

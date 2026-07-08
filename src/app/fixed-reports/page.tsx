@@ -172,7 +172,6 @@ function FixedReportsPageContent() {
           onTitleChange={setFilterTitle}
           onClear={clearFilters}
           filteredCount={filteredFixedTasks.length}
-          totalCount={visibleFixedTasks.length}
         />
 
         <div className="divide-y divide-[--border]">

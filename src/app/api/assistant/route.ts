@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import {
   completeWithFallback,
   configuredAssistantProviders,
-  type AssistantMessage,
 } from "./assistant-providers";
 
 type ChatMessage = {

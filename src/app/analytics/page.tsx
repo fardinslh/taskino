@@ -1970,7 +1970,6 @@ function DurationBalancePanel({ data }: { data: any }) {
   // and new API shape (expectedDailyMinutes/totalActualDurationMinutes/remainingMinutes)
   const totalExpected = data?.totalExpected ?? data?.expectedDailyMinutes ?? entries.reduce((sum: number, e: any) => sum + (e.expectedMinutes || 0), 0);
   const totalActual = data?.totalActual ?? data?.totalActualDurationMinutes ?? entries.reduce((sum: number, e: any) => sum + (e.actualMinutes || 0), 0);
-  const totalBalance = data?.totalBalance ?? (data?.remainingMinutes != null ? -data.remainingMinutes : null) ?? entries.reduce((sum: number, e: any) => sum + (e.balance || 0), 0);
   // remainingMinutes = expected - actual, so balance (actual - expected) = -remaining
   const remaining = data?.remainingMinutes ?? (totalExpected - totalActual);
 

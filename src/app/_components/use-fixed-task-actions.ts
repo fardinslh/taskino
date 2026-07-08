@@ -89,31 +89,6 @@ export function useFixedTaskActions({
     setShowFixedTaskForm(true);
   }
 
-  function buildDateRange(
-    recurrence: "daily" | "weekly" | "monthly",
-    nextRunAt?: string,
-  ) {
-    const baseDate = nextRunAt ? new Date(nextRunAt) : new Date();
-    const startDate = new Date(baseDate);
-    const endDate = new Date(baseDate);
-
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-
-    if (recurrence === "weekly") {
-      endDate.setDate(startDate.getDate() + 6);
-    }
-
-    if (recurrence === "monthly") {
-      endDate.setMonth(startDate.getMonth() + 1, 0);
-    }
-
-    return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    };
-  }
-
   function findSpecialistName(assignedTo: string) {
     const specialist = users.find((user) => getId(user) === assignedTo);
     const fullName = [specialist?.firstName, specialist?.lastName]

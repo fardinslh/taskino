@@ -38,7 +38,6 @@ export function TaskinoApp({
     authHydrated,
     claimTask,
     confirmRejectLeave,
-    createTaskFromValues,
     currentUser,
     darkMode,
     deleteTask,

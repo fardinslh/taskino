@@ -103,8 +103,6 @@ function SettingsPageContent() {
 
   const [passwordStep, setPasswordStep] = useState<1 | 2 | 3>(1);
   const [resetToken, setResetToken] = useState("");
-  const [verifyResponse, setVerifyResponse] =
-    useState<PasswordResetVerifyResponse | null>(null);
   const [verifyAttempts, setVerifyAttempts] = useState(0);
 
   const watchedMobile = watchForgot("mobile");
@@ -146,7 +144,6 @@ function SettingsPageContent() {
       });
       setPasswordStep(2);
       setResetToken("");
-      setVerifyResponse(null);
       setVerifyAttempts(0);
       resetVerify({ code: "" });
       resetChange({ newPassword: "", confirmPassword: "" });
@@ -175,7 +172,6 @@ function SettingsPageContent() {
       );
 
       setResetToken(response.resetToken);
-      setVerifyResponse(response);
       setPasswordStep(3);
       setMessage("کد با موفقیت تایید شد. حالا رمز جدید را ثبت کنید.");
     } catch (err) {
@@ -189,7 +185,6 @@ function SettingsPageContent() {
       if (limitReached) {
         setPasswordStep(1);
         setResetToken("");
-        setVerifyResponse(null);
         resetVerify({ code: "" });
         setError("حداکثر ۵ تلاش برای تایید کد مجاز است. دوباره کد بگیرید.");
         return;
@@ -229,7 +224,6 @@ function SettingsPageContent() {
 
       setPasswordStep(1);
       setResetToken("");
-      setVerifyResponse(null);
       setVerifyAttempts(0);
       resetVerify({ code: "" });
       resetChange({ newPassword: "", confirmPassword: "" });
