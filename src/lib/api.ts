@@ -1232,7 +1232,7 @@ export const fixedTaskApi = {
   rate: (
     token: string,
     id: string,
-    body: { score: number; ratingComment: string },
+    body: { score: number; ratingComment?: string },
   ) =>
     unwrapAxios(
       apiClient.patch<FixedTask>(`/fixed-tasks/${id}/rating`, body),

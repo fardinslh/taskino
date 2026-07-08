@@ -171,10 +171,10 @@ export function TaskinoApp({
   async function rateSelectedFixedTask(
     taskId: string,
     score: number,
-    ratingComment: string,
+    ratingComment?: string,
   ) {
     const ratedTask = await fixedTaskApi.rate(token, taskId, {
-      ratingComment,
+      ...(ratingComment ? { ratingComment } : {}),
       score,
     });
 

@@ -89,7 +89,7 @@ function TasksPageContent() {
     openFixedTaskForm,
     deleteFixedTask,
   } = useFixedTaskContext();
-  const canMoveOwnFixedTasks = isSpecialist;
+  const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
   const fixedStatusColumns = selectedStatusFilter
     ? COLUMNS.filter((col) => col.status === selectedStatusFilter)
     : COLUMNS;
@@ -381,8 +381,7 @@ function TasksPageContent() {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
                                   const hasManagerRating =
-                                    ft.ratingScore != null &&
-                                    Boolean(ft.ratingComment?.trim());
+                                    ft.ratingScore != null;
                                   return (
                                   <Draggable
                                     key={getId(ft)}
@@ -429,7 +428,6 @@ function TasksPageContent() {
                                               {ft.ratingScore.toLocaleString(
                                                 "fa-IR",
                                               )}
-                                              ٪
                                             </span>
                                           )}
                                         </div>

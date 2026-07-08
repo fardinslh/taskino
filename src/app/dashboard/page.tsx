@@ -68,6 +68,18 @@ function DraggablePortal({
   return children;
 }
 
+function isSameLocalDay(value: string | undefined, date: Date) {
+  if (!value) return false;
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return false;
+
+  return (
+    target.getFullYear() === date.getFullYear() &&
+    target.getMonth() === date.getMonth() &&
+    target.getDate() === date.getDate()
+  );
+}
+
 export default function DashboardPage() {
   return <DashboardPageContent />;
 }
@@ -175,6 +187,20 @@ function DashboardPageContent() {
     supervisorStats?.supervisedInProgressTasks ?? 0;
   const activeCompletedSupervisedTasksCount =
     supervisorStats?.activeCompletedSupervisedTasks ?? 0;
+  const canMoveFixedTasksOnDashboard = isSpecialist || isSupervisor;
+  const todaysProjects = isSpecialist
+    ? tasks
+        .filter((task: any) => {
+          if ((task.status ?? "todo") === "done") return false;
+          return isSameLocalDay(task.dueDate ?? task.endDate, new Date());
+        })
+        .sort((a: any, b: any) => {
+          return (
+            new Date(a.dueDate ?? a.endDate ?? 0).getTime() -
+            new Date(b.dueDate ?? b.endDate ?? 0).getTime()
+          );
+        })
+    : [];
 
   return (
     <>
@@ -713,7 +739,7 @@ function DashboardPageContent() {
                         </div>
                         <Droppable
                           droppableId={col.status}
-                          isDropDisabled={!isSpecialist}
+                          isDropDisabled={!canMoveFixedTasksOnDashboard}
                         >
                           {(dropProvided: any, dropSnapshot: any) => (
                             <div
@@ -740,8 +766,7 @@ function DashboardPageContent() {
                                       ? fixedTaskOccurrenceKey(ft)
                                       : getId(ft)) || `${getId(ft)}:${idx}`;
                                   const hasManagerRating =
-                                    ft.ratingScore != null &&
-                                    Boolean(ft.ratingComment?.trim());
+                                    ft.ratingScore != null;
                                   const managerRatingLabel =
                                     ft.ratingScore === 0
                                       ? "ضعیف"
@@ -754,7 +779,7 @@ function DashboardPageContent() {
                                       draggableId={boardItemId}
                                       index={idx}
                                       isDragDisabled={
-                                        !isSpecialist ||
+                                        !canMoveFixedTasksOnDashboard ||
                                         (ft.status ?? "todo") === "done" ||
                                         fixedTaskOverdue
                                       }
@@ -770,7 +795,7 @@ function DashboardPageContent() {
                                             ref={dragProvided.innerRef}
                                             {...dragProvided.draggableProps}
                                             {...dragProvided.dragHandleProps}
-                                            className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-[background-color,border-color,box-shadow] ${isManager ? "hover:shadow-md" : ""} ${isSpecialist && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                            className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-[background-color,border-color,box-shadow] ${isManager ? "hover:shadow-md" : ""} ${canMoveFixedTasksOnDashboard && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                             onClick={() =>
                                               setSelectedFixedTask(ft)
                                             }
@@ -799,7 +824,6 @@ function DashboardPageContent() {
                                                   {ft.ratingScore.toLocaleString(
                                                     "fa-IR",
                                                   )}
-                                                  ٪
                                                 </span>
                                               )}
                                             </div>
@@ -828,12 +852,14 @@ function DashboardPageContent() {
                                                     {ft.ratingScore.toLocaleString(
                                                       "fa-IR",
                                                     )}
-                                                    ٪ · {managerRatingLabel}
+                                                    · {managerRatingLabel}
                                                   </strong>
                                                 </div>
-                                                <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
-                                                  {ft.ratingComment}
-                                                </p>
+                                                {ft.ratingComment?.trim() && (
+                                                  <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
+                                                    {ft.ratingComment}
+                                                  </p>
+                                                )}
                                               </div>
                                             )}
                                             {ft.approvedDurationMinutes !=
@@ -934,6 +960,85 @@ function DashboardPageContent() {
               token={token}
             />
           )}
+
+          {isSpecialist &&
+            activeView === "dashboard" &&
+            todaysProjects.length > 0 && (
+              <div className="overflow-hidden rounded-2xl border border-[#b8dfe8] bg-[--surface] shadow-md shadow-[#1f7a8c]/8 dark:border-[#1f5060]">
+                <div className="flex items-center justify-between gap-3 border-b border-[#cce8ef] bg-gradient-to-l from-[#e0f4f8] to-[#f0fafb] px-5 py-4 dark:border-[#1f5060] dark:from-[#0f2535] dark:to-[#0f172a]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-white shadow-sm shadow-[#1f7a8c]/20">
+                      <CalendarDays size={17} />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-[--text]">
+                        پروژه‌های امروز
+                      </h2>
+                      <p className="text-[11px] text-[--text-3]">
+                        {todaysProjects.length.toLocaleString("fa-IR")} پروژه
+                        برای امروز داری
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    className="h-9 rounded-xl bg-[#1f7a8c]/10 px-3 text-xs font-black text-[#1f7a8c] transition-[background-color,transform] hover:bg-[#1f7a8c]/15 active:scale-[0.96]"
+                    onClick={() => setActiveView("tasks")}
+                    type="button"
+                  >
+                    مشاهده همه
+                  </button>
+                </div>
+                <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+                  {todaysProjects.slice(0, 6).map((task: any) => {
+                    const deadline = task.dueDate ?? task.endDate;
+                    const column =
+                      COLUMNS.find((item: any) => item.status === task.status) ??
+                      COLUMNS[0];
+
+                    return (
+                      <article
+                        className="cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 text-right shadow-sm transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md"
+                        key={getId(task)}
+                        onClick={() => setSelectedTask(task)}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span
+                            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${column.badge}`}
+                          >
+                            {statusLabel(task.status)}
+                          </span>
+                          {deadline && (
+                            <span className="flex items-center gap-1 rounded-md bg-[--surface-2] px-2 py-1 text-[10px] font-bold text-[--text-3]">
+                              <CalendarDays size={10} />
+                              {formatDate(deadline)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2.5 flex items-start gap-2">
+                          <FolderKanban
+                            size={15}
+                            className="mt-0.5 shrink-0 text-[#1f7a8c]"
+                          />
+                          <h4 className="line-clamp-2 text-sm font-semibold leading-snug">
+                            {task.title}
+                          </h4>
+                        </div>
+                        {task.description && (
+                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-[--text-3]">
+                            {task.description}
+                          </p>
+                        )}
+                        <TaskDeadlineCountdown
+                          className="mt-3"
+                          dueDate={deadline}
+                          status={task.status}
+                        />
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
           {isSpecialist && activeView === "dashboard" && tasks.length > 0 && (
             <div className="overflow-hidden rounded-2xl border border-indigo-200 dark:border-indigo-900 bg-[--surface] shadow-md shadow-indigo-500/8">

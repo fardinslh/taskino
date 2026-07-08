@@ -1326,8 +1326,8 @@ function FixedTaskRatingModal({
   async function submitRating(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const ratingComment = comment.trim();
-    if (score == null || !ratingComment) {
-      setError("انتخاب امتیاز و ثبت نظر الزامی است.");
+    if (score == null) {
+      setError("انتخاب امتیاز الزامی است.");
       return;
     }
 
@@ -1335,7 +1335,7 @@ function FixedTaskRatingModal({
     setError("");
     try {
       const ratedTask = await fixedTaskApi.rate(token, getId(task), {
-        ratingComment,
+        ...(ratingComment ? { ratingComment } : {}),
         score,
       });
       onRated(ratedTask);
@@ -1409,7 +1409,7 @@ function FixedTaskRatingModal({
                 const displayValue = value.toLocaleString("fa-IR");
                 return (
                   <button
-                    aria-label={`${displayValue} درصد، ${ratingLabel(value)}`}
+                    aria-label={`${displayValue}، ${ratingLabel(value)}`}
                     aria-pressed={selected}
                     className={`min-h-16 rounded-xl px-2 py-2 text-center transition-[background-color,box-shadow,transform] active:scale-[0.96] ${
                       selected
@@ -1424,7 +1424,7 @@ function FixedTaskRatingModal({
                     type="button"
                   >
                     <span className="block text-lg font-black tabular-nums">
-                      {displayValue}٪
+                      {displayValue}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-bold opacity-80">
                       {ratingLabel(value)}
@@ -1439,7 +1439,6 @@ function FixedTaskRatingModal({
             <span className="flex items-center gap-2 text-sm font-black text-[--text]">
               <MessageSquareText size={16} className="text-[#1f7a8c]" />
               نظر مدیر
-              <span className="text-red-500">*</span>
             </span>
             <textarea
               autoFocus
@@ -1450,7 +1449,6 @@ function FixedTaskRatingModal({
                 setError("");
               }}
               placeholder="نظر خود درباره کیفیت انجام این گزارش را بنویسید…"
-              required
               value={comment}
             />
           </label>
@@ -1475,7 +1473,7 @@ function FixedTaskRatingModal({
             </button>
             <button
               className="flex h-11 min-w-32 items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] px-5 text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/20 transition-[background-color,transform] hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={submitting || score == null || !comment.trim()}
+              disabled={submitting || score == null}
               type="submit"
             >
               {submitting && <Loader2 className="animate-spin" size={17} />}
@@ -1570,7 +1568,7 @@ function FixedTaskDetailRow({
             <Star size={14} />
             {ratingPercentage == null
               ? "برای ثبت امتیاز کلیک کنید"
-              : `امتیاز ${ratingPercentage.toLocaleString("fa-IR")}٪`}
+              : `امتیاز ${ratingPercentage.toLocaleString("fa-IR")}`}
           </span>
         )}
       </div>

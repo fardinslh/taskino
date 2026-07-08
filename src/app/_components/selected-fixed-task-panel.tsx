@@ -51,7 +51,7 @@ export function SelectedFixedTaskPanel({
   onClose: () => void;
   onDelete: (taskId: string) => void;
   onEdit: (task: FixedTask) => void;
-  onRate: (taskId: string, score: number, ratingComment: string) => Promise<void>;
+  onRate: (taskId: string, score: number, ratingComment?: string) => Promise<void>;
   onStatusChange: (taskId: string, status: FixedTaskStatus) => void;
   task: FixedTask;
 }) {
@@ -65,8 +65,7 @@ export function SelectedFixedTaskPanel({
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
   const statusChangeBlocked = isFixedTaskOverdue(task);
-  const hasManagerRating =
-    task.ratingScore != null && Boolean(task.ratingComment?.trim());
+  const hasManagerRating = task.ratingScore != null;
   const canSubmitRating = canRate && currentStatus === "done" && !hasManagerRating;
   const managerRatingLabel =
     task.ratingScore === 0
@@ -76,8 +75,8 @@ export function SelectedFixedTaskPanel({
   async function submitRating(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const comment = ratingComment.trim();
-    if (ratingScore == null || !comment) {
-      setRatingError("انتخاب امتیاز و ثبت نظر الزامی است.");
+    if (ratingScore == null) {
+      setRatingError("انتخاب امتیاز الزامی است.");
       return;
     }
 
@@ -169,13 +168,15 @@ export function SelectedFixedTaskPanel({
                   امتیاز مدیر
                 </span>
                 <strong className="text-sm font-black tabular-nums text-amber-700 dark:text-amber-300">
-                  {task.ratingScore?.toLocaleString("fa-IR")}٪ ·{" "}
+                  {task.ratingScore?.toLocaleString("fa-IR")} ·{" "}
                   {managerRatingLabel}
                 </strong>
               </div>
-              <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
-                {task.ratingComment}
-              </p>
+              {task.ratingComment?.trim() && (
+                <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
+                  {task.ratingComment}
+                </p>
+              )}
             </div>
           )}
 
@@ -208,7 +209,7 @@ export function SelectedFixedTaskPanel({
                       type="button"
                     >
                       <span className="block text-base font-black tabular-nums">
-                        {value.toLocaleString("fa-IR")}٪
+                        {value.toLocaleString("fa-IR")}
                       </span>
                       <span className="mt-0.5 block text-[10px] font-bold opacity-80">
                         {ratingLabel(value)}
@@ -231,7 +232,6 @@ export function SelectedFixedTaskPanel({
                     setRatingError("");
                   }}
                   placeholder="نظر خود درباره کیفیت انجام این گزارش را بنویسید..."
-                  required
                   value={ratingComment}
                 />
               </label>
@@ -242,9 +242,7 @@ export function SelectedFixedTaskPanel({
               )}
               <button
                 className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/15 transition-[background-color,transform] hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={
-                  ratingSubmitting || ratingScore == null || !ratingComment.trim()
-                }
+                disabled={ratingSubmitting || ratingScore == null}
                 type="submit"
               >
                 {ratingSubmitting && <Loader2 className="animate-spin" size={16} />}

@@ -1,7 +1,8 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
@@ -42,6 +43,20 @@ type ProjectBoardSectionProps = {
   onSearchChange: (value: string) => void;
   onSelectTask: (task: Task) => void;
 };
+
+function DraggablePortal({
+  children,
+  enabled,
+}: {
+  children: ReactNode;
+  enabled: boolean;
+}) {
+  if (enabled && typeof document !== "undefined") {
+    return createPortal(children, document.body);
+  }
+
+  return children;
+}
 
 export function ProjectBoardSection({
   progress,
@@ -272,11 +287,14 @@ export function ProjectBoardSection({
                                 key={taskId}
                               >
                                 {(dragProvided, dragSnapshot) => (
-                                  <article
+                                  <DraggablePortal
+                                    enabled={dragSnapshot.isDragging}
+                                  >
+                                    <article
                                     ref={dragProvided.innerRef}
                                     {...dragProvided.draggableProps}
                                     {...dragProvided.dragHandleProps}
-                                    className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-all ${isDone || isOverdue ? "cursor-pointer" : "cursor-grab touch-none active:cursor-grabbing"} hover:-translate-y-0.5 hover:shadow-md ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                    className={`rounded-xl border border-[--border] border-t-[3px] ${column.cardBorder} bg-[--surface] p-3.5 shadow-sm transition-[background-color,border-color,box-shadow] ${isDone || isOverdue ? "cursor-pointer" : "cursor-grab touch-none active:cursor-grabbing"} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : "hover:shadow-md"}`}
                                     onClick={() => onSelectTask(task)}
                                   >
                                     <div className="flex items-start justify-between gap-2">
@@ -338,7 +356,8 @@ export function ProjectBoardSection({
                                         انتخاب پروژه
                                       </button>
                                     )}
-                                  </article>
+                                    </article>
+                                  </DraggablePortal>
                                 )}
                               </Draggable>
                             );
