@@ -144,32 +144,6 @@ export function useDataLoader({
     return all;
   }
 
-  async function fetchAllSpecialistFixedTasks(
-    authToken: string,
-    userId: string,
-    base: Record<string, string | number | boolean | undefined> = {},
-  ) {
-    const all: FixedTask[] = [];
-    const limit = 100;
-    for (let page = 1; page <= 50; page++) {
-      const res = await fixedTaskApi
-        .bySpecialist(authToken, userId, { ...base, page, limit })
-        .catch(() => null);
-      if (!res) break;
-      const list = normalizeList(res as FixedTask[] | { data?: FixedTask[] });
-      all.push(...list);
-      const total =
-        res &&
-        typeof res === "object" &&
-        "total" in (res as Record<string, unknown>)
-          ? Number((res as Record<string, unknown>).total)
-          : all.length;
-      if (list.length === 0 || list.length < limit || all.length >= total)
-        break;
-    }
-    return all;
-  }
-
   async function fetchActiveFixedTasksByUserId(
     authToken: string,
     userId: string,
@@ -550,11 +524,7 @@ export function useDataLoader({
     specialistId: string,
   ) {
     if (!specialistId) return [];
-    const [specialistTasks, specialistDoneTasks] = await Promise.all([
-      fetchAllSpecialistFixedTasks(authToken, specialistId),
-      fetchDoneFixedTasksByUserId(authToken, specialistId),
-    ]);
-    return dedupeFixedTasks([...specialistTasks, ...specialistDoneTasks]);
+    return fetchBoardFixedTasksByUserId(authToken, specialistId);
   }
 
   return {

@@ -96,7 +96,7 @@ function TasksPageContent() {
     deleteFixedTask,
   } = useFixedTaskContext();
   const specialistUsers = users.filter((u: any) => u.roles === "specialist");
-  const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
+  const canMoveOwnFixedTasks = isSpecialist;
   const fixedStatusColumns = selectedStatusFilter
     ? COLUMNS.filter((col) => col.status === selectedStatusFilter)
     : COLUMNS;

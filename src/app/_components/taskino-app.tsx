@@ -302,7 +302,7 @@ export function TaskinoApp({
         <AnimatePresence>
           {selectedFixedTask && (
             <SelectedFixedTaskPanel
-            canChangeStatus={isSpecialist || isSupervisor}
+            canChangeStatus={isSpecialist}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
             canRate={isManager}
