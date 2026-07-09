@@ -1285,11 +1285,11 @@ function WorkDetailsPanel<T,>({
   );
 }
 
-const ratingOptions = [0, 1, 2, 3, 4, 5] as const;
+const ratingOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 function ratingLabel(score: number) {
-  if (score === 0) return "ضعیف";
-  if (score <= 3) return "متوسط";
+  if (score <= 3) return "ضعیف";
+  if (score <= 6) return "متوسط";
   return "خوب";
 }
 

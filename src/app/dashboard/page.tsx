@@ -768,9 +768,9 @@ function DashboardPageContent() {
                                   const hasManagerRating =
                                     ft.ratingScore != null;
                                   const managerRatingLabel =
-                                    ft.ratingScore === 0
+                                    ft.ratingScore <= 3
                                       ? "ضعیف"
-                                      : ft.ratingScore <= 3
+                                      : ft.ratingScore <= 6
                                         ? "متوسط"
                                         : "خوب";
                                   return (

@@ -24,11 +24,11 @@ import {
 } from "../_lib/task-helpers";
 
 const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "in_progress", "done"];
-const RATING_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
+const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 function ratingLabel(score: number) {
-  if (score === 0) return "ضعیف";
-  if (score <= 3) return "متوسط";
+  if (score <= 3) return "ضعیف";
+  if (score <= 6) return "متوسط";
   return "خوب";
 }
 
