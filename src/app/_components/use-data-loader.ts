@@ -274,16 +274,22 @@ export function useDataLoader({
       const supervisedTasks = normalizeList(
         tasksResponse as Task[] | { data?: Task[] },
       );
-      const memberIds = members
-        .map((member) => member.userId ?? getId(member))
-        .filter((id): id is string => !!id);
-      const doneFixedTaskLists = await Promise.all(
-        memberIds.map((memberId) =>
-          fetchDoneFixedTasksByUserId(authToken, memberId).catch(
-            () => [] as FixedTask[],
-          ),
-        ),
-      );
+      const shouldLoadDoneFixedTaskRanges =
+        activeView === "supervisor-projects";
+      const memberIds = shouldLoadDoneFixedTaskRanges
+        ? members
+            .map((member) => member.userId ?? getId(member))
+            .filter((id): id is string => !!id)
+        : [];
+      const doneFixedTaskLists = shouldLoadDoneFixedTaskRanges
+        ? await Promise.all(
+            memberIds.map((memberId) =>
+              fetchDoneFixedTasksByUserId(authToken, memberId).catch(
+                () => [] as FixedTask[],
+              ),
+            ),
+          )
+        : [];
       const supervisedFixedTasks = dedupeFixedTasks([
         ...normalizeList(
           fixedTasksResponse as FixedTask[] | { data?: FixedTask[] },

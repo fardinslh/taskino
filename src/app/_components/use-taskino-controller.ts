@@ -397,17 +397,9 @@ export function useTaskinoController(initialView: View = "dashboard") {
 
     if (!selectedSpecialistId) {
       if (role === "supervisor") {
-        if (activeView === "supervisor-create-report") {
-          // This page owns fixedTasks and loads the complete template list.
-          // Do not overwrite it with the supervisor-scoped board list.
-          return;
-        } else if (!myId) {
-          queueMicrotask(() => setFixedTasks(supervisorFixedTasks));
-        } else {
-          void loadLatestSpecialistFixedTasks(token, myId)
-            .then((r) => setFixedTasks(r))
-            .catch(() => setFixedTasks(supervisorFixedTasks));
-        }
+        // loadData already owns the supervisor fixed-task board request.
+        // Avoid duplicating the active + range requests on every supervisor render.
+        return;
       } else {
         void loadLatestManagerAnalytics(token);
       }
@@ -423,7 +415,6 @@ export function useTaskinoController(initialView: View = "dashboard") {
     currentUser?.roles,
     myId,
     selectedSpecialistId,
-    supervisorFixedTasks,
     token,
   ]);
 
