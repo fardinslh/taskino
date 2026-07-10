@@ -1,4 +1,4 @@
-import { useState, type HTMLAttributes } from "react";
+import { useState, type HTMLAttributes, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import {
   AlertCircle,
@@ -15,6 +15,29 @@ import type { User } from "@/lib/api";
 import { initials, userName } from "../_lib/task-helpers";
 
 // ─── Shared components ────────────────────────────────────────────────────────
+export function Tooltip({
+  children,
+  className = "",
+  content,
+}: {
+  children: ReactNode;
+  className?: string;
+  content: string;
+}) {
+  return (
+    <span
+      aria-label={content}
+      className={`group/tooltip relative inline-flex cursor-help focus-visible:outline-none ${className}`}
+      tabIndex={0}
+    >
+      {children}
+      <span className="pointer-events-none absolute bottom-full right-1/2 z-30 mb-2 w-max max-w-56 translate-x-1/2 translate-y-1 rounded-lg bg-slate-950 px-3 py-2 text-center text-[11px] font-semibold leading-5 text-white opacity-0 shadow-xl shadow-slate-950/20 transition-[opacity,transform] duration-150 group-hover/tooltip:translate-y-0 group-hover/tooltip:opacity-100 group-focus-visible/tooltip:translate-y-0 group-focus-visible/tooltip:opacity-100 dark:bg-slate-100 dark:text-slate-950">
+        {content}
+      </span>
+    </span>
+  );
+}
+
 export function Field({ label, name, id, required, type = "text", value, onChange, placeholder, dir, inputMode, registration }: {
   label: string; name: string; id?: string; required?: boolean; type?: string;
   value?: string; onChange?: (v: string) => void; placeholder?: string;

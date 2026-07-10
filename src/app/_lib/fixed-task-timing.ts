@@ -35,6 +35,50 @@ export function fixedTaskFirstOverdueActualDurationMinutes(
   return elapsed;
 }
 
+export function isFixedTaskDurationOverdue(
+  task: Pick<
+    FixedTask,
+    | "actualDurationMinutes"
+    | "approvedDurationInMinutes"
+    | "approvedDurationMinutes"
+    | "startedAt"
+    | "status"
+  >,
+  now = Date.now(),
+) {
+  return fixedTaskDurationOverdueMinutes(task, now) != null;
+}
+
+export function fixedTaskDurationOverdueMinutes(
+  task: Pick<
+    FixedTask,
+    | "actualDurationMinutes"
+    | "approvedDurationInMinutes"
+    | "approvedDurationMinutes"
+    | "startedAt"
+    | "status"
+  >,
+  now = Date.now(),
+) {
+  const approvedDurationMinutes =
+    task.approvedDurationMinutes ?? task.approvedDurationInMinutes;
+  if (approvedDurationMinutes == null || approvedDurationMinutes <= 0) {
+    return undefined;
+  }
+
+  const durationMinutes =
+    task.actualDurationMinutes ??
+    (task.status === "in_progress"
+      ? elapsedDurationMinutes(task.startedAt, now)
+      : undefined);
+
+  if (durationMinutes == null || durationMinutes <= approvedDurationMinutes) {
+    return undefined;
+  }
+
+  return durationMinutes;
+}
+
 export function formatDurationMinutes(minutes?: number | null) {
   if (minutes == null) return "";
   const total = Math.max(0, Math.round(minutes));

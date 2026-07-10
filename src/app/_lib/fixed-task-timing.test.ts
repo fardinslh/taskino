@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   elapsedDurationMinutes,
+  fixedTaskDurationOverdueMinutes,
   fixedTaskFirstOverdueActualDurationMinutes,
+  isFixedTaskDurationOverdue,
 } from "./fixed-task-timing";
 
 const startedAt = "2026-07-10T10:00:00.000Z";
@@ -92,5 +94,35 @@ describe("fixed-task timing", () => {
         startedAt,
       }),
     ).toBeUndefined();
+  });
+
+  it("detects saved actual durations that exceeded the approved duration", () => {
+    expect(
+      isFixedTaskDurationOverdue({
+        approvedDurationMinutes: 15,
+        actualDurationMinutes: 16,
+        status: "done",
+      }),
+    ).toBe(true);
+    expect(
+      isFixedTaskDurationOverdue({
+        approvedDurationMinutes: 15,
+        actualDurationMinutes: 15,
+        status: "done",
+      }),
+    ).toBe(false);
+  });
+
+  it("detects in-progress tasks whose live elapsed duration exceeded approval", () => {
+    expect(
+      fixedTaskDurationOverdueMinutes(
+        {
+          status: "in_progress",
+          startedAt,
+          approvedDurationMinutes: 15,
+        },
+        minutesAfterStart(16),
+      ),
+    ).toBe(16);
   });
 });

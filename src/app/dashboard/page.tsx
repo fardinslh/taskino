@@ -34,7 +34,7 @@ import {
   type ProgressBucket,
 } from "@/lib/api";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
-import { AssigneeStack } from "../_components/shared";
+import { AssigneeStack, Tooltip } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
 import {
   useFixedTaskContext,
@@ -43,7 +43,10 @@ import {
   useSessionContext,
   useTaskContext,
 } from "../_components/taskino-context";
-import { formatDurationMinutes } from "../_lib/fixed-task-timing";
+import {
+  fixedTaskDurationOverdueMinutes,
+  formatDurationMinutes,
+} from "../_lib/fixed-task-timing";
 import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
 import { COLUMNS, type TaskPeriod } from "../_lib/task-constants";
 import {
@@ -53,6 +56,9 @@ import {
   statusLabel,
   userName,
 } from "../_lib/task-helpers";
+
+const durationOverdueTooltip =
+  "زمان صرف‌شده از زمان تعیین‌شده توسط مدیر بیشتر شده است.";
 
 function DraggablePortal({
   children,
@@ -85,6 +91,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
+  const [fixedTaskTimerNow, setFixedTaskTimerNow] = useState(() => Date.now());
   const {
     activeView,
     boardShowAll,
@@ -188,6 +195,15 @@ function DashboardPageContent() {
   const activeCompletedSupervisedTasksCount =
     supervisorStats?.activeCompletedSupervisedTasks ?? 0;
   const canMoveFixedTasksOnDashboard = isSpecialist || isSupervisor;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => setFixedTaskTimerNow(Date.now()),
+      30000,
+    );
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const todaysProjects = isSpecialist
     ? tasks
         .filter((task: any) => {
@@ -761,6 +777,13 @@ function DashboardPageContent() {
                                 items.map((ft: any, idx: number) => {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
+                                  const fixedTaskSpentOverLimitMinutes =
+                                    fixedTaskDurationOverdueMinutes(
+                                      ft,
+                                      fixedTaskTimerNow,
+                                    );
+                                  const fixedTaskDurationOverdue =
+                                    fixedTaskSpentOverLimitMinutes != null;
                                   const boardItemId =
                                     (ft.status === "done"
                                       ? fixedTaskOccurrenceKey(ft)
@@ -818,6 +841,17 @@ function DashboardPageContent() {
                                                     : "غیرفعال"}
                                                 </span>
                                               )}
+                                              {fixedTaskDurationOverdue && (
+                                                <Tooltip
+                                                  content={
+                                                    durationOverdueTooltip
+                                                  }
+                                                >
+                                                  <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/35 dark:text-amber-300">
+                                                    زمان صرف‌شده
+                                                  </span>
+                                                </Tooltip>
+                                              )}
                                               {hasManagerRating && (
                                                 <span className="flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.18)] dark:bg-amber-950/35 dark:text-amber-300">
                                                   <Award size={11} />
@@ -874,6 +908,25 @@ function DashboardPageContent() {
                                                   )}
                                                 </span>
                                               </div>
+                                            )}
+                                            {fixedTaskDurationOverdue && (
+                                              <Tooltip
+                                                className="mt-2 w-full"
+                                                content={
+                                                  durationOverdueTooltip
+                                                }
+                                              >
+                                                <span className="flex w-full items-center justify-between rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                                                  <span className="font-semibold">
+                                                    زمان صرف‌شده:
+                                                  </span>
+                                                  <span className="font-extrabold tabular-nums">
+                                                    {formatDurationMinutes(
+                                                      fixedTaskSpentOverLimitMinutes,
+                                                    )}
+                                                  </span>
+                                                </span>
+                                              </Tooltip>
                                             )}
                                             <TaskDeadlineCountdown
                                               className="mt-3"

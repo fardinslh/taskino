@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Clock3 } from "lucide-react";
 
+import { Tooltip } from "./shared";
+
 type TaskDeadlineCountdownProps = {
   dueDate?: string;
   status?: string;
@@ -16,7 +18,10 @@ type RemainingTime = {
   bg: string;
 };
 
-function getRemainingTime(dueDate?: string, currentTime = Date.now()): RemainingTime | null {
+function getRemainingTime(
+  dueDate?: string,
+  currentTime = Date.now(),
+): RemainingTime | null {
   if (!dueDate) return null;
 
   const deadline = new Date(dueDate);
@@ -73,13 +78,19 @@ export function TaskDeadlineCountdown({
 
   if (!shouldShow || !remaining) return null;
 
+  const tooltip = remaining.isOverdue
+    ? "زمان گذشته از ددلاین تعیین‌شده برای این گزارش."
+    : "زمان باقی‌مانده تا ددلاین تعیین‌شده برای این گزارش.";
+
   return (
-    <div
-      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold ${remaining.bg} ${remaining.tone} ${className}`}
-    >
-      <Clock3 size={11} />
-      <span>{remaining.isOverdue ? "گذشته از ددلاین:" : "زمان باقی‌مانده:"}</span>
-      <span>{remaining.label}</span>
-    </div>
+    <Tooltip className={className} content={tooltip}>
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold ${remaining.bg} ${remaining.tone}`}
+      >
+        <Clock3 size={11} />
+        <span>{remaining.isOverdue ? "گذشته از ددلاین:" : "ددلاین:"}</span>
+        <span>{remaining.label}</span>
+      </span>
+    </Tooltip>
   );
 }

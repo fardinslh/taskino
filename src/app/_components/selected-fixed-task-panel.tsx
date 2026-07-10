@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   Award,
   CheckCircle2,
@@ -14,7 +14,11 @@ import {
 import { motion } from "motion/react";
 
 import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
-import { formatDurationMinutes } from "../_lib/fixed-task-timing";
+import { Tooltip } from "./shared";
+import {
+  fixedTaskDurationOverdueMinutes,
+  formatDurationMinutes,
+} from "../_lib/fixed-task-timing";
 import {
   formatDate,
   isFixedTaskOverdue,
@@ -25,6 +29,8 @@ import {
 
 const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "in_progress", "done"];
 const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const durationOverdueTooltip =
+  "زمان صرف‌شده از زمان تعیین‌شده توسط مدیر بیشتر شده است.";
 
 function ratingLabel(score: number) {
   if (score <= 3) return "ضعیف";
@@ -59,18 +65,29 @@ export function SelectedFixedTaskPanel({
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [timerNow, setTimerNow] = useState(() => Date.now());
   const taskId = getId(task);
   const assignee = Array.isArray(task.assignedTo)
     ? task.assignedTo[0]
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
   const statusChangeBlocked = isFixedTaskOverdue(task);
+  const durationOverdueMinutes = fixedTaskDurationOverdueMinutes(
+    task,
+    timerNow,
+  );
+  const durationOverdue = durationOverdueMinutes != null;
   const hasManagerRating = task.ratingScore != null;
   const canSubmitRating = canRate && currentStatus === "done" && !hasManagerRating;
   const managerRatingLabel =
     task.ratingScore === 0
       ? ratingLabel(0)
       : ratingLabel(task.ratingScore ?? 0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setTimerNow(Date.now()), 30000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   async function submitRating(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -285,6 +302,13 @@ export function SelectedFixedTaskPanel({
             <MetaRow label="ایجاد" value={formatDate(task.createdAt)} />
             {task.startedAt && <MetaRow label="شروع تایمر" value={formatDate(task.startedAt)} />}
             {task.doneTime && <MetaRow label="پایان تایمر" value={formatDate(task.doneTime)} />}
+            {durationOverdue && (
+              <MetaRow
+                label="زمان صرف‌شده"
+                tooltip={durationOverdueTooltip}
+                value={formatDurationMinutes(durationOverdueMinutes)}
+              />
+            )}
             {task.actualDurationMinutes != null && (
               <MetaRow label="مدت واقعی" value={formatDurationMinutes(task.actualDurationMinutes)} />
             )}
@@ -339,7 +363,28 @@ export function SelectedFixedTaskPanel({
   );
 }
 
-function MetaRow({ label, value }: { label: string; value?: string }) {
+function MetaRow({
+  label,
+  tooltip,
+  value,
+}: {
+  label: string;
+  tooltip?: string;
+  value?: string;
+}) {
+  if (tooltip) {
+    return (
+      <Tooltip className="w-full" content={tooltip}>
+        <span className="flex w-full items-center justify-between gap-3 text-xs">
+          <span className="text-[--text-3]">{label}</span>
+          <span className="text-right font-medium text-[--text]">
+            {value || "â€”"}
+          </span>
+        </span>
+      </Tooltip>
+    );
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 text-xs">
       <span className="text-[--text-3]">{label}</span>
