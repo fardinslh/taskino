@@ -1,8 +1,38 @@
-export function elapsedDurationMinutes(startedAt?: string | null) {
+import type { FixedTask } from "@/lib/api";
+
+export function elapsedDurationMinutes(
+  startedAt?: string | null,
+  now = Date.now(),
+) {
   if (!startedAt) return undefined;
   const start = new Date(startedAt).getTime();
   if (!Number.isFinite(start)) return undefined;
-  return Math.max(1, Math.ceil((Date.now() - start) / 60000));
+  return Math.max(1, Math.ceil((now - start) / 60000));
+}
+
+export function fixedTaskFirstOverdueActualDurationMinutes(
+  task: Pick<
+    FixedTask,
+    | "actualDurationMinutes"
+    | "approvedDurationInMinutes"
+    | "approvedDurationMinutes"
+    | "startedAt"
+    | "status"
+  >,
+  now = Date.now(),
+) {
+  if (task.status !== "in_progress") return undefined;
+  if (task.actualDurationMinutes != null) return undefined;
+
+  const approvedDurationMinutes =
+    task.approvedDurationMinutes ?? task.approvedDurationInMinutes;
+  if (approvedDurationMinutes == null || approvedDurationMinutes <= 0) {
+    return undefined;
+  }
+
+  const elapsed = elapsedDurationMinutes(task.startedAt, now);
+  if (elapsed == null || elapsed <= approvedDurationMinutes) return undefined;
+  return elapsed;
 }
 
 export function formatDurationMinutes(minutes?: number | null) {
