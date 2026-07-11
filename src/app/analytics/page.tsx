@@ -52,11 +52,7 @@ import {
 } from "../_components/taskino-context";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
-import {
-  formatDate,
-  recurrenceLabel,
-  userName,
-} from "../_lib/task-helpers";
+import { formatDate, recurrenceLabel, userName } from "../_lib/task-helpers";
 
 const emptyCounts: WorkStatusCounts = {
   done: 0,
@@ -97,6 +93,13 @@ function datePickerValue(value: string) {
   return value ? jalaliPickerDate(new Date(`${value}T00:00:00`)) : "";
 }
 
+function sameDayRangeEnd(from: string, to: string) {
+  if (from !== to) return to;
+  const nextDay = new Date(`${to}T00:00:00`);
+  nextDay.setDate(nextDay.getDate() + 1);
+  return nextDay.toISOString();
+}
+
 function todayRange() {
   const now = new Date();
   const today = dateParam(now);
@@ -132,7 +135,12 @@ function parseDateBoundary(value: string, endOfDay = false) {
   if (!value) return null;
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
-  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  date.setHours(
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  );
   return date;
 }
 
@@ -178,6 +186,7 @@ export default function AnalyticsPage() {
   );
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
+  const [activeRange, setActiveRange] = useState(initialRange);
   const [summaries, setSummaries] = useState<WorkStatusSummaryUser[]>([]);
   const [dailyProgress, setDailyProgress] = useState<
     Record<string, MyDailyProgressStats>
@@ -191,12 +200,12 @@ export default function AnalyticsPage() {
     Record<string, FixedTaskLists>
   >({});
   const [taskLists, setTaskLists] = useState<Record<string, TaskLists>>({});
-  const [durationLoadingUserId, setDurationLoadingUserId] = useState<string | null>(
-    null,
-  );
-  const [detailsLoadingUserId, setDetailsLoadingUserId] = useState<string | null>(
-    null,
-  );
+  const [durationLoadingUserId, setDurationLoadingUserId] = useState<
+    string | null
+  >(null);
+  const [detailsLoadingUserId, setDetailsLoadingUserId] = useState<
+    string | null
+  >(null);
   const [taskDetailsLoadingUserId, setTaskDetailsLoadingUserId] = useState<
     string | null
   >(null);
@@ -213,8 +222,8 @@ export default function AnalyticsPage() {
     ? Math.min(Math.max(selectableUsers.length, 1), 4)
     : 3;
   const completedReportsByUser = useMemo(() => {
-    const rangeStart = parseDateBoundary(from);
-    const rangeEnd = parseDateBoundary(to, true);
+    const rangeStart = parseDateBoundary(activeRange.from);
+    const rangeEnd = parseDateBoundary(activeRange.to, true);
     const grouped = new Map<string, FixedTask[]>();
     if (!rangeStart || !rangeEnd) return grouped;
 
@@ -235,7 +244,7 @@ export default function AnalyticsPage() {
     }
 
     return grouped;
-  }, [fixedTasks, from, to]);
+  }, [activeRange, fixedTasks]);
 
   async function fetchSummaries() {
     if (!from || !to || selectableUsers.length === 0) return;
@@ -246,13 +255,15 @@ export default function AnalyticsPage() {
 
     setLoading(true);
     setError("");
+    const rangeTo = sameDayRangeEnd(from, to);
+    setActiveRange({ from, to });
     try {
       const results = await Promise.all(
         selectableUsers.map(async (user) => {
           const userId = getId(user);
           const [summary, progress] = await Promise.all([
-            managerApi.workStatusSummary(token, { from, to, userId }),
-            managerApi.userDailyProgress(token, userId, { from, to }),
+            managerApi.workStatusSummary(token, { from, to: rangeTo, userId }),
+            managerApi.userDailyProgress(token, userId, { from, to: rangeTo }),
           ]);
           return { progress, summary, userId };
         }),
@@ -303,38 +314,58 @@ export default function AnalyticsPage() {
     if (needsDetails) setDetailsLoadingUserId(userId);
     if (needsTaskDetails) setTaskDetailsLoadingUserId(userId);
 
-    const overdueTo = from === to ? new Date(`${to}T00:00:00`) : null;
-    overdueTo?.setDate(overdueTo.getDate() + 1);
+    const { from: activeFrom, to: activeTo } = activeRange;
+    const rangeTo = sameDayRangeEnd(activeFrom, activeTo);
 
     const [durationResult, detailsResult, taskDetailsResult] =
       await Promise.allSettled([
-      needsDuration
-        ? managerApi.dailyDurationBalance(token, { from, to, userId })
-        : Promise.resolve(null),
-      needsDetails
-        ? Promise.all([
-            managerApi.overdueFixedTasks(token, {
-              from,
-              to: overdueTo?.toISOString() ?? to,
+        needsDuration
+          ? managerApi.dailyDurationBalance(token, {
+              from: activeFrom,
+              to: rangeTo,
               userId,
-            }),
-            managerApi.doneFixedTasks(token, { from, to, userId }),
-            managerApi.inProgressFixedTasks(token, { userId }),
-            managerApi.todoFixedTasks(token, { userId }),
-          ])
-        : Promise.resolve(null),
-      needsTaskDetails
-        ? Promise.all([
-            managerApi.overdueTasks(token, {
-              from,
-              to: overdueTo?.toISOString() ?? to,
-              userId,
-            }),
-            managerApi.doneTasks(token, { from, to, userId }),
-            managerApi.inProgressTasks(token, { from, to, userId }),
-            managerApi.todoTasks(token, { from, to, userId }),
-          ])
-        : Promise.resolve(null),
+            })
+          : Promise.resolve(null),
+        needsDetails
+          ? Promise.all([
+              managerApi.overdueFixedTasks(token, {
+                from: activeFrom,
+                to: rangeTo,
+                userId,
+              }),
+              managerApi.doneFixedTasks(token, {
+                from: activeFrom,
+                to: rangeTo,
+                userId,
+              }),
+              managerApi.inProgressFixedTasks(token, { userId }),
+              managerApi.todoFixedTasks(token, { userId }),
+            ])
+          : Promise.resolve(null),
+        needsTaskDetails
+          ? Promise.all([
+              managerApi.overdueTasks(token, {
+                from: activeFrom,
+                to: rangeTo,
+                userId,
+              }),
+              managerApi.doneTasks(token, {
+                from: activeFrom,
+                to: rangeTo,
+                userId,
+              }),
+              managerApi.inProgressTasks(token, {
+                from: activeFrom,
+                to: rangeTo,
+                userId,
+              }),
+              managerApi.todoTasks(token, {
+                from: activeFrom,
+                to: rangeTo,
+                userId,
+              }),
+            ])
+          : Promise.resolve(null),
       ]);
 
     if (durationResult.status === "fulfilled" && durationResult.value) {
@@ -359,10 +390,7 @@ export default function AnalyticsPage() {
         },
       }));
     }
-    if (
-      taskDetailsResult.status === "fulfilled" &&
-      taskDetailsResult.value
-    ) {
+    if (taskDetailsResult.status === "fulfilled" && taskDetailsResult.value) {
       const [overdue, done, inProgress, todo] = taskDetailsResult.value;
       setTaskLists((current) => ({
         ...current,
@@ -429,158 +457,152 @@ export default function AnalyticsPage() {
   return (
     <>
       <LandingPageEntrance className="space-y-5 pb-8 [&>div:nth-child(2)]:relative [&>div:nth-child(2)]:z-30">
-      <ManagerSummaryBanner
-        activeUsers={managerStats?.activeUsers ?? users.length}
-        firstName={userName(currentUser ?? undefined).split(" ")[0]}
-      />
+        <ManagerSummaryBanner
+          activeUsers={managerStats?.activeUsers ?? users.length}
+          firstName={userName(currentUser ?? undefined).split(" ")[0]}
+        />
 
-      <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-black text-[#1f7a8c]">آنالیتیکس مدیر</p>
-            <h1 className="mt-2 text-balance text-xl font-black sm:text-2xl">
-              عملکرد کاربران
-            </h1>
-          </div>
+        <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-black text-[#1f7a8c]">
+                آنالیتیکس مدیر
+              </p>
+              <h1 className="mt-2 text-balance text-xl font-black sm:text-2xl">
+                عملکرد کاربران
+              </h1>
+            </div>
 
-          <form
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,.75fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
-            onSubmit={loadSummary}
-          >
-            <label className="text-xs font-bold text-[--text-2]">
-              نوع
-              <select
-                className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                onChange={(event) =>
-                  setWorkTypeFilter(event.target.value as WorkTypeFilter)
-                }
-                value={workTypeFilter}
-              >
-                <option value="all">همه</option>
-                <option value="projects">پروژه</option>
-                <option value="reports">گزارش</option>
-              </select>
-            </label>
-            <label className="text-xs font-bold text-[--text-2]">
-              وضعیت
-              <select
-                className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as StatusFilter)
-                }
-                value={statusFilter}
-              >
-                <option value="all">همه وضعیت‌ها</option>
-                {statusRows.map((status) => (
-                  <option key={status.key} value={status.key}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <DateField
-              label="از تاریخ"
-              onChange={setFrom}
-              value={from}
-            />
-            <DateField
-              label="تا تاریخ"
-              onChange={setTo}
-              value={to}
-            />
-            <button
-              className="flex h-11 min-w-28 items-center justify-center gap-2 self-end rounded-xl bg-[#1f7a8c] px-4 text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/20 transition-transform duration-150 ease-out hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={loading || selectableUsers.length === 0}
-              type="submit"
+            <form
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,.75fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
+              onSubmit={loadSummary}
             >
-              {loading ? (
-                <Loader2 className="animate-spin" size={17} />
-              ) : (
-                <Search size={17} />
-              )}
-              نمایش
-            </button>
-          </form>
-        </div>
-        {error && (
-          <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">
-            {error}
-          </p>
-        )}
-      </header>
-
-      <AnimatePresence initial={false} mode="wait">
-        {showInitialSkeleton ? (
-          <motion.div
-            aria-label="در حال دریافت گزارش کاربران"
-            className="space-y-4"
-            exit={{
-              filter: "blur(4px)",
-              opacity: 0,
-              transition: { duration: 0.15, ease: "easeIn" },
-              y: -8,
-            }}
-            key="analytics-loading"
-            role="status"
-          >
-            {Array.from({ length: skeletonCount }, (_, index) => (
-              <AnalyticsCardSkeleton key={index} />
-            ))}
-          </motion.div>
-        ) : summaries.length > 0 ? (
-          <motion.div className="space-y-4" key="analytics-content">
-            {summaries.map((summaryUser, index) => (
-              <UserAnalyticsCard
-                completedReports={
-                  completedReportsByUser.get(summaryUser.userId) ?? []
-                }
-                durationBalance={durationBalances[summaryUser.userId]}
-                durationLoading={durationLoadingUserId === summaryUser.userId}
-                entranceIndex={index}
-                expanded={expandedUserId === summaryUser.userId}
-                fixedTaskDetails={fixedTaskLists[summaryUser.userId]}
-                fixedTaskDetailsLoading={
-                  detailsLoadingUserId === summaryUser.userId
-                }
-                key={summaryUser.userId}
-                onRateFixedTask={setRatingTask}
-                onToggle={() => void toggleUser(summaryUser.userId)}
-                progress={dailyProgress[summaryUser.userId]}
-                score={
-                  selectableUsers.find(
-                    (user) => getId(user) === summaryUser.userId,
-                  )?.score
-                }
-                role={
-                  selectableUsers.find(
-                    (user) => getId(user) === summaryUser.userId,
-                  )?.roles
-                }
-                statusFilter={statusFilter}
-                summary={summaryUser}
-                taskDetails={taskLists[summaryUser.userId]}
-                taskDetailsLoading={
-                  taskDetailsLoadingUserId === summaryUser.userId
-                }
-                workTypeFilter={workTypeFilter}
-              />
-            ))}
-          </motion.div>
-        ) : (
-          <motion.div
-            animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
-            className="rounded-2xl bg-[--surface] px-5 py-12 text-center shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
-            initial={{ filter: "blur(4px)", opacity: 0, y: 8 }}
-            key="analytics-empty"
-            transition={{ bounce: 0, duration: 0.3, type: "spring" }}
-          >
-            <UserRound className="mx-auto text-[--text-3]" size={30} />
-            <p className="mt-3 text-sm font-bold text-[--text-2]">
-              اطلاعاتی برای نمایش پیدا نشد.
+              <label className="text-xs font-bold text-[--text-2]">
+                نوع
+                <select
+                  className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                  onChange={(event) =>
+                    setWorkTypeFilter(event.target.value as WorkTypeFilter)
+                  }
+                  value={workTypeFilter}
+                >
+                  <option value="all">همه</option>
+                  <option value="projects">پروژه</option>
+                  <option value="reports">گزارش</option>
+                </select>
+              </label>
+              <label className="text-xs font-bold text-[--text-2]">
+                وضعیت
+                <select
+                  className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as StatusFilter)
+                  }
+                  value={statusFilter}
+                >
+                  <option value="all">همه وضعیت‌ها</option>
+                  {statusRows.map((status) => (
+                    <option key={status.key} value={status.key}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <DateField label="از تاریخ" onChange={setFrom} value={from} />
+              <DateField label="تا تاریخ" onChange={setTo} value={to} />
+              <button
+                className="flex h-11 min-w-28 items-center justify-center gap-2 self-end rounded-xl bg-[#1f7a8c] px-4 text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/20 transition-transform duration-150 ease-out hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading || selectableUsers.length === 0}
+                type="submit"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={17} />
+                ) : (
+                  <Search size={17} />
+                )}
+                نمایش
+              </button>
+            </form>
+          </div>
+          {error && (
+            <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">
+              {error}
             </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </header>
+
+        <AnimatePresence initial={false} mode="wait">
+          {showInitialSkeleton ? (
+            <motion.div
+              aria-label="در حال دریافت گزارش کاربران"
+              className="space-y-4"
+              exit={{
+                filter: "blur(4px)",
+                opacity: 0,
+                transition: { duration: 0.15, ease: "easeIn" },
+                y: -8,
+              }}
+              key="analytics-loading"
+              role="status"
+            >
+              {Array.from({ length: skeletonCount }, (_, index) => (
+                <AnalyticsCardSkeleton key={index} />
+              ))}
+            </motion.div>
+          ) : summaries.length > 0 ? (
+            <motion.div className="space-y-4" key="analytics-content">
+              {summaries.map((summaryUser, index) => (
+                <UserAnalyticsCard
+                  completedReports={
+                    completedReportsByUser.get(summaryUser.userId) ?? []
+                  }
+                  durationBalance={durationBalances[summaryUser.userId]}
+                  durationLoading={durationLoadingUserId === summaryUser.userId}
+                  entranceIndex={index}
+                  expanded={expandedUserId === summaryUser.userId}
+                  fixedTaskDetails={fixedTaskLists[summaryUser.userId]}
+                  fixedTaskDetailsLoading={
+                    detailsLoadingUserId === summaryUser.userId
+                  }
+                  key={summaryUser.userId}
+                  onRateFixedTask={setRatingTask}
+                  onToggle={() => void toggleUser(summaryUser.userId)}
+                  progress={dailyProgress[summaryUser.userId]}
+                  score={
+                    selectableUsers.find(
+                      (user) => getId(user) === summaryUser.userId,
+                    )?.score
+                  }
+                  role={
+                    selectableUsers.find(
+                      (user) => getId(user) === summaryUser.userId,
+                    )?.roles
+                  }
+                  statusFilter={statusFilter}
+                  summary={summaryUser}
+                  taskDetails={taskLists[summaryUser.userId]}
+                  taskDetailsLoading={
+                    taskDetailsLoadingUserId === summaryUser.userId
+                  }
+                  workTypeFilter={workTypeFilter}
+                />
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              className="rounded-2xl bg-[--surface] px-5 py-12 text-center shadow-[0_0_0_1px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+              initial={{ filter: "blur(4px)", opacity: 0, y: 8 }}
+              key="analytics-empty"
+              transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+            >
+              <UserRound className="mx-auto text-[--text-3]" size={30} />
+              <p className="mt-3 text-sm font-bold text-[--text-2]">
+                اطلاعاتی برای نمایش پیدا نشد.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </LandingPageEntrance>
       <AnimatePresence initial={false}>
         {ratingTask && (
@@ -685,11 +707,14 @@ function UserAnalyticsCard({
         baseReportCounts.overdueUnfinished,
     ),
   };
-  const showProjects = workTypeFilter === "all" || workTypeFilter === "projects";
+  const showProjects =
+    workTypeFilter === "all" || workTypeFilter === "projects";
   const showReports = workTypeFilter === "all" || workTypeFilter === "reports";
-  const total = (showProjects ? projectCounts.total : 0) +
+  const total =
+    (showProjects ? projectCounts.total : 0) +
     (showReports ? reportCounts.total : 0);
-  const done = (showProjects ? projectCounts.done : 0) +
+  const done =
+    (showProjects ? projectCounts.done : 0) +
     (showReports ? reportCounts.done : 0);
   const open = Math.max(total - done, 0);
   const rate = total ? Math.round((done / total) * 100) : 0;
@@ -780,11 +805,7 @@ function UserAnalyticsCard({
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[--border] pt-4 sm:grid-cols-4">
-          <SummaryMetric
-            label="امتیاز"
-            tone="warning"
-            value={score ?? 0}
-          />
+          <SummaryMetric label="امتیاز" tone="warning" value={score ?? 0} />
           <SummaryMetric
             label="پیشرفت پروژه‌ها"
             value={`${projectProgress}٪`}
@@ -896,7 +917,10 @@ function UserAnalyticsCard({
                     <Panel icon={Timer} title="تراز زمان گزارش‌های ثابت">
                       {durationLoading ? (
                         <div className="flex min-h-32 items-center justify-center">
-                          <Loader2 className="animate-spin text-[#1f7a8c]" size={24} />
+                          <Loader2
+                            className="animate-spin text-[#1f7a8c]"
+                            size={24}
+                          />
                         </div>
                       ) : durationBalance ? (
                         <DurationBalancePanel data={durationBalance} />
@@ -999,7 +1023,7 @@ function TaskDetailsPanel({
   );
 }
 
-function WorkDetailsPanel<T,>({
+function WorkDetailsPanel<T>({
   data,
   dateFilter,
   description,
@@ -1101,7 +1125,14 @@ function WorkDetailsPanel<T,>({
     ]);
 
     return Object.fromEntries(entries) as WorkDetailLists<T>;
-  }, [data, dateFilter, dateFilterError, detailFrom, detailTo, isDateFilterActive]);
+  }, [
+    data,
+    dateFilter,
+    dateFilterError,
+    detailFrom,
+    detailTo,
+    isDateFilterActive,
+  ]);
   const activeTasks = visibleData?.[activeSection.key] ?? [];
 
   return (
@@ -1120,9 +1151,7 @@ function WorkDetailsPanel<T,>({
           <TitleIcon size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-black text-[--text]">
-            {title}
-          </h3>
+          <h3 className="text-base font-black text-[--text]">{title}</h3>
           <p className="mt-1 text-pretty text-sm leading-6 text-[--text-2]">
             {description}
           </p>
@@ -1273,15 +1302,14 @@ function WorkDetailsPanel<T,>({
                     >
                       {activeTasks.length > 0 ? (
                         activeTasks.map((task, index) => (
-                          <div
-                            key={`${activeSection.key}-${index}`}
-                          >
+                          <div key={`${activeSection.key}-${index}`}>
                             {renderItem(task, activeSection.key)}
                           </div>
                         ))
                       ) : (
                         <p className="rounded-xl bg-[--surface] px-4 py-12 text-center text-sm font-bold text-[--text-3]">
-                          هیچ {itemLabel} {activeSection.emptySuffix} وجود ندارد.
+                          هیچ {itemLabel} {activeSection.emptySuffix} وجود
+                          ندارد.
                         </p>
                       )}
                     </motion.div>
@@ -1702,7 +1730,8 @@ function formatTaskDuration(minutes?: number | null) {
   const total = Math.max(0, Math.round(minutes));
   const hours = Math.floor(total / 60);
   const remainingMinutes = total % 60;
-  if (hours && remainingMinutes) return `${hours} ساعت و ${remainingMinutes} دقیقه`;
+  if (hours && remainingMinutes)
+    return `${hours} ساعت و ${remainingMinutes} دقیقه`;
   if (hours) return `${hours} ساعت`;
   return `${remainingMinutes} دقیقه`;
 }
@@ -1725,7 +1754,9 @@ function SummaryMetric({
 
   return (
     <div className="rounded-xl bg-[--surface-2] px-3 py-2.5">
-      <p className={`text-xl font-black tabular-nums ${tones[tone]}`}>{value}</p>
+      <p className={`text-xl font-black tabular-nums ${tones[tone]}`}>
+        {value}
+      </p>
       <p className="mt-0.5 text-[11px] font-bold text-[--text-3]">{label}</p>
     </div>
   );
@@ -1959,11 +1990,19 @@ function StatusBreakdown({
 }
 
 function DurationBalancePanel({ data }: { data: any }) {
-  const entries = Array.isArray(data) ? data : (Array.isArray(data?.entries) ? data.entries : []);
+  const entries = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.entries)
+      ? data.entries
+      : [];
   const hasEntries = entries.length > 0;
-  const maxMinutes = hasEntries ? Math.max(
-    ...entries.map((e: any) => Math.max(e.expectedMinutes || 0, e.actualMinutes || 0, 1)),
-  ) : 1;
+  const maxMinutes = hasEntries
+    ? Math.max(
+        ...entries.map((e: any) =>
+          Math.max(e.expectedMinutes || 0, e.actualMinutes || 0, 1),
+        ),
+      )
+    : 1;
 
   function fmt(minutes: number) {
     if (minutes == null || isNaN(minutes)) return "0 دقیقه";
@@ -1975,17 +2014,25 @@ function DurationBalancePanel({ data }: { data: any }) {
 
   // Normalize: support both old shape (totalExpected/totalActual/totalBalance)
   // and new API shape (expectedDailyMinutes/totalActualDurationMinutes/remainingMinutes)
-  const totalExpected = data?.totalExpected ?? data?.expectedDailyMinutes ?? entries.reduce((sum: number, e: any) => sum + (e.expectedMinutes || 0), 0);
-  const totalActual = data?.totalActual ?? data?.totalActualDurationMinutes ?? entries.reduce((sum: number, e: any) => sum + (e.actualMinutes || 0), 0);
+  const totalExpected =
+    data?.totalExpected ??
+    data?.expectedDailyMinutes ??
+    entries.reduce((sum: number, e: any) => sum + (e.expectedMinutes || 0), 0);
+  const totalActual =
+    data?.totalActual ??
+    data?.totalActualDurationMinutes ??
+    entries.reduce((sum: number, e: any) => sum + (e.actualMinutes || 0), 0);
   // remainingMinutes = expected - actual, so balance (actual - expected) = -remaining
-  const remaining = data?.remainingMinutes ?? (totalExpected - totalActual);
+  const remaining = data?.remainingMinutes ?? totalExpected - totalActual;
 
   return (
     <div className="space-y-5">
       {/* Summary totals */}
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl bg-[--surface-2] p-3 text-center">
-          <p className="text-[10px] font-bold text-[--text-3]">زمان مورد انتظار</p>
+          <p className="text-[10px] font-bold text-[--text-3]">
+            زمان مورد انتظار
+          </p>
           <p className="mt-1 text-xl font-black tabular-nums text-[#1f7a8c]">
             {fmt(totalExpected)}
           </p>
@@ -2022,12 +2069,19 @@ function DurationBalancePanel({ data }: { data: any }) {
           <p className="text-[11px] font-bold text-[--text-3]">جزئیات روزانه</p>
           <div className="space-y-1.5 overflow-x-auto">
             {entries.map((entry: any, index: number) => {
-              const expectedPct = Math.round(((entry.expectedMinutes || 0) / maxMinutes) * 100);
-              const actualPct = Math.round(((entry.actualMinutes || 0) / maxMinutes) * 100);
+              const expectedPct = Math.round(
+                ((entry.expectedMinutes || 0) / maxMinutes) * 100,
+              );
+              const actualPct = Math.round(
+                ((entry.actualMinutes || 0) / maxMinutes) * 100,
+              );
               const isPositive = (entry.balance || 0) >= 0;
               const dateLabel = entry.date ? entry.date.slice(5) : ""; // MM-DD
               return (
-                <div key={entry.date || index} className="flex items-center gap-3 text-xs">
+                <div
+                  key={entry.date || index}
+                  className="flex items-center gap-3 text-xs"
+                >
                   <span className="w-12 shrink-0 text-left font-mono text-[--text-3]">
                     {dateLabel}
                   </span>
