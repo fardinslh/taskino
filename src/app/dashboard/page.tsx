@@ -3,6 +3,7 @@
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import DateObject from "react-date-object";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
@@ -1168,6 +1169,14 @@ function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function jalaliPickerDate(date: Date) {
+  return new DateObject({ calendar: jalali, date, locale: persianFa });
+}
+
+function datePickerValue(value: string) {
+  return value ? jalaliPickerDate(new Date(`${value}T00:00:00`)) : "";
+}
+
 function todayRange() {
   const now = new Date();
   const today = dateParam(now);
@@ -1428,13 +1437,12 @@ function SpecialistPerformanceCard({
               format="YYYY/MM/DD"
               inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm font-semibold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
               locale={persianFa}
-              maxDate={to ? new Date(`${to}T00:00:00`) : undefined}
               onChange={(date) => {
                 if (!date || Array.isArray(date)) return setFrom("");
                 setFrom(dateParam(date.toDate()));
               }}
               portal
-              value={from ? new Date(`${from}T00:00:00`) : ""}
+              value={datePickerValue(from)}
               zIndex={10000}
             />
           </label>
@@ -1448,13 +1456,12 @@ function SpecialistPerformanceCard({
               format="YYYY/MM/DD"
               inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm font-semibold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
               locale={persianFa}
-              minDate={from ? new Date(`${from}T00:00:00`) : undefined}
               onChange={(date) => {
                 if (!date || Array.isArray(date)) return setTo("");
                 setTo(dateParam(date.toDate()));
               }}
               portal
-              value={to ? new Date(`${to}T00:00:00`) : ""}
+              value={datePickerValue(to)}
               zIndex={10000}
             />
           </label>

@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import DateObject from "react-date-object";
 import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
@@ -86,6 +87,14 @@ type WorkDetailListKey<T> = keyof WorkDetailLists<T>;
 
 function dateParam(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function jalaliPickerDate(date: Date) {
+  return new DateObject({ calendar: jalali, date, locale: persianFa });
+}
+
+function datePickerValue(value: string) {
+  return value ? jalaliPickerDate(new Date(`${value}T00:00:00`)) : "";
 }
 
 function todayRange() {
@@ -294,6 +303,9 @@ export default function AnalyticsPage() {
     if (needsDetails) setDetailsLoadingUserId(userId);
     if (needsTaskDetails) setTaskDetailsLoadingUserId(userId);
 
+    const overdueTo = from === to ? new Date(`${to}T00:00:00`) : null;
+    overdueTo?.setDate(overdueTo.getDate() + 1);
+
     const [durationResult, detailsResult, taskDetailsResult] =
       await Promise.allSettled([
       needsDuration
@@ -301,7 +313,11 @@ export default function AnalyticsPage() {
         : Promise.resolve(null),
       needsDetails
         ? Promise.all([
-            managerApi.overdueFixedTasks(token, { from, to, userId }),
+            managerApi.overdueFixedTasks(token, {
+              from,
+              to: overdueTo?.toISOString() ?? to,
+              userId,
+            }),
             managerApi.doneFixedTasks(token, { from, to, userId }),
             managerApi.inProgressFixedTasks(token, { userId }),
             managerApi.todoFixedTasks(token, { userId }),
@@ -309,7 +325,11 @@ export default function AnalyticsPage() {
         : Promise.resolve(null),
       needsTaskDetails
         ? Promise.all([
-            managerApi.overdueTasks(token, { from, to, userId }),
+            managerApi.overdueTasks(token, {
+              from,
+              to: overdueTo?.toISOString() ?? to,
+              userId,
+            }),
             managerApi.doneTasks(token, { from, to, userId }),
             managerApi.inProgressTasks(token, { from, to, userId }),
             managerApi.todoTasks(token, { from, to, userId }),
@@ -460,14 +480,11 @@ export default function AnalyticsPage() {
             </label>
             <DateField
               label="از تاریخ"
-              maxDate={to ? new Date(`${to}T00:00:00`) : new Date()}
               onChange={setFrom}
               value={from}
             />
             <DateField
               label="تا تاریخ"
-              maxDate={new Date()}
-              minDate={from ? new Date(`${from}T00:00:00`) : undefined}
               onChange={setTo}
               value={to}
             />
@@ -1160,13 +1177,11 @@ function WorkDetailsPanel<T,>({
                     <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                       <DateField
                         label="از تاریخ"
-                        maxDate={detailTo ? new Date(`${detailTo}T00:00:00`) : undefined}
                         onChange={setDetailFrom}
                         value={detailFrom}
                       />
                       <DateField
                         label="تا تاریخ"
-                        minDate={detailFrom ? new Date(`${detailFrom}T00:00:00`) : undefined}
                         onChange={setDetailTo}
                         value={detailTo}
                       />
@@ -1748,14 +1763,10 @@ function ManagerSummaryBanner({
 
 function DateField({
   label,
-  maxDate,
-  minDate,
   onChange,
   value,
 }: {
   label: string;
-  maxDate?: Date;
-  minDate?: Date;
   onChange: (value: string) => void;
   value: string;
 }) {
@@ -1770,14 +1781,12 @@ function DateField({
         format="YYYY/MM/DD"
         inputClass="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
         locale={persianFa}
-        maxDate={maxDate}
-        minDate={minDate}
         onChange={(date) => {
           if (!date || Array.isArray(date)) return onChange("");
           onChange(dateParam(date.toDate()));
         }}
         portal
-        value={value ? new Date(`${value}T00:00:00`) : ""}
+        value={datePickerValue(value)}
         zIndex={10000}
       />
     </label>
