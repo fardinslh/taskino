@@ -41,14 +41,12 @@ export function TemplateRow({
   onEdit,
   onDelete,
   canEdit = true,
-  onToggleActive,
 }: {
   task: any;
   onClick?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   canEdit?: boolean;
-  onToggleActive?: (active: boolean) => void;
 }) {
   const active = task.isActive !== false;
   const requiredDuration = formatDurationMinutes(
@@ -94,26 +92,6 @@ export function TemplateRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        {onToggleActive && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleActive(!active);
-            }}
-            className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1f7a8c]/40 ${
-              active ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
-            }`}
-            role="switch"
-            aria-checked={active}
-          >
-            <span
-              className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all duration-200 ease-in-out ${
-                active ? "left-6" : "left-1"
-              }`}
-            />
-          </button>
-        )}
         {canEdit && (
           <button
             className="rounded-lg border border-[--border] bg-[--surface] px-3 py-1.5 text-xs font-semibold text-[--text-2] transition hover:bg-[--surface-2]"

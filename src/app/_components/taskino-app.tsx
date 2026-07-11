@@ -304,7 +304,7 @@ export function TaskinoApp({
             canChangeStatus={isSpecialist}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
-            canRate={isManager}
+            canRate={isManager && activeView !== "fixed-reports"}
             onClose={() => setSelectedFixedTask(null)}
             onDelete={(taskId) => void controller.deleteFixedTask(taskId)}
             onEdit={(task) => {
