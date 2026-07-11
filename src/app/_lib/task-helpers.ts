@@ -83,20 +83,13 @@ export function isTaskInPeriod(task: Task, period: TaskPeriod) {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
 
-  if (period === "weekly") {
-    const day = start.getDay();
-    const daysFromSaturday = (day + 1) % 7;
-    start.setDate(start.getDate() - daysFromSaturday);
-  }
-
-  if (period === "monthly") {
-    start.setDate(1);
-  }
-
   const end = new Date(start);
   if (period === "daily") end.setDate(start.getDate() + 1);
-  if (period === "weekly") end.setDate(start.getDate() + 7);
-  if (period === "monthly") end.setMonth(start.getMonth() + 1);
+  if (period === "weekly") {
+    const daysFromSaturday = (start.getDay() + 1) % 7;
+    end.setDate(end.getDate() + 7 - daysFromSaturday);
+  }
+  if (period === "monthly") end.setMonth(start.getMonth() + 1, 1);
 
   return date >= start && date < end;
 }
