@@ -28,6 +28,7 @@ import {
 import {
   buildFixedTaskScheduleConfig,
   getFixedTaskScheduleValues,
+  initialFixedTaskDateRange,
 } from "../../../_lib/fixed-task-schedule";
 
 export default function SupervisorCreateReportsPage() {
@@ -235,7 +236,6 @@ export default function SupervisorCreateReportsPage() {
       ),
       approvedDurationMinutes: values.approvedDurationMinutes,
       description: values.description?.trim() || undefined,
-      isActive: editingFixedTask?.isActive ?? true,
     };
 
     try {
@@ -243,7 +243,12 @@ export default function SupervisorCreateReportsPage() {
         await fixedTaskApi.update(token, getId(editingFixedTask), myId, body);
         setMessage("گزارش ثابت بروزرسانی شد.");
       } else {
-        await fixedTaskApi.create(token, body);
+        await fixedTaskApi.create(token, {
+          ...body,
+          ...initialFixedTaskDateRange(values.recurrence),
+          startTime: "00:00",
+          endTime: "00:00",
+        });
         setMessage("گزارش ثابت جدید ساخته شد.");
       }
 

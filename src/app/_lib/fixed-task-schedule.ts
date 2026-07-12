@@ -47,6 +47,24 @@ export function buildFixedTaskScheduleConfig(
     [...new Set(values)].sort((a, b) => a - b);
 
   return recurrence === "monthly"
-    ? { monthDays: uniqueSorted(monthDays) }
-    : { weekdays: uniqueSorted(weekdays) };
+    ? { weekdays: [], monthDays: uniqueSorted(monthDays) }
+    : { weekdays: uniqueSorted(weekdays), monthDays: [] };
+}
+
+export function initialFixedTaskDateRange(
+  recurrence: FixedTaskRecurrence,
+  now = new Date(),
+) {
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(startDate);
+  if (recurrence === "daily") endDate.setDate(endDate.getDate() + 1);
+  if (recurrence === "weekly") endDate.setDate(endDate.getDate() + 7);
+  if (recurrence === "monthly") endDate.setMonth(endDate.getMonth() + 1);
+
+  return {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
 }

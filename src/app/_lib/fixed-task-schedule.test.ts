@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildFixedTaskScheduleConfig,
   getFixedTaskScheduleValues,
+  initialFixedTaskDateRange,
   isFixedTaskScheduleValid,
 } from "./fixed-task-schedule";
 
@@ -38,9 +39,26 @@ describe("fixed-task scheduling", () => {
   it("builds a numeric, recurrence-specific payload", () => {
     expect(buildFixedTaskScheduleConfig("weekly", [6, 1, 3, 1], [2])).toEqual({
       weekdays: [1, 3, 6],
+      monthDays: [],
     });
     expect(buildFixedTaskScheduleConfig("monthly", [6], [20, 2, 20])).toEqual({
+      weekdays: [],
       monthDays: [2, 20],
     });
+  });
+
+  it("uses midnight-to-midnight occurrence boundaries", () => {
+    const now = new Date(2026, 6, 12, 14, 30);
+
+    expect(initialFixedTaskDateRange("daily", now)).toEqual({
+      startDate: new Date(2026, 6, 12).toISOString(),
+      endDate: new Date(2026, 6, 13).toISOString(),
+    });
+    expect(initialFixedTaskDateRange("weekly", now).endDate).toBe(
+      new Date(2026, 6, 19).toISOString(),
+    );
+    expect(initialFixedTaskDateRange("monthly", now).endDate).toBe(
+      new Date(2026, 7, 12).toISOString(),
+    );
   });
 });

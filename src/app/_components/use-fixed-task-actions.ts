@@ -21,7 +21,10 @@ import {
   elapsedDurationMinutes,
   fixedTaskFirstOverdueActualDurationMinutes,
 } from "../_lib/fixed-task-timing";
-import { buildFixedTaskScheduleConfig } from "../_lib/fixed-task-schedule";
+import {
+  buildFixedTaskScheduleConfig,
+  initialFixedTaskDateRange,
+} from "../_lib/fixed-task-schedule";
 import { isFixedTaskOverdue } from "../_lib/task-helpers";
 
 type FixedTaskFormValues = {
@@ -151,20 +154,20 @@ export function useFixedTaskActions({
   async function saveFixedTaskFromValues(values: FixedTaskFormValues) {
     if (!myId || !values.title.trim() || !values.assignedTo) return;
     const specialistName = findSpecialistName(values.assignedTo);
+    const scheduleConfig = buildFixedTaskScheduleConfig(
+      values.recurrence,
+      values.weekdays,
+      values.monthDays,
+    );
 
     const body = {
       title: values.title.trim(),
       assignedTo: values.assignedTo,
       specialistName,
       recurrence: values.recurrence,
-      scheduleConfig: buildFixedTaskScheduleConfig(
-        values.recurrence,
-        values.weekdays,
-        values.monthDays,
-      ),
+      scheduleConfig,
       approvedDurationMinutes: values.approvedDurationMinutes,
       description: values.description?.trim() || undefined,
-      isActive: editingFixedTask?.isActive ?? true,
     };
 
     try {
@@ -181,7 +184,12 @@ export function useFixedTaskActions({
           ),
         );
       } else {
-        const created = await fixedTaskApi.create(token, body);
+        const created = await fixedTaskApi.create(token, {
+          ...body,
+          ...initialFixedTaskDateRange(values.recurrence),
+          startTime: "00:00",
+          endTime: "00:00",
+        });
         setFixedTasks((current) => [created, ...current]);
         await loadManagerAnalytics();
       }
@@ -222,7 +230,6 @@ export function useFixedTaskActions({
         scheduleConfig: fixedTask.scheduleConfig,
         approvedDurationMinutes: fixedTask.approvedDurationMinutes,
         description: fixedTask.description?.trim() || undefined,
-        isActive: true,
         startDate: startDate.toISOString(),
         startTime: formatTime(startDate),
         endDate: endDate.toISOString(),
