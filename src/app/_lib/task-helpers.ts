@@ -151,6 +151,19 @@ export function isFixedTaskOverdue(
   return !Number.isNaN(endDate.getTime()) && endDate < new Date();
 }
 
+export function isFixedTaskStartedTodayOrLater(
+  item: Pick<FixedTask, "startDate">,
+  now = new Date(),
+) {
+  if (!item.startDate) return true;
+  const startDate = new Date(item.startDate);
+  if (Number.isNaN(startDate.getTime())) return true;
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return startDate >= today;
+}
+
 function hasEnglishText(value: string) {
   return /[A-Za-z]/.test(value);
 }

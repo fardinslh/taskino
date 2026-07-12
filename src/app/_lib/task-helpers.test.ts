@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { notificationTarget, notificationText } from "./task-helpers";
+import {
+  isFixedTaskStartedTodayOrLater,
+  notificationTarget,
+  notificationText,
+} from "./task-helpers";
 
 describe("notification text localization", () => {
   it("localizes task assignment notifications as projects", () => {
@@ -108,5 +112,24 @@ describe("notification text localization", () => {
       title: "پروژه مازاد تأیید شد",
       message: "پروژه مازاد «تست پروژه» تأیید شد.",
     });
+  });
+});
+
+describe("fixed task start-date filtering", () => {
+  it("hides reports that started before today", () => {
+    const today = new Date(2026, 6, 12, 10);
+
+    expect(
+      isFixedTaskStartedTodayOrLater(
+        { startDate: "2026-07-11T23:00:00" },
+        today,
+      ),
+    ).toBe(false);
+    expect(
+      isFixedTaskStartedTodayOrLater(
+        { startDate: "2026-07-12T00:00:00" },
+        today,
+      ),
+    ).toBe(true);
   });
 });

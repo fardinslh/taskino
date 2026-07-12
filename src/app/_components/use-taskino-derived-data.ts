@@ -14,6 +14,7 @@ import {
 import type { Priority, TaskPeriod } from "../_lib/task-constants";
 import {
   isFixedTaskOverdue,
+  isFixedTaskStartedTodayOrLater,
   isTaskInPeriod,
   recurrenceLabel,
   statusLabel,
@@ -86,7 +87,8 @@ export function useTaskinoDerivedData({
     (item) =>
       item.isActive !== false &&
       (isManager || !myId || getId(item.assignedTo) === myId) &&
-      (!isManager && !isSpecialist || !isFixedTaskOverdue(item)),
+      (!isManager && !isSpecialist || !isFixedTaskOverdue(item)) &&
+      (!isManager || isFixedTaskStartedTodayOrLater(item)),
   );
   const fixedDoneTasks = activeFixedTasks.filter(
     (item) => item.status === "done",
