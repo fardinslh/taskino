@@ -18,7 +18,6 @@ import {
   ClipboardList,
   FileSpreadsheet,
   FolderKanban,
-  Gauge,
   Plus,
   TrendingUp,
   UserCheck,
@@ -1206,6 +1205,55 @@ function boundedPercent(value?: number) {
   return Math.min(100, Math.max(0, Math.round(value ?? 0)));
 }
 
+function CircularProgress({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: string;
+  value: number;
+}) {
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const progress = boundedPercent(value);
+
+  return (
+    <div
+      aria-label={`${label}: ${progress}%`}
+      className={`relative flex size-16 shrink-0 items-center justify-center ${tone}`}
+      role="img"
+    >
+      <svg aria-hidden="true" className="size-full -rotate-90" viewBox="0 0 56 56">
+        <circle
+          cx="28"
+          cy="28"
+          fill="none"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="5"
+          className="opacity-15"
+        />
+        <circle
+          cx="28"
+          cy="28"
+          fill="none"
+          r={radius}
+          stroke="currentColor"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress / 100)}
+          strokeLinecap="round"
+          strokeWidth="5"
+          className="transition-[stroke-dashoffset] duration-500 ease-out"
+        />
+      </svg>
+      <span className="absolute text-[11px] font-black tabular-nums text-[--text]">
+        {progress.toLocaleString("fa-IR")}٪
+      </span>
+    </div>
+  );
+}
+
 function averageDailyProgress(
   entries: DailyProgressEntry[] | undefined,
   field:
@@ -1357,36 +1405,19 @@ function SpecialistPerformanceCard({
             };
   const metrics = [
     {
-      Icon: Award,
-      iconStyles:
-        "bg-amber-50 text-amber-600 ring-amber-600/10 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-400/15",
-      label: "امتیاز",
-      value: dailyStats?.score ?? stats?.score ?? 0,
-      valueStyles: "text-amber-600 dark:text-amber-400",
-    },
-    {
-      Icon: ClipboardList,
-      iconStyles:
-        "bg-indigo-50 text-indigo-600 ring-indigo-600/10 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-400/15",
       label: "پیشرفت پروژه‌ها",
-      value: `${projectProgress}%`,
-      valueStyles: "text-indigo-600 dark:text-indigo-400",
+      tone: "text-indigo-600 dark:text-indigo-400",
+      value: projectProgress,
     },
     {
-      Icon: CalendarDays,
-      iconStyles:
-        "bg-cyan-50 text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-cyan-950/40 dark:text-cyan-400 dark:ring-cyan-400/15",
       label: "پیشرفت گزارش‌ها",
-      value: `${reportProgress}%`,
-      valueStyles: "text-[#1f7a8c] dark:text-cyan-400",
+      tone: "text-[#1f7a8c] dark:text-cyan-400",
+      value: reportProgress,
     },
     {
-      Icon: Gauge,
-      iconStyles:
-        "bg-emerald-50 text-emerald-600 ring-emerald-600/10 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-400/15",
       label: "پیشرفت کلی",
-      value: `${rate}%`,
-      valueStyles: "text-emerald-600 dark:text-emerald-400",
+      tone: "text-emerald-600 dark:text-emerald-400",
+      value: rate,
     },
   ];
 
@@ -1543,15 +1574,13 @@ function SpecialistPerformanceCard({
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-2 bg-[--surface-2]/65 xl:grid-cols-4">
+      <div className="grid grid-cols-3 bg-[--surface-2]/65">
         {metrics.map((metric, index) => (
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className={`flex min-w-0 items-center gap-3 px-4 py-4 ${
-              index >= 2 ? "border-t border-[--border]" : ""
-            } ${
-              index % 2 === 1 ? "border-s border-[--border]" : ""
-            } ${index > 0 ? "xl:border-s xl:border-[--border]" : "xl:border-s-0"} xl:border-t-0`}
+            className={`flex min-w-0 flex-col items-center justify-center gap-2 px-4 py-4 ${
+              index > 0 ? "border-s border-[--border]" : ""
+            }`}
             initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             key={metric.label}
             transition={{
@@ -1560,21 +1589,14 @@ function SpecialistPerformanceCard({
               ease: [0.2, 0, 0, 1],
             }}
           >
-            <div
-              className={`flex size-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ${metric.iconStyles}`}
-            >
-              <metric.Icon size={18} strokeWidth={2.1} />
-            </div>
-            <div className="min-w-0">
-              <p
-                className={`text-lg font-extrabold tabular-nums ${metric.valueStyles}`}
-              >
-                {metric.value}
-              </p>
-              <p className="truncate text-[11px] font-medium text-[--text-3]">
-                {metric.label}
-              </p>
-            </div>
+            <CircularProgress
+              label={metric.label}
+              tone={metric.tone}
+              value={metric.value}
+            />
+            <p className="truncate text-center text-[11px] font-medium text-[--text-3]">
+              {metric.label}
+            </p>
           </motion.div>
         ))}
       </div>
@@ -1608,18 +1630,21 @@ function PersonalPerformanceCard({
         ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
         : "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
   const metrics = [
-    { label: "امتیاز", value: stats?.score ?? 0, color: "text-amber-600" },
     {
       label: "پیشرفت پروژه‌ها",
-      value: `${stats?.taskProgressPercentage ?? 0}%`,
-      color: "text-indigo-600",
+      value: stats?.taskProgressPercentage ?? 0,
+      tone: "text-indigo-600 dark:text-indigo-400",
     },
     {
       label: "پیشرفت گزارش‌ها",
-      value: `${stats?.fixedTaskProgressPercentage ?? 0}%`,
-      color: "text-[#1f7a8c]",
+      value: stats?.fixedTaskProgressPercentage ?? 0,
+      tone: "text-[#1f7a8c] dark:text-cyan-400",
     },
-    { label: "پیشرفت کلی", value: `${rate}%`, color: "text-emerald-600" },
+    {
+      label: "پیشرفت کلی",
+      value: rate,
+      tone: "text-emerald-600 dark:text-emerald-400",
+    },
   ];
 
   return (
@@ -1644,12 +1669,17 @@ function PersonalPerformanceCard({
         </div>
         <span className="text-sm font-bold text-violet-600">{rate}%</span>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-center xl:grid-cols-4">
+      <div className="mt-4 grid grid-cols-3 gap-2">
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-xl bg-[--surface-2] py-3">
-            <p className={`text-xl font-bold ${metric.color}`}>
-              {metric.value}
-            </p>
+          <div
+            key={metric.label}
+            className="flex min-w-0 flex-col items-center gap-2 rounded-xl bg-[--surface-2] px-2 py-3"
+          >
+            <CircularProgress
+              label={metric.label}
+              tone={metric.tone}
+              value={metric.value}
+            />
             <p className="text-[11px] text-[--text-3]">{metric.label}</p>
           </div>
         ))}
