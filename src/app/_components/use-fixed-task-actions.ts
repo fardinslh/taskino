@@ -5,8 +5,6 @@ import {
   type Dispatch,
   type FormEvent,
   type SetStateAction,
-  useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -17,10 +15,6 @@ import {
   type FixedTask,
   type FixedTaskStatus,
 } from "@/lib/api";
-import {
-  elapsedDurationMinutes,
-  fixedTaskFirstOverdueActualDurationMinutes,
-} from "../_lib/fixed-task-timing";
 import {
   buildFixedTaskScheduleConfig,
   initialFixedTaskDateRange,
@@ -80,7 +74,6 @@ export function useFixedTaskActions({
   >("daily");
   const [ftTitle, setFtTitle] = useState("");
   const [showFixedTaskForm, setShowFixedTaskForm] = useState(false);
-  const syncedOverdueDurationTimers = useRef<Set<string>>(new Set());
 
   function closeFixedTaskForm() {
     setShowFixedTaskForm(false);
@@ -315,67 +308,6 @@ export function useFixedTaskActions({
     }
   }
 
-  useEffect(() => {
-    if (!token || !myId) return;
-    let cancelled = false;
-
-    async function syncFirstOverdueDurations() {
-      const candidates = fixedTasks
-        .map((task) => {
-          const id = getId(task);
-          const syncKey = `${id}:${task.startedAt ?? ""}`;
-          if (!id || syncedOverdueDurationTimers.current.has(syncKey)) {
-            return null;
-          }
-
-          const assignedId = getId(task.assignedTo);
-          if (assignedId && assignedId !== myId) return null;
-
-          const actualDurationMinutes =
-            fixedTaskFirstOverdueActualDurationMinutes(task);
-          if (actualDurationMinutes == null) return null;
-
-          return { id, actualDurationMinutes, syncKey };
-        })
-        .filter(
-          (
-            candidate,
-          ): candidate is {
-            id: string;
-            actualDurationMinutes: number;
-            syncKey: string;
-          } => candidate !== null,
-        );
-
-      for (const candidate of candidates) {
-        syncedOverdueDurationTimers.current.add(candidate.syncKey);
-        try {
-          const updated = await fixedTaskApi.updateStatus(
-            token,
-            candidate.id,
-            "in_progress",
-            { actualDurationMinutes: candidate.actualDurationMinutes },
-          );
-          if (cancelled) return;
-          setFixedTasks((current) =>
-            current.map((item) =>
-              getId(item) === candidate.id ? { ...item, ...updated } : item,
-            ),
-          );
-        } catch {
-          syncedOverdueDurationTimers.current.delete(candidate.syncKey);
-        }
-      }
-    }
-
-    void syncFirstOverdueDurations();
-    const intervalId = window.setInterval(syncFirstOverdueDurations, 30000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [fixedTasks, myId, setFixedTasks, token]);
-
   async function moveFixedTask(id: string, status: FixedTaskStatus) {
     if (!myId) return;
     const target = fixedTasks.find((item) => getId(item) === id);
@@ -391,20 +323,14 @@ export function useFixedTaskActions({
       target &&
       isFixedTaskOverdue(target) &&
       currentStatus === "todo" &&
-      status === "in_progress"
+      status === "done"
     ) {
-      setError("مهلت این گزارش ثابت گذشته است و امکان تغییر وضعیت به در حال انجام یا تکمیل شده وجود ندارد.");
+      setError("مهلت این گزارش ثابت گذشته است و امکان تکمیل آن وجود ندارد.");
       return;
     }
-    const validTransition =
-      (currentStatus === "todo" && status === "in_progress") ||
-      (currentStatus === "in_progress" && status === "done");
+    const validTransition = currentStatus === "todo" && status === "done";
     if (!validTransition) {
-      setError("گزارش ثابت باید به‌ترتیب از «در انتظار» به «در حال انجام» و سپس «تکمیل‌شده» منتقل شود.");
-      return;
-    }
-    if (status === "done" && !target?.startedAt) {
-      setError("ابتدا زمان‌سنج گزارش را شروع کنید.");
+      setError("گزارش ثابت فقط می‌تواند از «در انتظار» به «تکمیل‌شده» منتقل شود.");
       return;
     }
     const previous = fixedTasks;
@@ -412,17 +338,7 @@ export function useFixedTaskActions({
       current.map((item) => (getId(item) === id ? { ...item, status } : item)),
     );
     try {
-      const statusBody =
-        status === "done"
-          ? {
-              actualDurationMinutes:
-                elapsedDurationMinutes(target?.startedAt),
-            }
-          : undefined;
-      const updated =
-        status === "in_progress" && !target?.startedAt
-          ? await fixedTaskApi.startTimer(token, id)
-          : await fixedTaskApi.updateStatus(token, id, status, statusBody);
+      const updated = await fixedTaskApi.updateStatus(token, id, status);
       setFixedTasks((current) =>
         current.map((item) =>
           getId(item) === id ? { ...item, ...updated } : item,

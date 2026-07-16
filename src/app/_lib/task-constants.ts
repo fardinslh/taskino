@@ -69,23 +69,6 @@ export const COLUMNS = [
       "hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200",
   },
   {
-    status: "in_progress",
-    title: "در حال انجام",
-    dot: "bg-[#1f7a8c]",
-    colBg:
-      "dark:from-[#0f3040] dark:to-slate-900/40 bg-gradient-to-b from-[#e8f6f9] to-[#f5fbfd]",
-    border: "border-[#b8dfe8] dark:border-[#1f5060]",
-    headerGrad:
-      "from-[#d0eef5] to-[#e8f6f9] dark:from-[#0f3040] dark:to-[#0f3040]/60",
-    headerText: "text-[#1f7a8c] dark:text-[#4fc3d5]",
-    badge:
-      "bg-[#1f7a8c]/15 text-[#1f7a8c] dark:bg-[#1f7a8c]/20 dark:text-[#4fc3d5]",
-    emptyBorder: "border-[#9dd4dc] dark:border-[#1f5060]",
-    cardBorder: "border-t-[#1f7a8c] dark:border-t-[#2a9db2]",
-    btnHover:
-      "hover:bg-[#e0f4f8] hover:text-[#1f7a8c] dark:hover:bg-[#0f3040] dark:hover:text-[#4fc3d5]",
-  },
-  {
     status: "done",
     title: "تکمیل شده",
     dot: "bg-emerald-500",

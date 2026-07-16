@@ -135,6 +135,10 @@ export function useTaskinoController(initialView: View = "dashboard") {
   }, [darkMode]);
 
   function setActiveView(view: View) {
+    if (view !== activeView) {
+      setSelectedTask(null);
+      setSelectedFixedTask(null);
+    }
     setActiveViewState(view);
     router.push(VIEW_PATHS[view]);
   }
@@ -324,20 +328,17 @@ export function useTaskinoController(initialView: View = "dashboard") {
     activeFixedTaskCount,
     doneTasks,
     fixedDoneTasks,
-    fixedInProgressTasks,
     fixedOpenTasks,
     fixedTodoCount,
     filteredFixedTemplates,
     filteredTasks,
     incompleteFixedTasks,
-    inProgressTasks,
     isManager,
     isSpecialist,
     isSupervisor,
     progress,
     statsProjects,
     statsUsers,
-    supervisorInProgressReports,
     supervisorOwnDoneReports,
     supervisorProjectDoneReports,
     teamAssigneeCount,
@@ -560,17 +561,14 @@ export function useTaskinoController(initialView: View = "dashboard") {
     activeFixedTaskCount,
     doneTasks,
     fixedDoneTasks,
-    fixedInProgressTasks,
     fixedOpenTasks,
     fixedTodoCount,
     filteredFixedTemplates,
     filteredTasks,
     incompleteFixedTasks,
-    inProgressTasks,
     progress,
     statsProjects,
     statsUsers,
-    supervisorInProgressReports,
     supervisorOwnDoneReports,
     supervisorProjectDoneReports,
     teamAssigneeCount,

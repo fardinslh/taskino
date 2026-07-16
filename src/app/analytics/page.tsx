@@ -25,8 +25,6 @@ import {
   MessageSquareText,
   Search,
   Star,
-  Target,
-  Timer,
   UserRound,
   X,
 } from "lucide-react";
@@ -36,7 +34,6 @@ import {
   getId,
   managerApi,
   normalizeList,
-  type DailyProgressEntry,
   type DailyDurationBalance,
   type FixedTask,
   type MyDailyProgressStats,
@@ -56,7 +53,6 @@ import { formatDate, recurrenceLabel, userName } from "../_lib/task-helpers";
 
 const emptyCounts: WorkStatusCounts = {
   done: 0,
-  inProgress: 0,
   overdueUnfinished: 0,
   todo: 0,
   total: 0,
@@ -64,7 +60,6 @@ const emptyCounts: WorkStatusCounts = {
 
 const statusRows = [
   { key: "done", label: "انجام‌شده", color: "#10b981" },
-  { key: "inProgress", label: "در حال انجام", color: "#1f7a8c" },
   { key: "todo", label: "در انتظار", color: "#f59e0b" },
   { key: "overdueUnfinished", label: "معوق", color: "#ef4444" },
 ] as const;
@@ -73,7 +68,6 @@ type WorkTypeFilter = "all" | "projects" | "reports";
 type StatusFilter = "all" | (typeof statusRows)[number]["key"];
 type WorkDetailLists<T> = {
   done: T[];
-  inProgress: T[];
   overdue: T[];
   todo: T[];
 };
@@ -111,24 +105,6 @@ function todayRange() {
 
 function completionRate(counts: WorkStatusCounts) {
   return counts.total ? Math.round((counts.done / counts.total) * 100) : 0;
-}
-
-function averageDailyProgress(
-  entries: DailyProgressEntry[] | undefined,
-  field:
-    | "progressPercentage"
-    | "taskProgressPercentage"
-    | "fixedTaskProgressPercentage",
-) {
-  if (!entries?.length) return undefined;
-  return Math.round(
-    entries.reduce((sum, entry) => sum + (entry[field] ?? 0), 0) /
-      entries.length,
-  );
-}
-
-function boundedPercent(value?: number) {
-  return Math.min(100, Math.max(0, Math.round(value ?? 0)));
 }
 
 function parseDateBoundary(value: string, endOfDay = false) {
@@ -200,17 +176,17 @@ export default function AnalyticsPage() {
     Record<string, FixedTaskLists>
   >({});
   const [taskLists, setTaskLists] = useState<Record<string, TaskLists>>({});
-  const [durationLoadingUserId, setDurationLoadingUserId] = useState<
-    string | null
-  >(null);
   const [detailsLoadingUserId, setDetailsLoadingUserId] = useState<
     string | null
   >(null);
   const [taskDetailsLoadingUserId, setTaskDetailsLoadingUserId] = useState<
     string | null
   >(null);
-  const [workTypeFilter, setWorkTypeFilter] = useState<WorkTypeFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [durationLoadingUserId, setDurationLoadingUserId] = useState<
+    string | null
+  >(null);
+  const workTypeFilter: WorkTypeFilter = "all";
+  const statusFilter: StatusFilter = "all";
   const [loading, setLoading] = useState(false);
   const [hasLoadedSummaries, setHasLoadedSummaries] = useState(false);
   const [error, setError] = useState("");
@@ -268,10 +244,28 @@ export default function AnalyticsPage() {
           return { progress, summary, userId };
         }),
       );
-      setSummaries(
+      const summariesByUserId = new Map(
         results
           .flatMap((result) => result.summary.users)
-          .filter((user) => user.userId),
+          .filter((summary) => summary.userId)
+          .map((summary) => [summary.userId, summary]),
+      );
+      setSummaries(
+        selectableUsers.flatMap((user) => {
+          const userId = getId(user);
+          if (!userId) return [];
+
+          return [
+            summariesByUserId.get(userId) ?? {
+              email: user.email,
+              firstName: user.firstName,
+              fixedTasks: { ...emptyCounts },
+              lastName: user.lastName,
+              tasks: { ...emptyCounts },
+              userId,
+            },
+          ];
+        }),
       );
       setDailyProgress(
         Object.fromEntries(
@@ -285,6 +279,7 @@ export default function AnalyticsPage() {
     } catch (err) {
       setSummaries([]);
       setDailyProgress({});
+      setDurationBalances({});
       setError(
         err instanceof Error ? err.message : "دریافت گزارش عملکرد ناموفق بود.",
       );
@@ -338,7 +333,6 @@ export default function AnalyticsPage() {
                 to: rangeTo,
                 userId,
               }),
-              managerApi.inProgressFixedTasks(token, { userId }),
               managerApi.todoFixedTasks(token, { userId }),
             ])
           : Promise.resolve(null),
@@ -354,11 +348,6 @@ export default function AnalyticsPage() {
                 to: rangeTo,
                 userId,
               }),
-              managerApi.inProgressTasks(token, {
-                from: activeFrom,
-                to: rangeTo,
-                userId,
-              }),
               managerApi.todoTasks(token, {
                 from: activeFrom,
                 to: rangeTo,
@@ -369,14 +358,14 @@ export default function AnalyticsPage() {
       ]);
 
     if (durationResult.status === "fulfilled" && durationResult.value) {
-      const durationBalance = durationResult.value;
+      const durationBalance = durationResult.value as DailyDurationBalance;
       setDurationBalances((current) => ({
         ...current,
         [userId]: durationBalance,
       }));
     }
     if (detailsResult.status === "fulfilled" && detailsResult.value) {
-      const [overdue, done, inProgress, todo] = detailsResult.value;
+      const [overdue, done, todo] = detailsResult.value;
       setFixedTaskLists((current) => ({
         ...current,
         [userId]: {
@@ -384,19 +373,17 @@ export default function AnalyticsPage() {
             normalizeList(done),
             completedReportsByUser.get(userId) ?? [],
           ),
-          inProgress: normalizeList(inProgress),
           overdue: normalizeList(overdue),
           todo: normalizeList(todo),
         },
       }));
     }
     if (taskDetailsResult.status === "fulfilled" && taskDetailsResult.value) {
-      const [overdue, done, inProgress, todo] = taskDetailsResult.value;
+      const [overdue, done, todo] = taskDetailsResult.value;
       setTaskLists((current) => ({
         ...current,
         [userId]: {
           done: done.data,
-          inProgress: inProgress.data,
           overdue: overdue.data,
           todo: todo.data,
         },
@@ -465,49 +452,19 @@ export default function AnalyticsPage() {
         <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-black text-[#1f7a8c]">
-                آنالیتیکس مدیر
-              </p>
+              <p className="text-xs font-black text-[#1f7a8c]">یک نگاه ساده</p>
               <h1 className="mt-2 text-balance text-xl font-black sm:text-2xl">
-                عملکرد کاربران
+                کارهای تیم
               </h1>
+              <p className="mt-1 text-pretty text-sm text-[--text-3]">
+                تاریخ را انتخاب کنید تا ببینید هر نفر چقدر کار کرده است.
+              </p>
             </div>
 
             <form
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,.75fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
+              className="grid gap-3 sm:grid-cols-[minmax(150px,.8fr)_minmax(150px,.8fr)_auto]"
               onSubmit={loadSummary}
             >
-              <label className="text-xs font-bold text-[--text-2]">
-                نوع
-                <select
-                  className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  onChange={(event) =>
-                    setWorkTypeFilter(event.target.value as WorkTypeFilter)
-                  }
-                  value={workTypeFilter}
-                >
-                  <option value="all">همه</option>
-                  <option value="projects">پروژه</option>
-                  <option value="reports">گزارش</option>
-                </select>
-              </label>
-              <label className="text-xs font-bold text-[--text-2]">
-                وضعیت
-                <select
-                  className="mt-1.5 h-11 w-full rounded-xl border border-[--border] bg-[--surface-2] px-3 text-sm font-bold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as StatusFilter)
-                  }
-                  value={statusFilter}
-                >
-                  <option value="all">همه وضعیت‌ها</option>
-                  {statusRows.map((status) => (
-                    <option key={status.key} value={status.key}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <DateField label="از تاریخ" onChange={setFrom} value={from} />
               <DateField label="تا تاریخ" onChange={setTo} value={to} />
               <button
@@ -520,7 +477,7 @@ export default function AnalyticsPage() {
                 ) : (
                   <Search size={17} />
                 )}
-                نمایش
+                ببین
               </button>
             </form>
           </div>
@@ -568,11 +525,6 @@ export default function AnalyticsPage() {
                   onRateFixedTask={setRatingTask}
                   onToggle={() => void toggleUser(summaryUser.userId)}
                   progress={dailyProgress[summaryUser.userId]}
-                  score={
-                    selectableUsers.find(
-                      (user) => getId(user) === summaryUser.userId,
-                    )?.score
-                  }
                   role={
                     selectableUsers.find(
                       (user) => getId(user) === summaryUser.userId,
@@ -659,7 +611,6 @@ function UserAnalyticsCard({
   onToggle,
   progress,
   role,
-  score,
   statusFilter,
   summary,
   taskDetails,
@@ -677,7 +628,6 @@ function UserAnalyticsCard({
   onToggle: () => void;
   progress?: MyDailyProgressStats;
   role?: string;
-  score?: number;
   statusFilter: StatusFilter;
   summary: WorkStatusSummaryUser;
   taskDetails?: TaskLists;
@@ -702,7 +652,6 @@ function UserAnalyticsCard({
     total: Math.max(
       baseReportCounts.total,
       completedReportCount +
-        baseReportCounts.inProgress +
         baseReportCounts.todo +
         baseReportCounts.overdueUnfinished,
     ),
@@ -718,21 +667,6 @@ function UserAnalyticsCard({
     (showReports ? reportCounts.done : 0);
   const open = Math.max(total - done, 0);
   const rate = total ? Math.round((done / total) * 100) : 0;
-  const projectProgress = boundedPercent(
-    progress?.averageTaskProgressPercentage ??
-      averageDailyProgress(progress?.data, "taskProgressPercentage") ??
-      progress?.taskProgressPercentage,
-  );
-  const reportProgress = boundedPercent(
-    progress?.averageFixedTaskProgressPercentage ??
-      averageDailyProgress(progress?.data, "fixedTaskProgressPercentage") ??
-      progress?.fixedTaskProgressPercentage,
-  );
-  const overallProgress = boundedPercent(
-    progress?.averageProgressPercentage ??
-      averageDailyProgress(progress?.data, "progressPercentage") ??
-      progress?.progressPercentage,
-  );
   const roleLabel =
     role === "supervisor"
       ? "سرپرست"
@@ -784,10 +718,10 @@ function UserAnalyticsCard({
           </div>
 
           <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
-            <SummaryMetric label="کل موارد" value={total} />
-            <SummaryMetric label="انجام‌شده" tone="success" value={done} />
-            <SummaryMetric label="باز" tone="warning" value={open} />
-            <SummaryMetric label="نرخ تکمیل" tone="accent" value={`${rate}٪`} />
+            <SummaryMetric label="همه کارها" value={total} />
+            <SummaryMetric label="تمام شده" tone="success" value={done} />
+            <SummaryMetric label="باقی مانده" tone="warning" value={open} />
+            <SummaryMetric label="پیشرفت" tone="accent" value={`${rate}٪`} />
           </div>
 
           <button
@@ -796,7 +730,7 @@ function UserAnalyticsCard({
             onClick={onToggle}
             type="button"
           >
-            {expanded ? "بستن جزئیات" : "جزئیات بیشتر"}
+            {expanded ? "بستن" : "جزئیات بیشتر"}
             <ChevronDown
               className={`transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
               size={17}
@@ -804,23 +738,6 @@ function UserAnalyticsCard({
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[--border] pt-4 sm:grid-cols-4">
-          <SummaryMetric label="امتیاز" tone="warning" value={score ?? 0} />
-          <SummaryMetric
-            label="پیشرفت پروژه‌ها"
-            value={`${projectProgress}٪`}
-          />
-          <SummaryMetric
-            label="پیشرفت گزارش‌ها"
-            tone="accent"
-            value={`${reportProgress}٪`}
-          />
-          <SummaryMetric
-            label="پیشرفت کلی"
-            tone="success"
-            value={`${overallProgress}٪`}
-          />
-        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -833,46 +750,16 @@ function UserAnalyticsCard({
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
           >
             <div className="border-t border-[--border] bg-[--surface-2]/50 p-4 sm:p-5">
-              {statusFilter === "all" && (
-                <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {showProjects && (
-                    <>
-                      <MetricCard
-                        icon={FolderKanban}
-                        label="کل پروژه‌ها"
-                        tone="project"
-                        value={projectCounts.total}
-                      />
-                      <MetricCard
-                        icon={CheckCircle2}
-                        label="پروژه‌های انجام‌شده"
-                        tone="done"
-                        value={projectCounts.done}
-                      />
-                    </>
-                  )}
-                  {showReports && (
-                    <>
-                      <MetricCard
-                        icon={FileText}
-                        label="کل گزارش‌ها"
-                        tone="report"
-                        value={reportCounts.total}
-                      />
-                      <MetricCard
-                        icon={Clock3}
-                        label="گزارش‌های در انتظار"
-                        tone="todo"
-                        value={reportCounts.todo}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-3">
+                <TimeSummary
+                  data={durationBalance}
+                  loading={durationLoading}
+                />
                 {showProjects && (
-                  <Panel icon={FolderKanban} title="وضعیت پروژه‌ها">
+                  <Panel
+                    icon={FolderKanban}
+                    title="گزارشات محول شده به کارشناس"
+                  >
                     <StatusBreakdown
                       accent="#1f7a8c"
                       counts={projectCounts}
@@ -881,7 +768,7 @@ function UserAnalyticsCard({
                   </Panel>
                 )}
                 {showReports && (
-                  <Panel icon={FileText} title="وضعیت گزارش‌ها">
+                  <Panel icon={FileText} title="گزارش‌ها">
                     <StatusBreakdown
                       accent="#7c3aed"
                       counts={reportCounts}
@@ -890,49 +777,6 @@ function UserAnalyticsCard({
                   </Panel>
                 )}
               </div>
-
-              {statusFilter === "all" && (
-                <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                  <Panel icon={Target} title="نرخ تکمیل">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {showProjects && (
-                        <DonutChart
-                          color="#1f7a8c"
-                          label="پروژه"
-                          total={projectCounts.total}
-                          value={projectCounts.done}
-                        />
-                      )}
-                      {showReports && (
-                        <DonutChart
-                          color="#7c3aed"
-                          label="گزارش"
-                          total={reportCounts.total}
-                          value={reportCounts.done}
-                        />
-                      )}
-                    </div>
-                  </Panel>
-                  {showReports && (
-                    <Panel icon={Timer} title="تراز زمان گزارش‌های ثابت">
-                      {durationLoading ? (
-                        <div className="flex min-h-32 items-center justify-center">
-                          <Loader2
-                            className="animate-spin text-[#1f7a8c]"
-                            size={24}
-                          />
-                        </div>
-                      ) : durationBalance ? (
-                        <DurationBalancePanel data={durationBalance} />
-                      ) : (
-                        <p className="py-10 text-center text-sm text-[--text-3]">
-                          اطلاعات زمان در دسترس نیست.
-                        </p>
-                      )}
-                    </Panel>
-                  )}
-                </div>
-              )}
 
               {showReports && (
                 <div className="mt-4">
@@ -1007,16 +851,16 @@ function TaskDetailsPanel({
       data={data}
       dateFilter={{
         getItemDate: taskDetailDate,
-        title: "فیلتر بازه تاریخ پروژه‌ها",
+        title: "فیلتر بازه تاریخ گزارشات محول شده به کارشناس",
       }}
-      description="یک وضعیت را انتخاب کنید تا پروژه‌های این کاربر را با جزئیات ببینید."
-      itemLabel="پروژه"
+      description="یک وضعیت را انتخاب کنید تا گزارشات محول شده به کارشناس این کاربر را با جزئیات ببینید."
+      itemLabel="گزارشات محول شده به کارشناس"
       loading={loading}
       renderItem={(task, listKey) => (
         <TaskDetailRow listKey={listKey} task={task} />
       )}
       statusFilter={statusFilter}
-      title="جزئیات پروژه‌ها"
+      title="جزئیات گزارشات محول شده به کارشناس"
       titleIcon={FolderKanban}
       titleTone="bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]"
     />
@@ -1063,15 +907,6 @@ function WorkDetailsPanel<T>({
       activeTone:
         "bg-red-50 text-red-800 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.18)] dark:bg-red-950/35 dark:text-red-200",
       dot: "bg-red-500",
-    },
-    {
-      emptySuffix: "در حال انجامی",
-      key: "inProgress" as const,
-      label: "در حال انجام",
-      statusKey: "inProgress" as const,
-      activeTone:
-        "bg-sky-50 text-sky-800 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.18)] dark:bg-sky-950/35 dark:text-sky-200",
-      dot: "bg-sky-500",
     },
     {
       emptySuffix: "در انتظاری",
@@ -1552,7 +1387,6 @@ function FixedTaskDetailRow({
     task.actualDurationMinutes != null ? "زمان ثبت‌شده" : "زمان مورد نیاز";
   const borderTone = {
     done: "border-r-emerald-500",
-    inProgress: "border-r-sky-500",
     overdue: "border-r-red-500",
     todo: "border-r-amber-500",
   }[listKey];
@@ -1664,7 +1498,6 @@ function TaskDetailRow({
   const hasExcelFile = Boolean(task.excelFile || task.completionExcelFile);
   const borderTone = {
     done: "border-r-emerald-500",
-    inProgress: "border-r-sky-500",
     overdue: "border-r-red-500",
     todo: "border-r-amber-500",
   }[listKey];
@@ -1705,7 +1538,7 @@ function TaskDetailRow({
         <div className="rounded-lg bg-[--surface-2] px-3 py-2.5">
           <dt className="flex items-center gap-1.5 text-xs font-bold text-[--text-3]">
             <UserRound size={14} />
-            مسئول پروژه
+            مسئول گزارشات محول شده به کارشناس
           </dt>
           <dd className="mt-1 truncate text-sm font-black text-[--text]">
             {assignees}
@@ -1985,6 +1818,77 @@ function StatusBreakdown({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function TimeSummary({
+  data,
+  loading,
+}: {
+  data?: DailyDurationBalance;
+  loading: boolean;
+}) {
+  const entries = data?.entries ?? [];
+  const expected =
+    data?.totalExpected ??
+    data?.expectedDailyMinutes ??
+    entries.reduce((sum, entry) => sum + (entry.expectedMinutes ?? 0), 0);
+  const actual =
+    data?.totalActual ??
+    data?.totalActualDurationMinutes ??
+    entries.reduce((sum, entry) => sum + (entry.actualMinutes ?? 0), 0);
+  const remaining = data?.remainingMinutes ?? expected - actual;
+
+  return (
+    <Panel icon={Clock3} title="ساعت‌ها">
+      {loading ? (
+        <div className="flex min-h-24 items-center justify-center">
+          <Loader2 className="animate-spin text-[#1f7a8c]" size={22} />
+        </div>
+      ) : !data ? (
+        <p className="py-7 text-center text-sm text-[--text-3]">
+          اطلاعات ساعت ثبت نشده است.
+        </p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
+          <TimeMetric label="زمان مورد انتظار" tone="expected" value={expected} />
+          <TimeMetric label="زمان ثبت‌شده" tone="actual" value={actual} />
+          <TimeMetric
+            label="زمان باقی‌مانده"
+            tone={remaining > 0 ? "remaining" : "complete"}
+            value={remaining}
+          />
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function TimeMetric({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: "expected" | "actual" | "remaining" | "complete";
+  value: number;
+}) {
+  const tones = {
+    actual: "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300",
+    complete:
+      "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
+    expected:
+      "bg-cyan-50 text-[#1f7a8c] dark:bg-cyan-950/30 dark:text-cyan-300",
+    remaining: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
+  };
+
+  return (
+    <div className={`rounded-xl px-3 py-2.5 ${tones[tone]}`}>
+      <p className="text-[11px] font-bold opacity-75">{label}</p>
+      <p className="mt-1 text-lg font-black tabular-nums">
+        {formatTaskDuration(Math.abs(value))}
+      </p>
     </div>
   );
 }

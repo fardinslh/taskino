@@ -74,9 +74,6 @@ export function useTaskinoDerivedData({
   const activeTasks =
     managerStats?.openTasks ??
     tasks.filter((task) => task.status !== "done").length;
-  const inProgressTasks = tasks.filter(
-    (task) => task.status === "in_progress",
-  ).length;
   const todoCount = tasks.filter(
     (task) => (task.status ?? "todo") === "todo",
   ).length;
@@ -96,17 +93,11 @@ export function useTaskinoDerivedData({
   const fixedOpenTasks = activeFixedTasks.filter(
     (item) => (item.status ?? "todo") !== "done",
   ).length;
-  const fixedInProgressTasks = activeFixedTasks.filter(
-    (item) => item.status === "in_progress",
-  ).length;
   const fixedTodoCount = activeFixedTasks.filter(
     (item) => (item.status ?? "todo") === "todo",
   ).length;
   const statsProjects = managerStats?.activeProjects ?? projects.length;
   const statsUsers = managerStats?.activeUsers ?? users.length;
-  const supervisorInProgressReports =
-    (supervisorStats?.supervisedInProgressTasks ?? 0) +
-    (supervisorStats?.supervisedInProgressFixedTasks ?? 0);
   const supervisorProjectDoneReports =
     supervisorStats?.myOnTimeSuccessfulTasks ??
     supervisorStats?.participatingProjectsDoneTasks ??
@@ -241,13 +232,11 @@ export function useTaskinoDerivedData({
     activeFixedTaskCount,
     doneTasks,
     fixedDoneTasks,
-    fixedInProgressTasks,
     fixedOpenTasks,
     fixedTodoCount,
     filteredFixedTemplates,
     filteredTasks,
     incompleteFixedTasks,
-    inProgressTasks,
     isManager,
     isSpecialist,
     isSupervisor,
@@ -255,7 +244,6 @@ export function useTaskinoDerivedData({
     progress,
     statsProjects,
     statsUsers,
-    supervisorInProgressReports,
     supervisorOwnDoneReports,
     supervisorProjectDoneReports,
     teamAssigneeCount,

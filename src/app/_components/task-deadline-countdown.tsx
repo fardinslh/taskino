@@ -64,7 +64,7 @@ export function TaskDeadlineCountdown({
 }: TaskDeadlineCountdownProps) {
   const [now, setNow] = useState(() => Date.now());
   const remaining = getRemainingTime(dueDate, now);
-  const shouldShow = status === "in_progress" || status === "todo";
+  const shouldShow = status === "todo";
 
   useEffect(() => {
     if (!dueDate || !shouldShow) return;

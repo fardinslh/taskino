@@ -16,9 +16,7 @@ function SupervisorMyProjectsPageContent() {
   const totalCount = specialistTaskCounts?.total ?? 0;
   const todoCount =
     specialistTaskCounts?.todo ?? specialistTaskCounts?.pending ?? 0;
-  const inProgressCount =
-    specialistTaskCounts?.inProgress ?? specialistTaskCounts?.in_progress ?? 0;
-  const openCount = todoCount + inProgressCount;
+  const openCount = todoCount;
   const doneCount =
     specialistTaskCounts?.done ?? specialistTaskCounts?.completed ?? 0;
   const progress = totalCount
@@ -30,7 +28,6 @@ function SupervisorMyProjectsPageContent() {
   return (
     <ProjectBoardSection
       doneCount={doneCount}
-      inProgressCount={inProgressCount}
       onClaimTask={claimTask}
       onMoveTask={moveTask}
       onSearchChange={setTaskQuery}

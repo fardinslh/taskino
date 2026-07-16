@@ -72,7 +72,6 @@ function SupervisorTeamPageContent() {
                               <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-[--text-3]">
                                 <span>کل: {m.totalTasks ?? 0}</span>
                                 <span className="text-emerald-600">تمام: {m.completedTasks ?? 0}</span>
-                                <span className="text-[#1f7a8c]">جاری: {m.inProgressTasks ?? 0}</span>
                                 <span>ثابت: {m.completedFixedTasks ?? 0}/{m.totalFixedTasks ?? 0}</span>
                               </div>
                             </div>

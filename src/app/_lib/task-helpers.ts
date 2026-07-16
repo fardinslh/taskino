@@ -25,7 +25,6 @@ export function initials(user?: User | string) {
 export function statusLabel(s?: string) {
   const m: Record<string, string> = {
     todo: "در انتظار",
-    in_progress: "در حال انجام",
     done: "تکمیل شده",
     pending: "در انتظار",
     approved: "تأیید شد",
@@ -51,12 +50,6 @@ export function workFieldLabel(field?: string) {
 export function appTitleForWorkField(field?: WorkField | string) {
   if (field === "it") return "مدیریت واحد فناوری اطلاعات";
   return "مدیریت واحد بهبود عملیات و برنامه ریزی";
-}
-
-export function nextStatus(s?: string) {
-  if (s === "todo") return "in_progress";
-  if (s === "in_progress") return "done";
-  return "todo";
 }
 
 export function formatDate(d?: string) {

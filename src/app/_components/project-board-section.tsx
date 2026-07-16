@@ -35,7 +35,6 @@ type ProjectBoardSectionProps = {
   tasks: Task[];
   taskQuery: string;
   totalCount: number;
-  inProgressCount: number;
   openCount: number;
   doneCount: number;
   onClaimTask?: (taskId: string) => void | Promise<void>;
@@ -63,7 +62,6 @@ export function ProjectBoardSection({
   tasks,
   taskQuery,
   totalCount,
-  inProgressCount,
   openCount,
   doneCount,
   onClaimTask,
@@ -106,7 +104,7 @@ export function ProjectBoardSection({
           {
             label: "پروژه‌های باز",
             value: openCount,
-            sub: `${inProgressCount} در حال انجام`,
+            sub: "در انتظار تکمیل",
             icon: ClipboardList,
             accent:
               "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
@@ -211,7 +209,7 @@ export function ProjectBoardSection({
             void onMoveTask(result.draggableId, result.destination.droppableId);
           }}
         >
-          <div className="grid gap-4 bg-[--surface-2]/40 p-3 sm:p-4 lg:grid-cols-3">
+          <div className="grid gap-4 bg-[--surface-2]/40 p-3 sm:p-4 lg:grid-cols-2">
             {COLUMNS.map((column: any) => {
               const columnTasks = filteredTasks.filter(
                 (task) => (task.status ?? "todo") === column.status,

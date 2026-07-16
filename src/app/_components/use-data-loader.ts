@@ -486,16 +486,13 @@ export function useDataLoader({
                   if (status === "todo") {
                     acc.todo = (acc.todo ?? 0) + 1;
                     acc.pending = (acc.pending ?? 0) + 1;
-                  } else if (status === "in_progress") {
-                    acc.inProgress = (acc.inProgress ?? 0) + 1;
-                    acc.in_progress = (acc.in_progress ?? 0) + 1;
                   } else if (status === "done") {
                     acc.done = (acc.done ?? 0) + 1;
                     acc.completed = (acc.completed ?? 0) + 1;
                   }
                   return acc;
                 },
-                { total: 0, todo: 0, pending: 0, inProgress: 0, in_progress: 0, done: 0, completed: 0 },
+                { total: 0, todo: 0, pending: 0, done: 0, completed: 0 },
               );
               if (!specialistFixedTaskCountsRes) {
                 setSpecialistFixedTaskCounts(counts);

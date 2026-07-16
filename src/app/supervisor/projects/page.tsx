@@ -14,7 +14,7 @@ import {
 } from "../../_components/taskino-context";
 import { recurrenceLabel, statusLabel, userName } from "../../_lib/task-helpers";
 
-type FixedTaskStatusFilter = "" | "todo" | "in_progress" | "done";
+type FixedTaskStatusFilter = "" | "todo" | "done";
 
 export default function SupervisorProjectsPage() {
   return <SupervisorWorkPageContent />;
@@ -123,7 +123,6 @@ function StatusFilter({
       {[
         ["", "همه"],
         ["todo", "در انتظار"],
-        ["in_progress", "در حال انجام"],
         ["done", "تکمیل شده"],
       ].map(([status, label]) => (
         <button

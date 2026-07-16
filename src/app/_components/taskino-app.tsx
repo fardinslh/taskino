@@ -298,13 +298,15 @@ export function TaskinoApp({
             />
           )}
         </AnimatePresence>
-        <AnimatePresence>
+        <AnimatePresence initial={false} mode="wait">
           {selectedFixedTask && (
             <SelectedFixedTaskPanel
             canChangeStatus={isSpecialist}
             canDeleteTemplate={isManager}
             canEditTemplate={isManager || canSupervisorEditFixedTask}
             canRate={isManager && activeView !== "fixed-reports"}
+            inline={activeView === "tasks"}
+            key={getId(selectedFixedTask)}
             onClose={() => setSelectedFixedTask(null)}
             onDelete={(taskId) => void controller.deleteFixedTask(taskId)}
             onEdit={(task) => {

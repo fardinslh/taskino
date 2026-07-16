@@ -1,7 +1,7 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Award,
@@ -60,7 +60,6 @@ export default function TasksPage() {
 }
 
 function TasksPageContent() {
-  const [fixedTaskTimerNow, setFixedTaskTimerNow] = useState(() => Date.now());
   const {
     activeView,
     boardShowAll,
@@ -88,10 +87,10 @@ function TasksPageContent() {
     filteredFixedTemplates,
     fixedDoneTasks,
     fixedOpenTasks,
-    fixedInProgressTasks,
     fixedTodoCount,
     activeFixedTaskCount,
     fixedTasks,
+    selectedFixedTask,
     onDragEnd,
     openFixedTaskForm,
     deleteFixedTask,
@@ -103,24 +102,14 @@ function TasksPageContent() {
   const fixedStatusFilterLabel =
     selectedStatusFilter === "todo"
       ? "در انتظار شروع"
-      : selectedStatusFilter === "in_progress"
-        ? "در حال انجام"
-        : selectedStatusFilter === "done"
-          ? "تکمیل شده"
-          : "";
-  const openFixedReportStatus = (status: "" | "todo" | "in_progress" | "done") => {
+      : selectedStatusFilter === "done"
+        ? "تکمیل شده"
+        : "";
+  const openFixedReportStatus = (status: "" | "todo" | "done") => {
     setActiveView("tasks");
     setSelectedStatusFilter(status);
     setBoardShowAll(true);
   };
-
-  useEffect(() => {
-    const intervalId = window.setInterval(
-      () => setFixedTaskTimerNow(Date.now()),
-      30000,
-    );
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   return (
     <>
@@ -162,7 +151,9 @@ function TasksPageContent() {
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div
+            className={`grid grid-cols-2 gap-3 ${isManager ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+          >
             {(isManager
               ? [
                   {
@@ -210,14 +201,6 @@ function TasksPageContent() {
                     icon: FolderKanban,
                     a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
                     onClick: () => openFixedReportStatus(""),
-                  },
-                  {
-                    label: "گزارش در حال انجام",
-                    value: fixedInProgressTasks,
-                    sub: "در حال انجام",
-                    icon: ClipboardList,
-                    a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
-                    onClick: () => openFixedReportStatus("in_progress"),
                   },
                   {
                     label: "گزارش در حال انتظار",
@@ -397,10 +380,7 @@ function TasksPageContent() {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
                                   const fixedTaskSpentOverLimitMinutes =
-                                    fixedTaskDurationOverdueMinutes(
-                                      ft,
-                                      fixedTaskTimerNow,
-                                    );
+                                    fixedTaskDurationOverdueMinutes(ft);
                                   const fixedTaskDurationOverdue =
                                     fixedTaskSpentOverLimitMinutes != null;
                                   const hasManagerRating =
@@ -424,7 +404,7 @@ function TasksPageContent() {
                                           ref={dragProvided.innerRef}
                                           {...dragProvided.draggableProps}
                                           {...dragProvided.dragHandleProps}
-                                          className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-[background-color,border-color,box-shadow] ${isManager ? "hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
+                                          className={`cursor-pointer rounded-xl border border-[--border] border-t-[3px] border-t-[#1f7a8c] bg-[--surface] p-3.5 shadow-sm transition-[background-color,border-color,box-shadow] ${isManager ? "hover:shadow-md" : ""} ${canMoveOwnFixedTasks && (ft.status ?? "todo") !== "done" && !fixedTaskOverdue ? "cursor-grab touch-none active:cursor-grabbing" : ""} ${selectedFixedTask && getId(selectedFixedTask) === getId(ft) ? "ring-2 ring-[#1f7a8c]/45" : ""} ${dragSnapshot.isDragging ? "shadow-lg ring-2 ring-[#1f7a8c]/30" : ""}`}
                                           onClick={() => setSelectedFixedTask(ft)}
                                         >
                                         <div className="flex flex-wrap items-center justify-start gap-1.5">
@@ -571,6 +551,24 @@ function TasksPageContent() {
                       </div>
                     );
                   })}
+                  <div
+                    className="min-h-[420px] lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]"
+                    id="fixed-task-inline-detail"
+                  >
+                    {!selectedFixedTask && (
+                      <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl bg-[--surface]/55 px-6 text-center shadow-[inset_0_0_0_1px_var(--border)]">
+                        <div className="flex size-12 items-center justify-center rounded-2xl bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
+                          <ClipboardList size={22} />
+                        </div>
+                        <h3 className="mt-4 text-balance text-sm font-bold text-[--text]">
+                          جزئیات گزارش
+                        </h3>
+                        <p className="mt-1 max-w-52 text-pretty text-xs leading-5 text-[--text-3]">
+                          برای مشاهده جزئیات، یک گزارش را انتخاب کنید.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </DragDropContext>
             </div>

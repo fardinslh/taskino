@@ -14,7 +14,7 @@ import {
 } from "../../../_components/taskino-context";
 import { statusLabel, userName } from "../../../_lib/task-helpers";
 
-type TaskStatusFilter = "" | "todo" | "in_progress" | "done";
+type TaskStatusFilter = "" | "todo" | "done";
 
 export default function SupervisorWatchedProjectsPage() {
   return <SupervisorWatchedProjectsPageContent />;
@@ -227,7 +227,6 @@ function StatusFilter({
       {[
         ["", "همه"],
         ["todo", "در انتظار"],
-        ["in_progress", "در حال انجام"],
         ["done", "تکمیل شده"],
       ].map(([status, label]) => (
         <button

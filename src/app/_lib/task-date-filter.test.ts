@@ -13,7 +13,7 @@ describe("project date filtering", () => {
     const task = {
       ...baseTask,
       dueDate: "2026-06-30T17:00:00",
-      status: "in_progress",
+      status: "todo",
     };
 
     expect(isTaskVisibleOnDate(task, new Date(2026, 6, 1, 12))).toBe(false);

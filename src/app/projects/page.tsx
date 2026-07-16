@@ -54,8 +54,8 @@ type DateCountFormValues = {
 };
 
 const PROJECT_TYPE_OPTIONS: Array<[ProjectType, string]> = [
-  ["specialist", "پروژه تخصصی"],
-  ["general", "پروژه عمومی"],
+  ["specialist", "گزارش تخصصی"],
+  ["general", "گزارش عمومی"],
 ];
 
 export default function ProjectsPage() {
@@ -90,9 +90,7 @@ function ProjectsPageContent() {
   const specialistTotalCount = specialistTaskCounts?.total ?? 0;
   const specialistTodoCount =
     specialistTaskCounts?.todo ?? specialistTaskCounts?.pending ?? 0;
-  const specialistInProgressCount =
-    specialistTaskCounts?.inProgress ?? specialistTaskCounts?.in_progress ?? 0;
-  const specialistOpenCount = specialistTodoCount + specialistInProgressCount;
+  const specialistOpenCount = specialistTodoCount;
   const specialistDoneCount =
     specialistTaskCounts?.done ?? specialistTaskCounts?.completed ?? 0;
   const specialistProgress = specialistTotalCount
@@ -235,12 +233,12 @@ function ProjectsPageContent() {
     Number(dateCountStats?.pendingTasks ?? 0),
     Number(dateCountStats?.todoTasks ?? 0),
   );
-  const createTitle = "پروژه جدید";
-  const createButtonLabel = "پروژه جدید";
-  const titleFieldLabel = "عنوان پروژه *";
+  const createTitle = "گزارش جدید محول‌شده به کارشناس";
+  const createButtonLabel = "گزارش جدید";
+  const titleFieldLabel = "عنوان گزارش *";
   const titlePlaceholder = "مثلاً: تکمیل اکسل فروش";
-  const descriptionPlaceholder = "شرح کوتاه پروژه";
-  const assigneeLabel = "مسئول پروژه";
+  const descriptionPlaceholder = "شرح کوتاه گزارش";
+  const assigneeLabel = "کارشناس مسئول گزارش";
   function formatLocalDateBoundary(value: string, endOfDay = false) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
@@ -260,7 +258,6 @@ function ProjectsPageContent() {
       {!isManager && !isSupervisor && activeView === "tasks-admin" && (
         <ProjectBoardSection
           doneCount={specialistDoneCount}
-          inProgressCount={specialistInProgressCount}
           onClaimTask={claimTask}
           onMoveTask={moveTask}
           onSearchChange={setTaskQuery}
@@ -288,7 +285,7 @@ function ProjectsPageContent() {
                   <div className="space-y-1">
                     <h2 className="font-bold">{createTitle}</h2>
                     <p className="text-[12px] text-[--text-3]">
-                      نوع پروژه را مشخص کن، بعد
+                      نوع گزارش را مشخص کن، بعد
                       مسئول مناسب همان حوزه را انتخاب کن.
                     </p>
                   </div>
@@ -336,7 +333,7 @@ function ProjectsPageContent() {
                   }
                   if (values.projectType === "specialist" && !values.assignee) {
                     projectForm.setError("assignee", {
-                      message: "انتخاب مسئول پروژه الزامی است.",
+                      message: "انتخاب کارشناس مسئول گزارش الزامی است.",
                     });
                     return;
                   }
@@ -358,7 +355,7 @@ function ProjectsPageContent() {
                 <div className="space-y-4 rounded-2xl border border-[--border] bg-[--surface] p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-[--text]">
                     <Layers3 size={15} className="text-[#1f7a8c]" />
-                    مشخصات پروژه
+                    مشخصات گزارش
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field
@@ -371,9 +368,9 @@ function ProjectsPageContent() {
                       })}
                     />
                     <Select
-                      label="نوع پروژه"
+                      label="نوع گزارش"
                       options={PROJECT_TYPE_OPTIONS}
-                      placeholder="انتخاب نوع پروژه"
+                      placeholder="انتخاب نوع گزارش"
                       registration={projectForm.register("projectType", {
                         required: true,
                       })}
@@ -406,8 +403,8 @@ function ProjectsPageContent() {
                   </div>
                   <div className="rounded-xl bg-[--surface-2] p-3 text-xs text-[--text-2]">
                     {projectType === "general"
-                      ? "پروژه عمومی است و برای همه نمایش داده می‌شود."
-                      : "پروژه تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند."}
+                      ? "گزارش عمومی است و برای همه نمایش داده می‌شود."
+                      : "گزارش تخصصی است؛ فقط متخصص‌های همان حوزه نمایش داده می‌شوند."}
                   </div>
                   {projectType === "specialist" && (
                     <Select
@@ -485,7 +482,7 @@ function ProjectsPageContent() {
                       disabled={projectForm.formState.isSubmitting}
                       type="submit"
                     >
-                      ایجاد پروژه
+                      ایجاد گزارش
                     </button>
                     {selectedFile && (
                       <button
@@ -509,16 +506,16 @@ function ProjectsPageContent() {
                   <ClipboardList size={17} />
                 </div>
                 <div>
-                  <h2 className="font-bold">همه پروژه‌ها</h2>
+                  <h2 className="font-bold">همه گزارشات محول شده به کارشناس</h2>
                   <p className="text-[11px] text-[--text-3]">
-                    {visibleProjectTasks.length} پروژه
+                    {visibleProjectTasks.length} گزارش
                   </p>
                 </div>
               </div>
               <div className="max-h-[420px] divide-y divide-[--border] overflow-y-auto">
                 {visibleProjectTasks.length === 0 ? (
                   <p className="py-8 text-center text-sm text-[--text-3]">
-                    پروژه‌ای یافت نشد
+                    گزارشی یافت نشد
                   </p>
                 ) : (
                   visibleProjectTasks.map((task: any) => (
@@ -573,9 +570,9 @@ function ProjectsPageContent() {
 
             <div className="space-y-4">
               <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-                <h2 className="font-bold">آمار تکمیل پروژه</h2>
+                <h2 className="font-bold">آمار تکمیل گزارشات محول شده به کارشناس</h2>
                 <p className="mt-1 text-xs text-[--text-3]">
-                  پروژه‌های ساخته‌شده توسط شما و واگذارشده به یک متخصص یا سرپرست
+                  گزارشات ساخته‌شده توسط شما و واگذارشده به یک متخصص یا سرپرست
                 </p>
                 <form
                   className="mt-4 flex flex-wrap items-end gap-2"
@@ -622,7 +619,7 @@ function ProjectsPageContent() {
                       </div>
                       <div className="rounded-lg bg-[--surface] p-3">
                         <p className="text-[11px] text-[--text-3]">
-                          کل پروژه‌ها
+                          کل گزارشات محول شده به کارشناس
                         </p>
                         <p className="mt-1 text-sm font-semibold">
                           {completionStats?.totalTasks}
@@ -652,7 +649,7 @@ function ProjectsPageContent() {
               </div>
 
               <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-                <h2 className="font-bold">تعداد پروژه در بازه تاریخی</h2>
+                <h2 className="font-bold">تعداد گزارشات محول شده به کارشناس در بازه تاریخی</h2>
                 <form
                   className="mt-4 grid gap-2 sm:grid-cols-2"
                   onSubmit={dateCountForm.handleSubmit((values) =>
@@ -780,7 +777,7 @@ function ProjectsPageContent() {
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       {[
                         {
-                          label: "کل پروژه‌ها",
+                          label: "کل گزارشات محول شده به کارشناس",
                           value: dateCountStats.totalTasks ?? 0,
                           tone: "text-[#1f7a8c]",
                           bg: "bg-[#e8f4f7] dark:bg-[#0f3040]",
@@ -820,7 +817,7 @@ function ProjectsPageContent() {
 
                     {dateCountHasData === 0 && (
                       <div className="mt-4 rounded-xl border border-dashed border-[#cfe7ec] bg-white/70 px-4 py-3 text-sm text-[--text-2] dark:border-[#1f5060] dark:bg-white/5">
-                        در این بازه پروژه‌ای ثبت نشده است.
+                        در این بازه گزارشی ثبت نشده است.
                       </div>
                     )}
                   </div>

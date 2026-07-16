@@ -148,12 +148,7 @@ export default function ExtraProjectsPage() {
 
   async function advanceTask(task: Task) {
     if (!token) return;
-    const nextStatus =
-      task.status === "todo"
-        ? "in_progress"
-        : task.status === "in_progress"
-          ? "done"
-          : null;
+    const nextStatus = task.status === "todo" ? "done" : null;
     if (!nextStatus) return;
 
     const id = getId(task);
@@ -163,11 +158,7 @@ export default function ExtraProjectsPage() {
       setTasks((current) =>
         current.map((item) => (getId(item) === id ? updated : item)),
       );
-      setMessage(
-        nextStatus === "done"
-          ? "پروژه مازاد تکمیل شد."
-          : "پروژه مازاد در حال انجام است.",
-      );
+      setMessage("پروژه مازاد تکمیل شد.");
     } catch (error) {
       setError(
         error instanceof Error
@@ -349,12 +340,7 @@ export default function ExtraProjectsPage() {
               const assignee = task.assignedTo?.[0];
               const approvalStatus =
                 task.extraTaskApprovalStatus ?? "pending";
-              const nextLabel =
-                task.status === "todo"
-                  ? "شروع پروژه"
-                  : task.status === "in_progress"
-                    ? "تکمیل پروژه"
-                    : null;
+              const nextLabel = task.status === "todo" ? "تکمیل پروژه" : null;
 
               return (
                 <article

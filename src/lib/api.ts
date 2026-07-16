@@ -58,7 +58,7 @@ export type WorkField =
   | "sales"
   | "operations";
 export type FixedTaskRecurrence = "daily" | "weekly" | "monthly";
-export type FixedTaskStatus = "todo" | "in_progress" | "done";
+export type FixedTaskStatus = "todo" | "done";
 export type ExtraTaskApprovalStatus = "pending" | "approved" | "rejected";
 export type FixedTaskScheduleConfig = {
   weekdays?: number[];
@@ -173,7 +173,6 @@ export type ProjectProgress = {
   projectName: string;
   totalTasks: number;
   completedTasks: number;
-  inProgressTasks: number;
   pendingTasks: number;
   progressPercentage: number;
 };
@@ -185,7 +184,6 @@ export type ProjectProgressItem = {
   progressPercentage?: number;
   totalTasks?: number;
   completedTasks?: number;
-  inProgressTasks?: number;
   pendingTasks?: number;
 };
 
@@ -193,20 +191,14 @@ export type SupervisorStats = {
   recurrence?: string | null;
   supervisedTasks?: number;
   supervisedFixedTasks?: number;
-  supervisedInProgressTasks?: number;
-  supervisedInProgressFixedTasks?: number;
   activeCompletedSupervisedTasks?: number;
   activeCompletedSupervisedFixedTasks?: number;
-  myInProgressTasks?: number;
-  myInProgressFixedTasks?: number;
   mySuccessfulTasks?: number;
   myOnTimeSuccessfulTasks?: number;
   // legacy fields (still referenced by older supervisor views)
   supervisedProjects?: number;
-  supervisedProjectsInProgressTasks?: number;
   participatingProjectsDoneTasks?: number;
   supervisorDoneTasks?: number;
-  inProgressTasks?: number;
   successfulTasksInProjects?: number;
   successfulTasksAssignedToSupervisor?: number;
 };
@@ -246,7 +238,6 @@ export type MemberPerformance = {
   completedCount?: number;
   completedTasks?: number;
   todoTasks?: number;
-  inProgressTasks?: number;
   doneTasks?: number;
   pendingTasks?: number;
   overdueTasks?: number;
@@ -262,7 +253,6 @@ export type MemberPerformance = {
 export type ProjectReport = {
   totalTasks?: number;
   todoTasks?: number;
-  inProgressTasks?: number;
   doneTasks?: number;
   overdueTasks?: number;
   overdueCount?: number;
@@ -274,11 +264,8 @@ export type ProjectReport = {
 export type TaskStatusOverview = {
   totalTasks?: number;
   todoTasks?: number;
-  inProgressTasks?: number;
   doneTasks?: number;
   todo?: number;
-  inProgress?: number;
-  in_progress?: number;
   done?: number;
   total?: number;
 };
@@ -286,7 +273,6 @@ export type TaskStatusOverview = {
 export type TaskStatusRangeBreakdown = {
   total: number;
   done: number;
-  inProgress: number;
   todo: number;
   overdueUnfinished: number;
 };
@@ -299,8 +285,6 @@ export type ManagerTaskStatusRange = TaskStatusRangeBreakdown & {
 export type StatusCounts = {
   total?: number;
   todo?: number;
-  inProgress?: number;
-  in_progress?: number;
   done?: number;
   overdue?: number;
   overdueUnfinished?: number;
@@ -377,11 +361,8 @@ export type UserTaskCount = {
   email?: string;
   totalTasks?: number;
   todoTasks?: number;
-  inProgressTasks?: number;
   doneTasks?: number;
   todo?: number;
-  inProgress?: number;
-  in_progress?: number;
   done?: number;
   total?: number;
 };
@@ -399,7 +380,6 @@ export type MonthlyPerformance = {
   email?: string;
   totalTasks?: number;
   completedTasks?: number;
-  inProgressTasks?: number;
   pendingTasks?: number;
   completionRate?: number;
   score?: number;
@@ -439,10 +419,8 @@ export type UserProgress = {
   totalTasks?: number;
   completedTasks?: number;
   onTimeTasks?: number;
-  inProgressTasks?: number;
   totalFixedTasks?: number;
   completedFixedTasks?: number;
-  inProgressFixedTasks?: number;
   progressPercentage?: number;
   performanceStatus?: string;
   performanceEvaluatedAt?: string;
@@ -451,7 +429,6 @@ export type UserProgress = {
 export type WorkStatusCounts = {
   total: number;
   done: number;
-  inProgress: number;
   todo: number;
   overdueUnfinished: number;
 };
@@ -1030,14 +1007,6 @@ export const managerApi = {
       apiClient.get(`/manager/tasks/done${qs(params)}`),
       "دریافت پروژه‌های انجام‌شده ناموفق بود",
     ),
-  inProgressTasks: (
-    token: string,
-    params: { userId?: string; from: string; to: string },
-  ) =>
-    unwrapAxios<ManagerTaskListResponse>(
-      apiClient.get(`/manager/tasks/in-progress${qs(params)}`),
-      "دریافت پروژه‌های در حال انجام ناموفق بود",
-    ),
   todoTasks: (
     token: string,
     params: { userId?: string; from: string; to: string },
@@ -1069,11 +1038,6 @@ export const managerApi = {
     unwrapAxios<ListResponse<FixedTask>>(
       apiClient.get(`/manager/fixed-tasks/done${qs(params)}`),
       "دریافت گزارش‌های ثابت انجام‌شده ناموفق بود",
-    ),
-  inProgressFixedTasks: (token: string, params?: { userId?: string }) =>
-    unwrapAxios<ListResponse<FixedTask>>(
-      apiClient.get(`/manager/fixed-tasks/in-progress${qs(params ?? {})}`),
-      "دریافت گزارش‌های ثابت در حال انجام ناموفق بود",
     ),
   todoFixedTasks: (token: string, params?: { userId?: string }) =>
     unwrapAxios<ListResponse<FixedTask>>(
@@ -1218,16 +1182,10 @@ export const fixedTaskApi = {
     token: string,
     id: string,
     status: FixedTaskStatus,
-    body?: Partial<Pick<FixedTask, "actualDurationMinutes">>,
   ) =>
     unwrapAxios(
-      apiClient.patch<FixedTask>(`/fixed-tasks/${id}`, { status, ...body }),
+      apiClient.patch<FixedTask>(`/fixed-tasks/${id}`, { status }),
       "تغییر وضعیت گزارش ثابت ناموفق بود",
-    ),
-  startTimer: (token: string, id: string) =>
-    unwrapAxios(
-      apiClient.patch<FixedTask>(`/fixed-tasks/${id}/timer/start`),
-      "شروع زمان‌سنج گزارش ثابت ناموفق بود",
     ),
   rate: (
     token: string,

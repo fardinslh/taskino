@@ -84,12 +84,11 @@ export function TaskPanel({
           {/* Title */}
           <div>
             <div className="flex items-start gap-2">
-              {task.status === "done"
-                ? <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-500" />
-                : task.status === "in_progress"
-                ? <div className="mt-1 h-4 w-4 shrink-0 rounded-full border-2 border-[#1f7a8c] border-t-transparent animate-spin" />
-                : <CircleDashed size={18} className="mt-0.5 shrink-0 text-[--text-3]" />
-              }
+              {task.status === "done" ? (
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-500" />
+              ) : (
+                <CircleDashed size={18} className="mt-0.5 shrink-0 text-[--text-3]" />
+              )}
               <h2 className="text-lg font-bold leading-snug text-[--text]">{task.title}</h2>
             </div>
           </div>

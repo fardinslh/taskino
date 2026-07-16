@@ -165,14 +165,14 @@ export function useTaskActions({
       if (
         currentTask &&
         isTaskOverdue(currentTask) &&
-        (newStatus === "in_progress" || newStatus === "done")
+        newStatus === "done"
       ) {
-        setError("مهلت این پروژه گذشته است و امکان تغییر وضعیت به در حال انجام یا تکمیل شده وجود ندارد.");
+        setError("مهلت این پروژه گذشته است و امکان تکمیل آن وجود ندارد.");
         return;
       }
       const shouldClaimPublicTask =
         !!currentTask?.isPublic &&
-        (newStatus === "in_progress" || newStatus === "done");
+        newStatus === "done";
       if (shouldClaimPublicTask && !myId) return;
       const updatedTask: Partial<Task> = shouldClaimPublicTask
         ? await taskApi.update(token, taskId, {

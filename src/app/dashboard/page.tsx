@@ -8,7 +8,6 @@ import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
 import {
-  Activity,
   AlertTriangle,
   Award,
   BarChart2,
@@ -91,7 +90,6 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
-  const [fixedTaskTimerNow, setFixedTaskTimerNow] = useState(() => Date.now());
   const {
     activeView,
     boardShowAll,
@@ -190,19 +188,9 @@ function DashboardPageContent() {
   };
 
   const supervisedTasksCount = supervisorStats?.supervisedTasks ?? 0;
-  const supervisedInProgressTasksCount =
-    supervisorStats?.supervisedInProgressTasks ?? 0;
   const activeCompletedSupervisedTasksCount =
     supervisorStats?.activeCompletedSupervisedTasks ?? 0;
   const canMoveFixedTasksOnDashboard = isSpecialist || isSupervisor;
-
-  useEffect(() => {
-    const intervalId = window.setInterval(
-      () => setFixedTaskTimerNow(Date.now()),
-      30000,
-    );
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   const todaysProjects = isSpecialist
     ? tasks
@@ -240,7 +228,6 @@ function DashboardPageContent() {
               <div className="flex shrink-0 items-center gap-5">
                 {[
                   { n: supervisedTasksCount, l: "تحت نظر" },
-                  { n: supervisedInProgressTasksCount, l: "در حال انجام" },
                   { n: activeCompletedSupervisedTasksCount, l: "انجام شده" },
                 ].map((s: any, i: number) => (
                   <div key={i} className="text-center">
@@ -253,7 +240,7 @@ function DashboardPageContent() {
           </div>
 
           {/* Stats cards */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
               {
                 label: "گزارش‌های تحت نظر",
@@ -261,13 +248,6 @@ function DashboardPageContent() {
                 sub: "کل گزارش‌ها",
                 icon: FolderKanban,
                 a: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900",
-              },
-              {
-                label: "گزارش‌های در حال انجام",
-                value: supervisedInProgressTasksCount,
-                sub: "در حال انجام",
-                icon: Activity,
-                a: "bg-[#e8f4f7] text-[#1f7a8c] ring-[#1f7a8c]/10 dark:bg-[#0f3040] dark:text-[#4fc3d5] dark:ring-[#1f7a8c]/20",
               },
               {
                 label: "گزارش های انجام شده",
@@ -371,7 +351,7 @@ function DashboardPageContent() {
                 </h1>
                 <p className="mt-1 text-sm opacity-75">
                   {isManager
-                    ? `${managerStats?.activeProjects ?? projects.length} پروژه فعال · ${managerStats?.activeUsers ?? users.length} کاربر`
+                    ? `${managerStats?.activeProjects ?? projects.length} گزارشات محول شده به کارشناس فعال · ${managerStats?.activeUsers ?? users.length} کاربر`
                     : activeTasks === 0
                       ? "همه پروژه‌ها تکمیل شده‌اند"
                       : `${activeTasks} پروژه باز داری`}
@@ -382,7 +362,7 @@ function DashboardPageContent() {
                   ? [
                       {
                         n: managerStats?.activeProjects ?? projects.length,
-                        l: "پروژه فعال",
+                        l: "گزارشات محول شده به کارشناس فعال",
                       },
                       {
                         n: fixedOpenTasks,
@@ -417,9 +397,9 @@ function DashboardPageContent() {
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               {[
                 {
-                  label: "پروژه‌ها",
+                  label: "گزارشات محول شده به کارشناس",
                   value: tasks.length,
-                  sub: "پروژه",
+                  sub: "گزارشات محول شده به کارشناس",
                   icon: FolderKanban,
                   a: "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900",
                   onClick: () => setActiveView("tasks-admin"),
@@ -778,10 +758,7 @@ function DashboardPageContent() {
                                   const fixedTaskOverdue =
                                     isFixedTaskOverdue(ft);
                                   const fixedTaskSpentOverLimitMinutes =
-                                    fixedTaskDurationOverdueMinutes(
-                                      ft,
-                                      fixedTaskTimerNow,
-                                    );
+                                    fixedTaskDurationOverdueMinutes(ft);
                                   const fixedTaskDurationOverdue =
                                     fixedTaskSpentOverLimitMinutes != null;
                                   const boardItemId =

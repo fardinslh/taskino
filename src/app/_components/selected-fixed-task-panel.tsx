@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Award,
   CheckCircle2,
@@ -27,7 +28,7 @@ import {
   userName,
 } from "../_lib/task-helpers";
 
-const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "in_progress", "done"];
+const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "done"];
 const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const durationOverdueTooltip =
   "زمان صرف‌شده از زمان تعیین‌شده توسط مدیر بیشتر شده است.";
@@ -49,6 +50,7 @@ export function SelectedFixedTaskPanel({
   onRate,
   onStatusChange,
   task,
+  inline = false,
 }: {
   canChangeStatus: boolean;
   canRate: boolean;
@@ -60,22 +62,19 @@ export function SelectedFixedTaskPanel({
   onRate: (taskId: string, score: number, ratingComment?: string) => Promise<void>;
   onStatusChange: (taskId: string, status: FixedTaskStatus) => void;
   task: FixedTask;
+  inline?: boolean;
 }) {
   const [ratingScore, setRatingScore] = useState<number | null>(null);
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingError, setRatingError] = useState("");
-  const [timerNow, setTimerNow] = useState(() => Date.now());
   const taskId = getId(task);
   const assignee = Array.isArray(task.assignedTo)
     ? task.assignedTo[0]
     : task.assignedTo;
   const currentStatus = task.status ?? "todo";
   const statusChangeBlocked = isFixedTaskOverdue(task);
-  const durationOverdueMinutes = fixedTaskDurationOverdueMinutes(
-    task,
-    timerNow,
-  );
+  const durationOverdueMinutes = fixedTaskDurationOverdueMinutes(task);
   const durationOverdue = durationOverdueMinutes != null;
   const hasManagerRating = task.ratingScore != null;
   const canSubmitRating = canRate && currentStatus === "done" && !hasManagerRating;
@@ -83,11 +82,6 @@ export function SelectedFixedTaskPanel({
     task.ratingScore === 0
       ? ratingLabel(0)
       : ratingLabel(task.ratingScore ?? 0);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setTimerNow(Date.now()), 30000);
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   async function submitRating(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,27 +108,26 @@ export function SelectedFixedTaskPanel({
     }
   }
 
-  return (
-    <>
-      <motion.div
-        animate={{ opacity: 1 }}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm dark:bg-black/50"
-        exit={{ opacity: 0 }}
-        initial={{ opacity: 0 }}
-        onClick={onClose}
-        transition={{ duration: 0.2 }}
-      />
-      <motion.div
-        animate={{ opacity: 1, x: 0 }}
-        className="fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-[--surface] shadow-2xl"
-        exit={{ opacity: 0, x: "-100%" }}
-        initial={{ opacity: 0, x: "-100%" }}
-        transition={{ type: "spring", duration: 0.36, bounce: 0 }}
-      >
+  const panel = (
+    <motion.div
+      animate={inline ? { opacity: 1, y: 0 } : { opacity: 1, x: 0 }}
+      className={
+        inline
+          ? "flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+          : "fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-[--surface] shadow-2xl"
+      }
+      exit={
+        inline
+          ? { opacity: 0, y: -12, transition: { duration: 0.15 } }
+          : { opacity: 0, x: "-100%" }
+      }
+      initial={inline ? { opacity: 0, y: 12 } : { opacity: 0, x: "-100%" }}
+      transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+    >
         <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
           <h3 className="font-bold text-[--text]">جزئیات گزارش ثابت</h3>
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[--text-3] transition hover:bg-[--surface-2] hover:text-[--text]"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-[--text-3] transition-[background-color,color,transform] hover:bg-[--surface-2] hover:text-[--text] active:scale-[0.96]"
             onClick={onClose}
             type="button"
           >
@@ -146,8 +139,6 @@ export function SelectedFixedTaskPanel({
           <div className="flex items-start gap-2">
             {currentStatus === "done" ? (
               <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-500" />
-            ) : currentStatus === "in_progress" ? (
-              <div className="mt-1 h-4 w-4 shrink-0 rounded-full border-2 border-[#1f7a8c] border-t-transparent animate-spin" />
             ) : (
               <CircleDashed size={18} className="mt-0.5 shrink-0 text-[--text-3]" />
             )}
@@ -300,8 +291,6 @@ export function SelectedFixedTaskPanel({
             <MetaRow label="شروع" value={formatDate(task.startDate)} />
             <MetaRow label="پایان" value={formatDate(task.endDate)} />
             <MetaRow label="ایجاد" value={formatDate(task.createdAt)} />
-            {task.startedAt && <MetaRow label="شروع تایمر" value={formatDate(task.startedAt)} />}
-            {task.doneTime && <MetaRow label="پایان تایمر" value={formatDate(task.doneTime)} />}
             {durationOverdue && (
               <MetaRow
                 label="زمان صرف‌شده"
@@ -320,16 +309,11 @@ export function SelectedFixedTaskPanel({
           <div className="border-t border-[--border] p-4 space-y-2">
             {canChangeStatus && currentStatus !== "done" && !statusChangeBlocked && (
               <button
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-semibold text-white transition hover:bg-[#196b7b] active:scale-[0.98]"
-                onClick={() =>
-                  onStatusChange(
-                    taskId,
-                    currentStatus === "todo" ? "in_progress" : "done",
-                  )
-                }
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-semibold text-white transition-[background-color,transform] hover:bg-[#196b7b] active:scale-[0.96]"
+                onClick={() => onStatusChange(taskId, "done")}
                 type="button"
               >
-                {currentStatus === "todo" ? "شروع کار" : "تکمیل کردن"}
+                تکمیل کردن
                 <ChevronLeft size={15} />
               </button>
             )}
@@ -358,7 +342,25 @@ export function SelectedFixedTaskPanel({
             )}
           </div>
         )}
-      </motion.div>
+    </motion.div>
+  );
+
+  if (inline && typeof document !== "undefined") {
+    const target = document.getElementById("fixed-task-inline-detail");
+    return target ? createPortal(panel, target) : null;
+  }
+
+  return (
+    <>
+      <motion.div
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm dark:bg-black/50"
+        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        onClick={onClose}
+        transition={{ duration: 0.2 }}
+      />
+      {panel}
     </>
   );
 }
