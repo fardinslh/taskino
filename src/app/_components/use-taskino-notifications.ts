@@ -41,16 +41,15 @@ export function useTaskinoNotifications({
     let seeded = false;
 
     async function poll() {
-      const response = await notificationApi
-        .list(token, { isRead: false, limit: 20 })
-        .catch(() => null);
+      const [response, unreadResponse] = await Promise.all([
+        notificationApi.listAll(token).catch(() => null),
+        notificationApi.unreadCount(token).catch(() => null),
+      ]);
       if (!response) return;
 
-      const list = normalizeList(
-        response as Notification[] | { data?: Notification[] },
-      );
+      const list = normalizeList(response);
       setNotifications(list);
-      setUnreadCount(list.length);
+      setUnreadCount(unreadResponse?.unreadCount ?? 0);
 
       if (!seeded) {
         list.forEach((notification) => seen.add(getId(notification)));
@@ -59,7 +58,8 @@ export function useTaskinoNotifications({
       }
 
       const fresh = list.filter(
-        (notification) => !seen.has(getId(notification)),
+        (notification) =>
+          !notification.isRead && !seen.has(getId(notification)),
       );
       fresh.forEach((notification) => seen.add(getId(notification)));
 
@@ -81,13 +81,14 @@ export function useTaskinoNotifications({
     try {
       await notificationApi.markRead(token, id);
       setNotifications((current) =>
-        current.filter((notification) => getId(notification) !== id),
+        current.map((notification) =>
+          getId(notification) === id
+            ? { ...notification, isRead: true }
+            : notification,
+        ),
       );
-      setUnreadCount((count) => {
-        const next = Math.max(0, count - 1);
-        if (next === 0) setShowNotifications(false);
-        return next;
-      });
+      const unread = await notificationApi.unreadCount(token);
+      setUnreadCount(unread.unreadCount);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "خطا در خواندن اعلان",
@@ -98,7 +99,9 @@ export function useTaskinoNotifications({
   async function markAllNotificationsRead() {
     try {
       await notificationApi.markAllRead(token);
-      setNotifications([]);
+      setNotifications((current) =>
+        current.map((notification) => ({ ...notification, isRead: true })),
+      );
       setUnreadCount(0);
       setShowNotifications(false);
       setMessage("همه اعلان‌ها خوانده شد.");

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import {
   type FormEvent,
   useEffect,
@@ -49,7 +51,12 @@ import {
 } from "../_components/taskino-context";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
-import { formatDate, recurrenceLabel, userName } from "../_lib/task-helpers";
+import {
+  avatarUrl,
+  formatDate,
+  recurrenceLabel,
+  userName,
+} from "../_lib/task-helpers";
 
 const emptyCounts: WorkStatusCounts = {
   done: 0,
@@ -255,14 +262,19 @@ export default function AnalyticsPage() {
           const userId = getId(user);
           if (!userId) return [];
 
+          const summary = summariesByUserId.get(userId);
+
           return [
-            summariesByUserId.get(userId) ?? {
-              email: user.email,
-              firstName: user.firstName,
-              fixedTasks: { ...emptyCounts },
-              lastName: user.lastName,
-              tasks: { ...emptyCounts },
-              userId,
+            {
+              ...(summary ?? {
+                email: user.email,
+                firstName: user.firstName,
+                fixedTasks: { ...emptyCounts },
+                lastName: user.lastName,
+                tasks: { ...emptyCounts },
+                userId,
+              }),
+              avatarKey: user.avatarKey ?? summary?.avatarKey,
             },
           ];
         }),
@@ -452,13 +464,9 @@ export default function AnalyticsPage() {
         <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-black text-[#1f7a8c]">یک نگاه ساده</p>
-              <h1 className="mt-2 text-balance text-xl font-black sm:text-2xl">
-                کارهای تیم
+              <h1 className="text-balance text-xl font-black sm:text-2xl">
+                عملکرد تیم
               </h1>
-              <p className="mt-1 text-pretty text-sm text-[--text-3]">
-                تاریخ را انتخاب کنید تا ببینید هر نفر چقدر کار کرده است.
-              </p>
             </div>
 
             <form
@@ -477,7 +485,7 @@ export default function AnalyticsPage() {
                 ) : (
                   <Search size={17} />
                 )}
-                ببین
+                نمایش
               </button>
             </form>
           </div>
@@ -579,7 +587,7 @@ function AnalyticsCardSkeleton() {
     >
       <div className="flex animate-pulse flex-col gap-5 motion-reduce:animate-none xl:flex-row xl:items-center">
         <div className="flex items-center gap-3 xl:w-64">
-          <span className="h-12 w-12 shrink-0 rounded-2xl bg-[--border]" />
+          <span className="h-14 w-14 shrink-0 rounded-2xl bg-[--border]" />
           <span className="min-w-0 flex-1 space-y-2">
             <span className="block h-4 w-28 rounded-full bg-[--border]" />
             <span className="block h-3 w-40 max-w-full rounded-full bg-[--surface-2]" />
@@ -596,6 +604,50 @@ function AnalyticsCardSkeleton() {
         <span className="h-11 w-full shrink-0 rounded-xl bg-[--surface-2] xl:w-32" />
       </div>
     </div>
+  );
+}
+
+function AnalyticsUserAvatar({
+  displayName,
+  summary,
+}: {
+  displayName: string;
+  summary: WorkStatusSummaryUser;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = avatarUrl(summary);
+  const showImage = Boolean(imageUrl) && !imageFailed;
+
+  return (
+    <span
+      className="group/avatar relative shrink-0"
+      tabIndex={showImage ? 0 : undefined}
+    >
+      <span className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-[#1f7a8c]/10 text-[#1f7a8c]">
+        <UserRound size={23} />
+        {showImage && (
+          <img
+            alt={displayName}
+            className="absolute inset-0 h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+            onError={() => setImageFailed(true)}
+            src={imageUrl}
+          />
+        )}
+      </span>
+
+      {showImage && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 right-16 z-30 h-44 w-44 -translate-y-1/2 overflow-hidden rounded-3xl bg-[--surface] p-2 opacity-0 shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_14px_32px_rgba(15,23,42,0.2)] transition-[opacity,filter] duration-150 ease-in [filter:blur(4px)] group-hover/avatar:opacity-100 group-hover/avatar:duration-300 group-hover/avatar:ease-[cubic-bezier(0.2,0,0,1)] group-hover/avatar:[filter:blur(0px)] group-focus-visible/avatar:opacity-100 group-focus-visible/avatar:duration-300 group-focus-visible/avatar:ease-[cubic-bezier(0.2,0,0,1)] group-focus-visible/avatar:[filter:blur(0px)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_14px_32px_rgba(0,0,0,0.35)]"
+        >
+          <img
+            alt=""
+            className="h-full w-full rounded-2xl object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+            src={imageUrl}
+          />
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -698,14 +750,12 @@ function UserAnalyticsCard({
         },
         layout: { bounce: 0, duration: 0.3, type: "spring" },
       }}
-      className="overflow-hidden rounded-3xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.05)] transition-[box-shadow] duration-200 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_14px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+      className="relative overflow-visible rounded-3xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_24px_rgba(15,23,42,0.05)] transition-[box-shadow] duration-200 hover:z-20 hover:shadow-[0_0_0_1px_rgba(15,23,42,0.08),0_14px_32px_rgba(15,23,42,0.08)] focus-within:z-20 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
     >
       <div className="p-4 sm:p-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
           <div className="flex min-w-0 items-center gap-3 xl:w-64">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1f7a8c]/10 text-[#1f7a8c]">
-              <UserRound size={21} />
-            </span>
+            <AnalyticsUserAvatar displayName={displayName} summary={summary} />
             <div className="min-w-0">
               <h2 className="truncate text-base font-black text-[--text]">
                 {displayName}
@@ -749,7 +799,7 @@ function UserAnalyticsCard({
             initial={{ height: 0, opacity: 0 }}
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
           >
-            <div className="border-t border-[--border] bg-[--surface-2]/50 p-4 sm:p-5">
+            <div className="rounded-b-3xl border-t border-[--border] bg-[--surface-2]/50 p-4 sm:p-5">
               <div className="grid gap-4 xl:grid-cols-3">
                 <TimeSummary
                   data={durationBalance}

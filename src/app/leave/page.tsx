@@ -50,17 +50,22 @@ function LeavePageContent() {
 
   if (!isManager && !isSupervisor) {
     return (
-      <LandingPageEntrance className="space-y-4">
-        <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-          <div className="flex items-center gap-2">
-            <CalendarDays size={17} className="text-[#1f7a8c]" />
-            <h2 className="font-bold">درخواست مرخصی</h2>
+      <LandingPageEntrance className="space-y-5">
+        <div className="rounded-3xl bg-[--surface] p-4 shadow-[0_0_0_1px_var(--border),0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="flex items-center gap-3">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-[#1f7a8c]/10 text-[#1f7a8c]">
+              <CalendarDays size={18} />
+            </span>
+            <div>
+              <h2 className="text-balance font-bold">درخواست مرخصی</h2>
+              <p className="mt-0.5 text-pretty text-xs text-[--text-3]">نوع مرخصی و بازه موردنظر را وارد کنید</p>
+            </div>
           </div>
           <LeaveRequestForm />
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
-          <div className="border-b border-[--border] px-5 py-4">
+          <div className="border-b border-[--border] px-4 py-3">
             <h2 className="font-bold">درخواست‌های من</h2>
           </div>
           <div className="divide-y divide-[--border]">
@@ -120,19 +125,24 @@ function LeavePageContent() {
   };
 
   return (
-    <LandingPageEntrance className="space-y-4">
+    <LandingPageEntrance className="space-y-5">
       {isSupervisor && (
         <>
-          <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-            <div className="flex items-center gap-2">
-              <CalendarDays size={17} className="text-[#1f7a8c]" />
-              <h2 className="font-bold">درخواست مرخصی</h2>
+          <div className="rounded-3xl bg-[--surface] p-4 shadow-[0_0_0_1px_var(--border),0_8px_24px_rgba(15,23,42,0.04)]">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-[#1f7a8c]/10 text-[#1f7a8c]">
+                <CalendarDays size={18} />
+              </span>
+              <div>
+                <h2 className="text-balance font-bold">درخواست مرخصی</h2>
+                <p className="mt-0.5 text-pretty text-xs text-[--text-3]">نوع مرخصی و بازه موردنظر را وارد کنید</p>
+              </div>
             </div>
             <LeaveRequestForm />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
-            <div className="border-b border-[--border] px-5 py-4">
+          <div className="mt-5 overflow-hidden rounded-2xl border border-[--border] bg-[--surface]">
+            <div className="border-b border-[--border] px-4 py-3">
               <h2 className="font-bold">درخواست‌های من</h2>
             </div>
             <div className="divide-y divide-[--border]">

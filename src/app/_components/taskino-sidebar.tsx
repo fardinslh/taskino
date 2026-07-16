@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- User avatars may come from arbitrary backend hosts. */
+
 import {
   BarChart2,
   CalendarDays,
@@ -16,14 +18,9 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import type {
-  LeaveRequest,
-  SupervisorStats,
-  Task,
-  User,
-} from "@/lib/api";
+import type { LeaveRequest, SupervisorStats, Task, User } from "@/lib/api";
 import { type View } from "../_lib/task-constants";
-import { initials, roleLabel, userName } from "../_lib/task-helpers";
+import { avatarUrl, initials, roleLabel, userName } from "../_lib/task-helpers";
 import { SideItem } from "./shared";
 
 type TaskinoSidebarProps = {
@@ -66,6 +63,7 @@ export function TaskinoSidebar({
   const pendingLeaves = leaveRequests.filter(
     (request) => request.status === "pending",
   ).length;
+  const currentUserAvatarUrl = avatarUrl(currentUser ?? undefined);
   void overdueTasks;
   void supervisorStats;
   void supervisorTasks;
@@ -98,7 +96,11 @@ export function TaskinoSidebar({
             onClick={onToggleCollapsed}
             type="button"
           >
-            {sidebarCollapsed ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+            {sidebarCollapsed ? (
+              <ChevronLeft size={15} />
+            ) : (
+              <ChevronRight size={15} />
+            )}
           </button>
         </div>
 
@@ -123,7 +125,11 @@ export function TaskinoSidebar({
                 label="گزارش‌ها"
                 onClick={() => handleSelect("supervisor-create-report")}
               />
-              <div className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}>
+              <div
+                className={
+                  sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"
+                }
+              >
                 <SideItem
                   active={activeView === "supervisor-create-report"}
                   collapsed={sidebarCollapsed}
@@ -158,7 +164,11 @@ export function TaskinoSidebar({
                 label="پروژه‌ها"
                 onClick={() => handleSelect("supervisor-create-project")}
               />
-              <div className={sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"}>
+              <div
+                className={
+                  sidebarCollapsed ? "space-y-0.5" : "space-y-0.5 pr-5"
+                }
+              >
                 <SideItem
                   active={activeView === "supervisor-create-project"}
                   collapsed={sidebarCollapsed}
@@ -283,7 +293,9 @@ export function TaskinoSidebar({
                 collapsed={sidebarCollapsed}
                 icon={FolderKanban}
                 label="پروژه‌های مدیریت"
-                meta={tasks.filter((task) => task.excelFile).length || undefined}
+                meta={
+                  tasks.filter((task) => task.excelFile).length || undefined
+                }
                 onClick={() => handleSelect("tasks-admin")}
               />
               <SideItem
@@ -314,10 +326,30 @@ export function TaskinoSidebar({
         </nav>
 
         {!sidebarCollapsed && (
-          <div className="mx-2 mt-2 rounded-xl border border-[--border] bg-[--surface-2] p-3">
+          <div className="mx-2 mt-2 rounded-2xl bg-[linear-gradient(145deg,rgba(31,122,140,0.1),transparent_42%),var(--surface-2)] p-3 shadow-[0_0_0_1px_rgba(31,122,140,0.28),0_8px_24px_rgba(15,23,42,0.07)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_10px_28px_rgba(0,0,0,0.18)]">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-xs font-bold text-white">
-                {initials(currentUser ?? undefined)}
+              <div className="group/avatar relative shrink-0" tabIndex={0}>
+                <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-xs font-bold text-white shadow-[0_0_0_2px_var(--surface-2),0_0_0_3px_rgba(31,122,140,0.45)]">
+                  {initials(currentUser ?? undefined)}
+                  {currentUserAvatarUrl && (
+                    <img
+                      alt={userName(currentUser ?? undefined)}
+                      className="absolute inset-0 h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                      src={currentUserAvatarUrl}
+                      onError={(event) => event.currentTarget.remove()}
+                    />
+                  )}
+                </div>
+                {currentUserAvatarUrl && (
+                  <div className="pointer-events-none absolute bottom-[calc(100%+0.625rem)] right-0 z-50 h-44 w-44 origin-bottom-right scale-[0.25] overflow-hidden rounded-3xl bg-[--surface] p-2 opacity-0 blur-[4px] shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_14px_32px_rgba(15,23,42,0.2)] transition-[opacity,filter,scale] duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/avatar:scale-100 group-hover/avatar:opacity-100 group-hover/avatar:blur-0 group-focus/avatar:scale-100 group-focus/avatar:opacity-100 group-focus/avatar:blur-0 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_14px_32px_rgba(0,0,0,0.35)]">
+                    <img
+                      alt=""
+                      className="h-full w-full rounded-2xl object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                      src={currentUserAvatarUrl}
+                      onError={(event) => event.currentTarget.remove()}
+                    />
+                  </div>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">

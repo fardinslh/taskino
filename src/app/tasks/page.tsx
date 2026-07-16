@@ -1,26 +1,27 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  Award,
   BarChart2,
   CalendarDays,
   CircleDashed,
   ClipboardList,
   FolderKanban,
   Plus,
+  Star,
   TrendingUp,
   UsersRound,
 } from "lucide-react";
 
-import { getId } from "@/lib/api";
+import { fixedTaskApi, getId } from "@/lib/api";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { AssigneeStack, Tooltip } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
 import {
   useFixedTaskContext,
+  useFeedbackContext,
   useManagementContext,
   useNavigationContext,
   useSessionContext,
@@ -73,8 +74,9 @@ function TasksPageContent() {
     setTaskQuery,
     taskQuery,
   } = useNavigationContext();
-  const { currentUser, isManager, isSpecialist, isSupervisor } =
+  const { currentUser, isManager, isSpecialist, isSupervisor, token } =
     useSessionContext();
+  const { setError, setMessage } = useFeedbackContext();
   const {
     activeTasks,
     doneTasks,
@@ -90,12 +92,37 @@ function TasksPageContent() {
     fixedTodoCount,
     activeFixedTaskCount,
     fixedTasks,
+    setFixedTasks,
     selectedFixedTask,
     onDragEnd,
     openFixedTaskForm,
     deleteFixedTask,
   } = useFixedTaskContext();
+  const [ratingTaskId, setRatingTaskId] = useState<string | null>(null);
   const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
+
+  async function rateFixedTask(task: any, score: number) {
+    const taskId = getId(task);
+    if (!taskId || ratingTaskId) return;
+
+    setRatingTaskId(taskId);
+    try {
+      const ratedTask = await fixedTaskApi.rate(token, taskId, { score });
+      setFixedTasks((current) =>
+        current.map((item) => (getId(item) === taskId ? ratedTask : item)),
+      );
+      setSelectedFixedTask((current) =>
+        current && getId(current) === taskId ? ratedTask : current,
+      );
+      setMessage("امتیاز گزارش ثبت شد.");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "ثبت امتیاز گزارش ناموفق بود.",
+      );
+    } finally {
+      setRatingTaskId(null);
+    }
+  }
   const fixedStatusColumns = selectedStatusFilter
     ? COLUMNS.filter((col) => col.status === selectedStatusFilter)
     : COLUMNS;
@@ -385,6 +412,10 @@ function TasksPageContent() {
                                     fixedTaskSpentOverLimitMinutes != null;
                                   const hasManagerRating =
                                     ft.ratingScore != null;
+                                  const displayedRating = Math.min(
+                                    5,
+                                    Math.max(0, Math.round(ft.ratingScore ?? 0)),
+                                  );
                                   return (
                                   <Draggable
                                     key={getId(ft)}
@@ -435,11 +466,22 @@ function TasksPageContent() {
                                             </Tooltip>
                                           )}
                                           {hasManagerRating && (
-                                            <span className="flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.18)] dark:bg-amber-950/35 dark:text-amber-300">
-                                              <Award size={11} />
-                                              {ft.ratingScore.toLocaleString(
-                                                "fa-IR",
-                                              )}
+                                            <span
+                                              aria-label={`امتیاز مدیر: ${displayedRating} از ۵`}
+                                              className="flex items-center gap-px text-amber-500"
+                                              title={`امتیاز مدیر: ${displayedRating} از ۵`}
+                                            >
+                                              {[1, 2, 3, 4, 5].map((score) => (
+                                                <Star
+                                                  fill={
+                                                    score <= displayedRating
+                                                      ? "currentColor"
+                                                      : "none"
+                                                  }
+                                                  key={score}
+                                                  size={12}
+                                                />
+                                              ))}
                                             </span>
                                           )}
                                         </div>
@@ -467,6 +509,45 @@ function TasksPageContent() {
                                                 ft.approvedDurationMinutes,
                                               )}
                                             </span>
+                                          </div>
+                                        )}
+                                        {isManager && col.status === "done" && (
+                                          <div
+                                            className="mt-3 flex items-center justify-between gap-3 border-t border-amber-500/15 pt-2.5"
+                                            onClick={(event) =>
+                                              event.stopPropagation()
+                                            }
+                                          >
+                                            <span className="text-[11px] font-bold text-[--text-3]">
+                                              امتیاز مدیر
+                                            </span>
+                                            <div
+                                              aria-label="امتیازدهی گزارش"
+                                              className="flex items-center gap-0.5"
+                                              role="group"
+                                            >
+                                              {[1, 2, 3, 4, 5].map((score) => (
+                                                <button
+                                                  aria-label={`${score} ستاره`}
+                                                  className={`flex h-10 w-10 items-center justify-center rounded-lg transition-[background-color,color,transform] hover:bg-amber-500/10 active:scale-[0.96] disabled:cursor-wait disabled:opacity-50 ${score <= displayedRating ? "text-amber-500" : "text-amber-500/35 dark:text-amber-400/35"}`}
+                                                  disabled={ratingTaskId === getId(ft)}
+                                                  key={score}
+                                                  onClick={() =>
+                                                    void rateFixedTask(ft, score)
+                                                  }
+                                                  type="button"
+                                                >
+                                                  <Star
+                                                    fill={
+                                                      score <= displayedRating
+                                                        ? "currentColor"
+                                                        : "none"
+                                                    }
+                                                    size={17}
+                                                  />
+                                                </button>
+                                              ))}
+                                            </div>
                                           </div>
                                         )}
                                         {fixedTaskDurationOverdue && (

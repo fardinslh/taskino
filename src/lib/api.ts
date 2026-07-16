@@ -43,6 +43,7 @@ export type User = {
   lastName?: string;
   email?: string;
   mobile?: string;
+  avatarKey?: string;
   roles?: string;
   workField?: WorkField;
   isActive?: boolean;
@@ -435,6 +436,7 @@ export type WorkStatusCounts = {
 
 export type WorkStatusSummaryUser = {
   userId: string;
+  avatarKey?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -1101,6 +1103,35 @@ export const supervisorApi = {
 };
 
 // ─── Notifications ───────────────────────────────────────────────────────────
+async function listAllNotifications(token: string) {
+  const pageSize = 100;
+  const notifications: Notification[] = [];
+  const seenIds = new Set<string>();
+  let page = 1;
+
+  while (true) {
+    const response = await notificationApi.list(token, {
+      limit: pageSize,
+      page,
+    });
+    const batch = normalizeList(response);
+    let added = 0;
+
+    batch.forEach((notification) => {
+      const id = getId(notification);
+      if (!id || seenIds.has(id)) return;
+      seenIds.add(id);
+      notifications.push(notification);
+      added += 1;
+    });
+
+    if (batch.length < pageSize || added === 0) break;
+    page += 1;
+  }
+
+  return notifications;
+}
+
 export const notificationApi = {
   list: (token: string, params?: BoolParams) =>
     unwrapAxios(
@@ -1108,6 +1139,7 @@ export const notificationApi = {
         `/notifications/me${qs(params)}`,
       ),
     ),
+  listAll: listAllNotifications,
   unreadCount: (token: string) =>
     unwrapAxios(
       apiClient.get<{ unreadCount: number }>("/notifications/me/unread-count"),

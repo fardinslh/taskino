@@ -144,6 +144,17 @@ export function isFixedTaskOverdue(
   return !Number.isNaN(endDate.getTime()) && endDate < new Date();
 }
 
+export function avatarUrl(user?: User | string) {
+  if (!user || typeof user === "string" || !user.avatarKey) return "";
+  const backendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "").replace(
+    /\/+$/,
+    "",
+  );
+  if (!backendUrl) return "";
+
+  return `${backendUrl}/uploads/images/${encodeURIComponent(user.avatarKey.replace(/^\/+/, ""))}`;
+}
+
 export function isFixedTaskStartedTodayOrLater(
   item: Pick<FixedTask, "startDate">,
   now = new Date(),

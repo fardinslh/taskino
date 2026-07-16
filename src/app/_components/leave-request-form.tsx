@@ -5,6 +5,8 @@ import DatePicker from "react-multi-date-picker";
 import jalali from "react-date-object/calendars/jalali";
 import persianFa from "react-date-object/locales/persian_fa";
 import TimePicker from "react-multi-date-picker/plugins/time_picker";
+import { Clock3, Send } from "lucide-react";
+import { motion } from "motion/react";
 
 import { leaveApi } from "@/lib/api";
 import { useFeedbackContext, useSessionContext } from "./taskino-context";
@@ -34,7 +36,7 @@ export function LeaveRequestForm() {
       startTime: "",
       endTime: "",
       reason: "",
-      recurrence: "daily",
+      recurrence: "hourly",
     },
   });
   const startDate = useWatch({ control, name: "startDate" });
@@ -138,216 +140,209 @@ export function LeaveRequestForm() {
     }
   }
 
+  const inputClass =
+    "h-11 w-full rounded-xl border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15";
+
   return (
-    <form
-      className="mt-4 grid gap-3 sm:grid-cols-2"
-      onSubmit={handleSubmit(createLeaveRequest)}
-    >
-      <label className="block">
-        <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-          از تاریخ
-        </span>
-        <Controller
-          control={control}
-          name="startDate"
-          rules={{ required: true }}
-          render={({ field }) => (
-            <DatePicker
-              portal
-              value={field.value ? new Date(field.value) : ""}
-              onChange={(value) => {
-                if (!value || Array.isArray(value)) {
-                  field.onChange("");
-                  return;
-                }
+    <form className="mt-4 space-y-3" onSubmit={handleSubmit(createLeaveRequest)}>
+      <div className="rounded-2xl bg-[--surface-2]/70 p-3 shadow-[inset_0_0_0_1px_var(--border)]">
+        <p className="mb-2 text-xs font-bold text-[--text-2]">نوع مرخصی</p>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="نوع مرخصی">
+          {[
+            { value: "hourly", label: "ساعتی" },
+            { value: "daily", label: "روزانه" },
+            { value: "weekly", label: "هفتگی" },
+          ].map((option) => {
+            const isSelected = recurrence === option.value;
 
-                field.onChange(value.toDate().toISOString());
-              }}
-              calendar={jalali}
-              locale={persianFa}
-              minDate={todayStart}
-              format="YYYY/MM/DD"
-              calendarPosition="bottom-right"
-              inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-              containerClassName="w-full"
-              zIndex={10000}
-              placeholder="انتخاب تاریخ شروع"
-            />
-          )}
-        />
-        {errors.startDate && (
-          <span className="mt-1 block text-xs text-red-500">
-            این فیلد الزامی است.
-          </span>
-        )}
-      </label>
+            return (
+            <label className="relative cursor-pointer" key={option.value}>
+              <input
+                className="peer sr-only"
+                type="radio"
+                value={option.value}
+                {...register("recurrence", { required: true })}
+              />
+              {isSelected && (
+                <motion.span
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-xl bg-[#1f7a8c] shadow-sm"
+                  initial={false}
+                  layoutId="leave-type-selection"
+                  transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+                />
+              )}
+              <span
+                className={`relative z-10 flex h-10 items-center justify-center rounded-xl text-sm font-semibold transition-[color,transform] peer-focus-visible:ring-2 peer-focus-visible:ring-[#1f7a8c]/30 active:scale-[0.96] ${
+                  isSelected ? "text-white" : "text-[--text-2] hover:text-[#1f7a8c]"
+                }`}
+              >
+                {option.label}
+              </span>
+            </label>
+            );
+          })}
+        </div>
+      </div>
 
-      <label className="block">
-        <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-          تا تاریخ
-        </span>
-        <Controller
-          control={control}
-          name="endDate"
-          rules={{ required: true }}
-          render={({ field }) => (
-            <DatePicker
-              portal
-              value={field.value ? new Date(field.value) : ""}
-              onChange={(value) => {
-                if (!value || Array.isArray(value)) {
-                  field.onChange("");
-                  return;
-                }
-
-                field.onChange(value.toDate().toISOString());
-              }}
-              calendar={jalali}
-              locale={persianFa}
-              minDate={
-                startDate
-                  ? (() => {
-                      const value = new Date(startDate);
-                      value.setHours(0, 0, 0, 0);
-                      return value;
-                    })()
-                  : todayStart
-              }
-              format="YYYY/MM/DD"
-              calendarPosition="bottom-right"
-              inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-              containerClassName="w-full"
-              zIndex={10000}
-              placeholder="انتخاب تاریخ پایان"
-            />
-          )}
-        />
-        {errors.endDate && (
-          <span className="mt-1 block text-xs text-red-500">
-            این فیلد الزامی است.
-          </span>
-        )}
-      </label>
-
-      <div className="sm:col-span-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-            تکرار
-          </span>
-          <select
-            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-            {...register("recurrence", { required: true })}
-          >
-            <option value="daily">روزانه</option>
-            <option value="weekly">هفتگی</option>
-            <option value="hourly">ساعتی</option>
-          </select>
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">از تاریخ</span>
+          <Controller
+            control={control}
+            name="startDate"
+            rules={{ required: true }}
+            render={({ field }) => (
+              <DatePicker
+                portal
+                value={field.value ? new Date(field.value) : ""}
+                onChange={(value) => {
+                  if (!value || Array.isArray(value)) {
+                    field.onChange("");
+                    return;
+                  }
+                  field.onChange(value.toDate().toISOString());
+                }}
+                calendar={jalali}
+                locale={persianFa}
+                minDate={todayStart}
+                format="YYYY/MM/DD"
+                calendarPosition="bottom-right"
+                inputClass={inputClass}
+                containerClassName="w-full"
+                zIndex={10000}
+                placeholder="انتخاب تاریخ شروع"
+              />
+            )}
+          />
+          {errors.startDate && <span className="mt-1 block text-xs text-red-500">این فیلد الزامی است.</span>}
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">تا تاریخ</span>
+          <Controller
+            control={control}
+            name="endDate"
+            rules={{ required: true }}
+            render={({ field }) => (
+              <DatePicker
+                portal
+                value={field.value ? new Date(field.value) : ""}
+                onChange={(value) => {
+                  if (!value || Array.isArray(value)) {
+                    field.onChange("");
+                    return;
+                  }
+                  field.onChange(value.toDate().toISOString());
+                }}
+                calendar={jalali}
+                locale={persianFa}
+                minDate={startDate ? new Date(startDate) : todayStart}
+                format="YYYY/MM/DD"
+                calendarPosition="bottom-right"
+                inputClass={inputClass}
+                containerClassName="w-full"
+                zIndex={10000}
+                placeholder="انتخاب تاریخ پایان"
+              />
+            )}
+          />
+          {errors.endDate && <span className="mt-1 block text-xs text-red-500">این فیلد الزامی است.</span>}
         </label>
       </div>
 
       {recurrence === "hourly" && (
-        <>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-              ساعت شروع
+        <div className="rounded-2xl bg-[#1f7a8c]/[0.07] p-3 shadow-[inset_0_0_0_1px_rgba(31,122,140,0.18)]">
+          <div className="mb-2 flex items-center gap-2 text-[#1f7a8c]">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-[#1f7a8c]/10">
+              <Clock3 size={16} />
             </span>
-            <Controller
-              control={control}
-              name="startTime"
-              rules={{ required: recurrence === "hourly" }}
-              render={({ field }) => (
-                <DatePicker
-                  portal
-                  value={timePickerValue(field.value)}
-                  onChange={(value) => {
-                    if (!value || Array.isArray(value)) {
-                      field.onChange("");
-                      return;
-                    }
+            <div>
+              <p className="text-xs font-bold">بازه زمانی مرخصی</p>
+              <p className="mt-0.5 text-[11px] text-[--text-3]">ساعت شروع و پایان را مشخص کنید</p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">ساعت شروع</span>
+              <Controller
+                control={control}
+                name="startTime"
+                rules={{ required: recurrence === "hourly" }}
+                render={({ field }) => (
+                  <DatePicker
+                    portal
+                    value={timePickerValue(field.value)}
+                    onChange={(value) => {
+                      if (!value || Array.isArray(value)) {
+                        field.onChange("");
+                        return;
+                      }
+                      field.onChange(normalizeTime(value.format("HH:mm")));
+                    }}
+                    calendar={jalali}
+                    locale={persianFa}
+                    disableDayPicker
+                    format="HH:mm"
+                    plugins={[<TimePicker key="start-time" hideSeconds />]}
+                    calendarPosition="bottom-right"
+                    inputClass={inputClass}
+                    containerClassName="w-full"
+                    zIndex={10000}
+                    placeholder="انتخاب ساعت شروع"
+                  />
+                )}
+              />
+              {errors.startTime && <span className="mt-1 block text-xs text-red-500">این فیلد الزامی است.</span>}
+            </label>
 
-                    field.onChange(normalizeTime(value.format("HH:mm")));
-                  }}
-                  calendar={jalali}
-                  locale={persianFa}
-                  disableDayPicker
-                  format="HH:mm"
-                  plugins={[<TimePicker key="start-time" hideSeconds />]}
-                  calendarPosition="bottom-right"
-                  inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  containerClassName="w-full"
-                  zIndex={10000}
-                  placeholder="انتخاب ساعت شروع"
-                />
-              )}
-            />
-            {errors.startTime && (
-              <span className="mt-1 block text-xs text-red-500">
-                این فیلد الزامی است.
-              </span>
-            )}
-          </label>
-
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-              ساعت پایان
-            </span>
-            <Controller
-              control={control}
-              name="endTime"
-              rules={{ required: recurrence === "hourly" }}
-              render={({ field }) => (
-                <DatePicker
-                  portal
-                  value={timePickerValue(field.value)}
-                  onChange={(value) => {
-                    if (!value || Array.isArray(value)) {
-                      field.onChange("");
-                      return;
-                    }
-
-                    field.onChange(normalizeTime(value.format("HH:mm")));
-                  }}
-                  calendar={jalali}
-                  locale={persianFa}
-                  disableDayPicker
-                  format="HH:mm"
-                  plugins={[<TimePicker key="end-time" hideSeconds />]}
-                  calendarPosition="bottom-right"
-                  inputClass="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-                  containerClassName="w-full"
-                  zIndex={10000}
-                  placeholder="انتخاب ساعت پایان"
-                />
-              )}
-            />
-            {errors.endTime && (
-              <span className="mt-1 block text-xs text-red-500">
-                این فیلد الزامی است.
-              </span>
-            )}
-          </label>
-        </>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">ساعت پایان</span>
+              <Controller
+                control={control}
+                name="endTime"
+                rules={{ required: recurrence === "hourly" }}
+                render={({ field }) => (
+                  <DatePicker
+                    portal
+                    value={timePickerValue(field.value)}
+                    onChange={(value) => {
+                      if (!value || Array.isArray(value)) {
+                        field.onChange("");
+                        return;
+                      }
+                      field.onChange(normalizeTime(value.format("HH:mm")));
+                    }}
+                    calendar={jalali}
+                    locale={persianFa}
+                    disableDayPicker
+                    format="HH:mm"
+                    plugins={[<TimePicker key="end-time" hideSeconds />]}
+                    calendarPosition="bottom-right"
+                    inputClass={inputClass}
+                    containerClassName="w-full"
+                    zIndex={10000}
+                    placeholder="انتخاب ساعت پایان"
+                  />
+                )}
+              />
+              {errors.endTime && <span className="mt-1 block text-xs text-red-500">این فیلد الزامی است.</span>}
+            </label>
+          </div>
+        </div>
       )}
 
-      <div className="sm:col-span-2">
+      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">
-            دلیل
-          </span>
-          <input
-            className="h-10 w-full rounded-lg border border-[--border] bg-[--surface] px-3 text-sm text-[--text] outline-none transition focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
-            placeholder="اختیاری"
-            {...register("reason")}
-          />
+          <span className="mb-1.5 block text-xs font-semibold text-[--text-2]">دلیل مرخصی</span>
+          <input className={inputClass} placeholder="در صورت نیاز توضیح کوتاهی بنویسید" {...register("reason")} />
         </label>
-      </div>
-
-      <div className="flex items-end">
         <button
-          className="h-10 rounded-lg bg-[#1f7a8c] px-4 text-sm font-semibold text-white disabled:opacity-60"
+          className="flex h-11 min-w-36 items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] pl-4 pr-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(31,122,140,0.2)] transition-[background-color,box-shadow,transform] duration-150 hover:bg-[#196b7b] hover:shadow-[0_10px_24px_rgba(31,122,140,0.26)] active:scale-[0.96] disabled:opacity-60"
           disabled={isSubmitting}
           type="submit"
         >
+          <Send size={15} />
           ثبت درخواست
         </button>
       </div>

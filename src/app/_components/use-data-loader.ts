@@ -390,7 +390,7 @@ export function useDataLoader({
             .unreadCount(authToken)
             .catch(() => ({ unreadCount: 0 })),
           notificationApi
-            .list(authToken, { isRead: false, limit: 20 })
+            .listAll(authToken)
             .catch(() => []),
           shouldLoadLeaveStats
             ? leaveApi.statistics(authToken).catch(() => null)

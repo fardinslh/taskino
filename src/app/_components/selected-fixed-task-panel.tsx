@@ -10,6 +10,8 @@ import {
   Loader2,
   MessageSquareText,
   Repeat,
+  Star,
+  UserRound,
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -21,7 +23,6 @@ import {
   formatDurationMinutes,
 } from "../_lib/fixed-task-timing";
 import {
-  formatDate,
   isFixedTaskOverdue,
   recurrenceLabel,
   statusLabel,
@@ -29,13 +30,13 @@ import {
 } from "../_lib/task-helpers";
 
 const FIXED_TASK_STATUSES: FixedTaskStatus[] = ["todo", "done"];
-const RATING_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const RATING_OPTIONS = [1, 2, 3, 4, 5] as const;
 const durationOverdueTooltip =
   "زمان صرف‌شده از زمان تعیین‌شده توسط مدیر بیشتر شده است.";
 
 function ratingLabel(score: number) {
-  if (score <= 3) return "ضعیف";
-  if (score <= 6) return "متوسط";
+  if (score <= 2) return "ضعیف";
+  if (score <= 3) return "متوسط";
   return "خوب";
 }
 
@@ -142,13 +143,21 @@ export function SelectedFixedTaskPanel({
             ) : (
               <CircleDashed size={18} className="mt-0.5 shrink-0 text-[--text-3]" />
             )}
-            <div>
+            <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold leading-snug text-[--text]">
                 {task.title}
               </h2>
-              <p className="mt-1 text-xs text-[--text-3]">
-                ثابت · {recurrenceLabel(task.recurrence)}
-              </p>
+              <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-[#e8f4f7] px-3 py-2.5 text-[#1f7a8c] shadow-[inset_0_0_0_1px_rgba(31,122,140,0.12)] dark:bg-[#0f3040] dark:text-cyan-300">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1f7a8c] text-white">
+                  <UserRound size={17} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold opacity-75">مسئول گزارش</p>
+                  <p className="truncate text-sm font-black">
+                    {assignee ? userName(assignee) : "بدون مسئول"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -190,23 +199,24 @@ export function SelectedFixedTaskPanel({
 
           {canSubmitRating && (
             <form
-              className="rounded-xl bg-[--surface-2] p-3 shadow-[inset_0_0_0_1px_var(--border)]"
+              className="rounded-xl bg-[--surface-2]/70 p-3 shadow-[inset_0_0_0_1px_var(--border)]"
               onSubmit={submitRating}
             >
               <div className="flex items-center gap-2 text-sm font-black text-[--text]">
                 <Award size={16} className="text-amber-600" />
                 امتیازدهی گزارش
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-2 flex items-center gap-0.5">
                 {RATING_OPTIONS.map((value) => {
                   const selected = ratingScore === value;
                   return (
                     <button
                       aria-pressed={selected}
-                      className={`min-h-14 rounded-xl px-2 py-2 text-center transition-[background-color,box-shadow,transform] active:scale-[0.96] ${
+                      aria-label={`${value} ستاره`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg transition-[background-color,color,transform] active:scale-[0.96] ${
                         selected
-                          ? "bg-[#1f7a8c] text-white shadow-lg shadow-[#1f7a8c]/20"
-                          : "bg-[--surface] text-[--text-2] shadow-[inset_0_0_0_1px_var(--border)] hover:bg-[--border]"
+                          ? "bg-amber-500/10 text-amber-500"
+                          : "text-amber-500/35 hover:bg-amber-500/10 hover:text-amber-500 dark:text-amber-400/35"
                       }`}
                       disabled={ratingSubmitting}
                       key={value}
@@ -216,23 +226,18 @@ export function SelectedFixedTaskPanel({
                       }}
                       type="button"
                     >
-                      <span className="block text-base font-black tabular-nums">
-                        {value.toLocaleString("fa-IR")}
-                      </span>
-                      <span className="mt-0.5 block text-[10px] font-bold opacity-80">
-                        {ratingLabel(value)}
-                      </span>
+                      <Star fill={selected ? "currentColor" : "none"} size={18} />
                     </button>
                   );
                 })}
               </div>
-              <label className="mt-3 block">
+              <label className="mt-2.5 block">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-[--text-2]">
                   <MessageSquareText size={14} className="text-[#1f7a8c]" />
-                  نظر مدیر
+                  نظر مدیر (اختیاری)
                 </span>
                 <textarea
-                  className="mt-2 min-h-24 w-full resize-y rounded-xl border border-[--border] bg-[--surface] px-3 py-2.5 text-sm leading-6 text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                  className="mt-1.5 min-h-16 w-full resize-y rounded-xl border border-[--border] bg-[--surface] px-3 py-2 text-sm leading-5 text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
                   disabled={ratingSubmitting}
                   maxLength={1000}
                   onChange={(event) => {
@@ -249,7 +254,7 @@ export function SelectedFixedTaskPanel({
                 </p>
               )}
               <button
-                className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-black text-white shadow-lg shadow-[#1f7a8c]/15 transition-[background-color,transform] hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2.5 flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-[#1f7a8c] text-sm font-black text-white shadow-sm transition-[background-color,transform] hover:bg-[#186777] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={ratingSubmitting || ratingScore == null}
                 type="submit"
               >
@@ -285,12 +290,14 @@ export function SelectedFixedTaskPanel({
           </div>
 
           <div className="rounded-xl bg-[--surface-2] p-4 space-y-3">
-            <MetaRow label="مسئول" value={assignee ? userName(assignee) : "بدون مسئول"} />
-            <MetaRow label="فعال" value={task.isActive === false ? "خیر" : "بله"} />
-            <MetaRow label="تکرار" value={recurrenceLabel(task.recurrence)} />
-            <MetaRow label="شروع" value={formatDate(task.startDate)} />
-            <MetaRow label="پایان" value={formatDate(task.endDate)} />
-            <MetaRow label="ایجاد" value={formatDate(task.createdAt)} />
+            <MetaRow label="نوع گزارش" value={recurrenceLabel(task.recurrence)} />
+            <MetaRow label="وضعیت" value={statusLabel(currentStatus)} />
+            {task.approvedDurationMinutes != null && (
+              <MetaRow
+                label="زمان در دسترس"
+                value={formatDurationMinutes(task.approvedDurationMinutes)}
+              />
+            )}
             {durationOverdue && (
               <MetaRow
                 label="زمان صرف‌شده"
@@ -299,7 +306,10 @@ export function SelectedFixedTaskPanel({
               />
             )}
             {task.actualDurationMinutes != null && (
-              <MetaRow label="مدت واقعی" value={formatDurationMinutes(task.actualDurationMinutes)} />
+              <MetaRow
+                label="زمان ثبت‌شده"
+                value={formatDurationMinutes(task.actualDurationMinutes)}
+              />
             )}
           </div>
         </div>

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- User avatars may come from arbitrary backend hosts. */
+
 import { useEffect } from "react";
 import {
   Bell,
@@ -15,6 +17,7 @@ import {
 import { getId, type Notification, type User } from "@/lib/api";
 import {
   appTitleForWorkField,
+  avatarUrl,
   initials,
   notificationText,
   userName,
@@ -54,6 +57,7 @@ export function TaskinoHeader({
   unreadCount,
 }: TaskinoHeaderProps) {
   const appTitle = appTitleForWorkField(currentUser?.workField);
+  const currentUserAvatarUrl = avatarUrl(currentUser ?? undefined);
 
   useEffect(() => {
     document.title = appTitle;
@@ -91,8 +95,8 @@ export function TaskinoHeader({
             >
               <Bell size={16} />
               {unreadCount > 0 && (
-                <span className="absolute -left-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
+                <span className="absolute -left-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold tabular-nums text-white">
+                  {unreadCount}
                 </span>
               )}
             </button>
@@ -169,8 +173,18 @@ export function TaskinoHeader({
             onClick={onLogout}
             type="button"
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1f7a8c] text-[10px] font-bold text-white">
-              {initials(currentUser ?? undefined)}
+            <span className="relative shrink-0">
+              <span className="relative flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-[#1f7a8c] text-[10px] font-bold text-white">
+                {initials(currentUser ?? undefined)}
+                {currentUserAvatarUrl && (
+                  <img
+                    alt={userName(currentUser ?? undefined)}
+                    className="absolute inset-0 h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                    src={currentUserAvatarUrl}
+                    onError={(event) => event.currentTarget.remove()}
+                  />
+                )}
+              </span>
             </span>
             <span className="hidden max-w-[90px] truncate text-xs sm:block">
               {userName(currentUser ?? undefined)}
