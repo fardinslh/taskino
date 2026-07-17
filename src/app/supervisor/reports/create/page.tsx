@@ -245,7 +245,10 @@ export default function SupervisorCreateReportsPage() {
       } else {
         await fixedTaskApi.create(token, {
           ...body,
-          ...initialFixedTaskDateRange(values.recurrence),
+          ...initialFixedTaskDateRange(
+            values.recurrence,
+            body.scheduleConfig,
+          ),
           startTime: "00:00",
           endTime: "00:00",
         });

@@ -2,6 +2,8 @@ import type {
   FixedTaskRecurrence,
   FixedTaskScheduleConfig,
 } from "@/lib/api";
+import DateObject from "react-date-object";
+import jalali from "react-date-object/calendars/jalali";
 
 export const DEFAULT_DAILY_WEEKDAYS = [6, 0, 1, 2, 3, 4];
 export const DEFAULT_WEEKLY_WEEKDAYS = [6];
@@ -53,18 +55,64 @@ export function buildFixedTaskScheduleConfig(
 
 export function initialFixedTaskDateRange(
   recurrence: FixedTaskRecurrence,
+  scheduleConfig?: FixedTaskScheduleConfig,
   now = new Date(),
 ) {
-  const startDate = new Date(now);
-  startDate.setHours(0, 0, 0, 0);
+  const schedule = getFixedTaskScheduleValues(recurrence, scheduleConfig);
+  const startDate =
+    recurrence === "monthly"
+      ? nextMonthlyStart(now, schedule.monthDays)
+      : nextWeekdayStart(now, schedule.weekdays);
 
   const endDate = new Date(startDate);
-  if (recurrence === "daily") endDate.setDate(endDate.getDate() + 1);
-  if (recurrence === "weekly") endDate.setDate(endDate.getDate() + 7);
-  if (recurrence === "monthly") endDate.setMonth(endDate.getMonth() + 1);
+  endDate.setDate(endDate.getDate() + 1);
 
   return {
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
   };
+}
+
+function nextWeekdayStart(now: Date, weekdays: number[]) {
+  const startDate = startOfDay(now);
+  const nextOffset = Math.min(
+    ...weekdays.map((weekday) => (weekday - startDate.getDay() + 7) % 7),
+  );
+  startDate.setDate(startDate.getDate() + nextOffset);
+  return startDate;
+}
+
+function nextMonthlyStart(now: Date, monthDays: number[]) {
+  const todayStart = startOfDay(now);
+  const today = new DateObject({ calendar: jalali, date: todayStart });
+  const sortedDays = [...monthDays].sort((a, b) => a - b);
+
+  for (let monthOffset = 0; monthOffset < 12; monthOffset += 1) {
+    const monthStart = new DateObject(today)
+      .setDay(1)
+      .setMonth(today.month.number + monthOffset);
+    const expectedYear = monthStart.year;
+    const expectedMonth = monthStart.month.number;
+
+    for (const day of sortedDays) {
+      const candidate = new DateObject(monthStart).setDay(day);
+      if (
+        candidate.year !== expectedYear ||
+        candidate.month.number !== expectedMonth
+      ) {
+        continue;
+      }
+
+      const candidateDate = startOfDay(candidate.toDate());
+      if (candidateDate >= todayStart) return candidateDate;
+    }
+  }
+
+  throw new Error("No valid monthly report date found");
+}
+
+function startOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
 }

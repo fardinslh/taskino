@@ -179,7 +179,7 @@ export function useFixedTaskActions({
       } else {
         const created = await fixedTaskApi.create(token, {
           ...body,
-          ...initialFixedTaskDateRange(values.recurrence),
+          ...initialFixedTaskDateRange(values.recurrence, scheduleConfig),
           startTime: "00:00",
           endTime: "00:00",
         });

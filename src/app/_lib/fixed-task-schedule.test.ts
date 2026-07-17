@@ -47,18 +47,40 @@ describe("fixed-task scheduling", () => {
     });
   });
 
-  it("uses midnight-to-midnight occurrence boundaries", () => {
-    const now = new Date(2026, 6, 12, 14, 30);
+  it("starts daily reports today when today is selected", () => {
+    const saturday = new Date(2026, 6, 18, 14, 30);
 
-    expect(initialFixedTaskDateRange("daily", now)).toEqual({
-      startDate: new Date(2026, 6, 12).toISOString(),
-      endDate: new Date(2026, 6, 13).toISOString(),
+    expect(
+      initialFixedTaskDateRange("daily", { weekdays: [6, 0, 1, 2, 3, 4] }, saturday),
+    ).toEqual({
+      startDate: new Date(2026, 6, 18).toISOString(),
+      endDate: new Date(2026, 6, 19).toISOString(),
     });
-    expect(initialFixedTaskDateRange("weekly", now).endDate).toBe(
-      new Date(2026, 6, 19).toISOString(),
-    );
-    expect(initialFixedTaskDateRange("monthly", now).endDate).toBe(
-      new Date(2026, 7, 12).toISOString(),
-    );
+  });
+
+  it("moves weekly reports to the next selected weekday", () => {
+    const saturday = new Date(2026, 6, 18, 14, 30);
+
+    expect(
+      initialFixedTaskDateRange("weekly", { weekdays: [1, 3] }, saturday),
+    ).toEqual({
+      startDate: new Date(2026, 6, 20).toISOString(),
+      endDate: new Date(2026, 6, 21).toISOString(),
+    });
+  });
+
+  it("moves passed Jalali month days to the next valid month", () => {
+    const twentySixthOfTir = new Date(2026, 6, 17, 14, 30);
+
+    expect(
+      initialFixedTaskDateRange(
+        "monthly",
+        { monthDays: [17, 21] },
+        twentySixthOfTir,
+      ),
+    ).toEqual({
+      startDate: new Date(2026, 7, 8).toISOString(),
+      endDate: new Date(2026, 7, 9).toISOString(),
+    });
   });
 });
