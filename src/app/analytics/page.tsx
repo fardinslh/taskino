@@ -1213,11 +1213,11 @@ function WorkDetailsPanel<T>({
   );
 }
 
-const ratingOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const ratingOptions = [1, 2, 3, 4, 5] as const;
 
 function ratingLabel(score: number) {
-  if (score <= 3) return "ضعیف";
-  if (score <= 6) return "متوسط";
+  if (score <= 2) return "ضعیف";
+  if (score <= 3) return "متوسط";
   return "خوب";
 }
 
@@ -1331,18 +1331,20 @@ function FixedTaskRatingModal({
             <legend className="text-sm font-black text-[--text]">
               امتیاز عملکرد
             </legend>
-            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[--surface-2] p-2.5 shadow-[inset_0_0_0_1px_var(--border)]">
               {ratingOptions.map((value) => {
                 const selected = score === value;
-                const displayValue = value.toLocaleString("fa-IR");
+                const filled = score != null && value <= score;
                 return (
                   <button
-                    aria-label={`${displayValue}، ${ratingLabel(value)}`}
+                    aria-label={`${value.toLocaleString("fa-IR")} ستاره، ${ratingLabel(value)}`}
                     aria-pressed={selected}
-                    className={`min-h-16 rounded-xl px-2 py-2 text-center transition-[background-color,box-shadow,transform] active:scale-[0.96] ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl transition-[background-color,color,transform] active:scale-[0.96] ${
                       selected
-                        ? "bg-[#1f7a8c] text-white shadow-lg shadow-[#1f7a8c]/20"
-                        : "bg-[--surface-2] text-[--text-2] shadow-[inset_0_0_0_1px_var(--border)] hover:bg-[--border]"
+                        ? "bg-amber-500/[0.12] text-amber-500"
+                        : filled
+                          ? "text-amber-500 hover:bg-amber-500/10"
+                          : "text-amber-500/35 hover:bg-amber-500/10 hover:text-amber-500 dark:text-amber-400/35"
                     }`}
                     key={value}
                     onClick={() => {
@@ -1351,15 +1353,15 @@ function FixedTaskRatingModal({
                     }}
                     type="button"
                   >
-                    <span className="block text-lg font-black tabular-nums">
-                      {displayValue}
-                    </span>
-                    <span className="mt-0.5 block text-[10px] font-bold opacity-80">
-                      {ratingLabel(value)}
-                    </span>
+                    <Star fill={filled ? "currentColor" : "none"} size={22} />
                   </button>
                 );
               })}
+              {score != null && (
+                <span className="mr-auto rounded-xl bg-[--surface] px-3 py-2 text-xs font-black text-amber-600 shadow-[0_0_0_1px_rgba(245,158,11,0.16)] dark:text-amber-300">
+                  {score.toLocaleString("fa-IR")} از ۵ · {ratingLabel(score)}
+                </span>
+              )}
             </div>
           </fieldset>
 

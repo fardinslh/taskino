@@ -322,6 +322,7 @@ export function TaskinoApp({
             }}
             onRate={rateSelectedFixedTask}
             task={selectedFixedTask}
+            users={currentUser ? [currentUser, ...users] : users}
             />
           )}
         </AnimatePresence>

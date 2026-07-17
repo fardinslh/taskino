@@ -341,7 +341,7 @@ export function TaskinoSidebar({
                   )}
                 </div>
                 {currentUserAvatarUrl && (
-                  <div className="pointer-events-none absolute bottom-[calc(100%+0.625rem)] right-0 z-50 h-44 w-44 origin-bottom-right scale-[0.25] overflow-hidden rounded-3xl bg-[--surface] p-2 opacity-0 blur-[4px] shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_14px_32px_rgba(15,23,42,0.2)] transition-[opacity,filter,scale] duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/avatar:scale-100 group-hover/avatar:opacity-100 group-hover/avatar:blur-0 group-focus/avatar:scale-100 group-focus/avatar:opacity-100 group-focus/avatar:blur-0 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_14px_32px_rgba(0,0,0,0.35)]">
+                      <div className="pointer-events-none absolute bottom-[calc(100%+0.625rem)] right-0 z-50 h-60 w-60 origin-bottom-right scale-[0.25] overflow-hidden rounded-3xl bg-[--surface] p-2 opacity-0 blur-[4px] shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_14px_32px_rgba(15,23,42,0.2)] transition-[opacity,filter,scale] duration-300 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/avatar:scale-100 group-hover/avatar:opacity-100 group-hover/avatar:blur-0 group-focus/avatar:scale-100 group-focus/avatar:opacity-100 group-focus/avatar:blur-0 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_14px_32px_rgba(0,0,0,0.35)]">
                     <img
                       alt=""
                       className="h-full w-full rounded-2xl object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"

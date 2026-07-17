@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { FixedTask } from "@/lib/api";
 import {
+  filterFixedTasksByRecurrencePeriods,
   fixedTaskMatchesPeriodScope,
   mergeFixedTaskPeriodScopes,
   withFixedTaskPeriodScope,
@@ -15,6 +16,42 @@ const task: FixedTask = {
 };
 
 describe("fixed-task request period scopes", () => {
+  it("keeps each recurrence inside its own period after one broad request", () => {
+    const reports: FixedTask[] = [
+      { ...task, startDate: "2026-07-17T08:00:00.000Z" },
+      { ...task, _id: "fixed-task-2", startDate: "2026-07-16T08:00:00.000Z" },
+      {
+        ...task,
+        _id: "fixed-task-3",
+        recurrence: "weekly",
+        startDate: "2026-07-13T08:00:00.000Z",
+      },
+      {
+        ...task,
+        _id: "fixed-task-4",
+        recurrence: "monthly",
+        startDate: "2026-07-02T08:00:00.000Z",
+      },
+    ];
+
+    expect(
+      filterFixedTasksByRecurrencePeriods(reports, {
+        daily: {
+          from: "2026-07-17T00:00:00.000Z",
+          to: "2026-07-17T23:59:59.999Z",
+        },
+        weekly: {
+          from: "2026-07-11T00:00:00.000Z",
+          to: "2026-07-17T23:59:59.999Z",
+        },
+        monthly: {
+          from: "2026-07-01T00:00:00.000Z",
+          to: "2026-07-31T23:59:59.999Z",
+        },
+      }),
+    ).toEqual([reports[0], reports[2], reports[3]]);
+  });
+
   it("matches a completed task only to the request that returned it", () => {
     const weeklyResult = withFixedTaskPeriodScope(task, "weekly");
 

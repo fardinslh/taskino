@@ -4,6 +4,25 @@ export type PeriodScopedFixedTask = FixedTask & {
   _clientPeriodScopes?: FixedTaskRecurrence[];
 };
 
+type FixedTaskPeriodRange = { from: string; to: string };
+
+export function filterFixedTasksByRecurrencePeriods(
+  tasks: FixedTask[],
+  ranges: Record<FixedTaskRecurrence, FixedTaskPeriodRange>,
+) {
+  return tasks.filter((task) => {
+    const recurrence = task.recurrence ?? "daily";
+    const startedAt = Date.parse(task.startDate ?? "");
+    const range = ranges[recurrence];
+
+    return (
+      Number.isFinite(startedAt) &&
+      startedAt >= Date.parse(range.from) &&
+      startedAt <= Date.parse(range.to)
+    );
+  });
+}
+
 export function withFixedTaskPeriodScope(
   task: FixedTask,
   scope: FixedTaskRecurrence,

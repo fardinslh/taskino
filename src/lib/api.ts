@@ -208,6 +208,7 @@ export type SupervisorMember = {
   _id?: string;
   id?: string;
   userId?: string;
+  avatarKey?: string;
   firstName?: string;
   lastName?: string;
   email?: string;

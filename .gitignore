@@ -12,3 +12,7 @@ yarn-error.log*
 README.internal.md
 skills
 .env
+.codex
+graphify-out
+AGENTS.md
+.agents

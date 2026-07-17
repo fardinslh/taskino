@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { FormEvent, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -16,13 +18,19 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 
-import { getId, type FixedTask, type FixedTaskStatus } from "@/lib/api";
+import {
+  getId,
+  type FixedTask,
+  type FixedTaskStatus,
+  type User,
+} from "@/lib/api";
 import { Tooltip } from "./shared";
 import {
   fixedTaskDurationOverdueMinutes,
   formatDurationMinutes,
 } from "../_lib/fixed-task-timing";
 import {
+  avatarUrl,
   isFixedTaskOverdue,
   recurrenceLabel,
   statusLabel,
@@ -51,6 +59,7 @@ export function SelectedFixedTaskPanel({
   onRate,
   onStatusChange,
   task,
+  users,
   inline = false,
 }: {
   canChangeStatus: boolean;
@@ -63,16 +72,22 @@ export function SelectedFixedTaskPanel({
   onRate: (taskId: string, score: number, ratingComment?: string) => Promise<void>;
   onStatusChange: (taskId: string, status: FixedTaskStatus) => void;
   task: FixedTask;
+  users: User[];
   inline?: boolean;
 }) {
   const [ratingScore, setRatingScore] = useState<number | null>(null);
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const taskId = getId(task);
-  const assignee = Array.isArray(task.assignedTo)
+  const assignedUser = Array.isArray(task.assignedTo)
     ? task.assignedTo[0]
     : task.assignedTo;
+  const assignee =
+    users.find((user) => getId(user) === getId(assignedUser)) ?? assignedUser;
+  const assigneeAvatarUrl = avatarUrl(assignee);
+  const showAssigneeAvatar = Boolean(assigneeAvatarUrl) && !avatarFailed;
   const currentStatus = task.status ?? "todo";
   const statusChangeBlocked = isFixedTaskOverdue(task);
   const durationOverdueMinutes = fixedTaskDurationOverdueMinutes(task);
@@ -148,8 +163,34 @@ export function SelectedFixedTaskPanel({
                 {task.title}
               </h2>
               <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-[#e8f4f7] px-3 py-2.5 text-[#1f7a8c] shadow-[inset_0_0_0_1px_rgba(31,122,140,0.12)] dark:bg-[#0f3040] dark:text-cyan-300">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1f7a8c] text-white">
-                  <UserRound size={17} />
+                <span
+                  className="group/avatar relative shrink-0 outline-none"
+                  tabIndex={showAssigneeAvatar ? 0 : undefined}
+                >
+                  <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-[#1f7a8c] text-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
+                    <UserRound size={17} />
+                    {showAssigneeAvatar && (
+                      <img
+                        alt={assignee ? userName(assignee) : ""}
+                        className="absolute inset-0 h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                        onError={() => setAvatarFailed(true)}
+                        src={assigneeAvatarUrl}
+                      />
+                    )}
+                  </span>
+                  {showAssigneeAvatar && (
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute top-1/2 right-12 z-30 h-44 w-44 -translate-y-1/2 overflow-hidden rounded-3xl bg-[--surface] p-2 opacity-0 shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_14px_32px_rgba(15,23,42,0.2)] transition-[opacity,filter] duration-150 ease-in [filter:blur(4px)] group-hover/avatar:opacity-100 group-hover/avatar:duration-300 group-hover/avatar:ease-[cubic-bezier(0.2,0,0,1)] group-hover/avatar:[filter:blur(0px)] group-focus-visible/avatar:opacity-100 group-focus-visible/avatar:duration-300 group-focus-visible/avatar:ease-[cubic-bezier(0.2,0,0,1)] group-focus-visible/avatar:[filter:blur(0px)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_14px_32px_rgba(0,0,0,0.35)]"
+                    >
+                      <img
+                        alt=""
+                        className="h-full w-full rounded-2xl object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                        onError={() => setAvatarFailed(true)}
+                        src={assigneeAvatarUrl}
+                      />
+                    </span>
+                  )}
                 </span>
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold opacity-75">مسئول گزارش</p>
