@@ -132,7 +132,7 @@ export default function SupervisorCreateReportsPage() {
     setLoadingTemplates(true);
     try {
       const limit = 100;
-      const firstResponse = await fixedTaskApi.list(token, { page: 1, limit });
+      const firstResponse = await supervisorApi.latestFixedTasks(token, { page: 1, limit });
       const firstPageItems = normalizeList(
         firstResponse as FixedTask[] | { data?: FixedTask[] },
       );
@@ -147,7 +147,7 @@ export default function SupervisorCreateReportsPage() {
         totalPages > 1
           ? await Promise.all(
               Array.from({ length: totalPages - 1 }, (_, index) =>
-                fixedTaskApi.list(token, {
+                supervisorApi.latestFixedTasks(token, {
                   page: index + 2,
                   limit,
                 }),

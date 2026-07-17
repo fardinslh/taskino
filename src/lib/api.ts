@@ -1101,6 +1101,12 @@ export const supervisorApi = {
         `/supervisor/fixed-tasks${qs(params)}`,
       ),
     ),
+  latestFixedTasks: (token: string, params?: BoolParams) =>
+    unwrapAxios(
+      apiClient.get<ListResponse<FixedTask>>(
+        `/supervisor/fixed-tasks/latest${qs(params)}`,
+      ),
+    ),
 };
 
 // ─── Notifications ───────────────────────────────────────────────────────────
