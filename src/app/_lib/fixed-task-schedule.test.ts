@@ -53,8 +53,8 @@ describe("fixed-task scheduling", () => {
     expect(
       initialFixedTaskDateRange("daily", { weekdays: [6, 0, 1, 2, 3, 4] }, saturday),
     ).toEqual({
-      startDate: new Date(2026, 6, 18).toISOString(),
-      endDate: new Date(2026, 6, 19).toISOString(),
+      startDate: "2026-07-18T00:00:00+03:30",
+      endDate: "2026-07-19T00:00:00+03:30",
     });
   });
 
@@ -64,23 +64,38 @@ describe("fixed-task scheduling", () => {
     expect(
       initialFixedTaskDateRange("weekly", { weekdays: [1, 3] }, saturday),
     ).toEqual({
-      startDate: new Date(2026, 6, 20).toISOString(),
-      endDate: new Date(2026, 6, 21).toISOString(),
+      startDate: "2026-07-20T00:00:00+03:30",
+      endDate: "2026-07-21T00:00:00+03:30",
     });
   });
 
-  it("moves passed Jalali month days to the next valid month", () => {
-    const twentySixthOfTir = new Date(2026, 6, 17, 14, 30);
+  it("uses the first selected day of next month when all selected days passed", () => {
+    const twentyFifthOfTir = new Date("2026-07-16T10:30:00.000Z");
 
     expect(
       initialFixedTaskDateRange(
         "monthly",
-        { monthDays: [17, 21] },
+        { monthDays: [1, 5, 14] },
+        twentyFifthOfTir,
+      ),
+    ).toEqual({
+      startDate: "2026-07-23T00:00:00+03:30",
+      endDate: "2026-07-24T00:00:00+03:30",
+    });
+  });
+
+  it("uses today when today and an earlier monthly day are selected", () => {
+    const twentySixthOfTir = new Date("2026-07-17T10:30:00.000Z");
+
+    expect(
+      initialFixedTaskDateRange(
+        "monthly",
+        { monthDays: [1, 26] },
         twentySixthOfTir,
       ),
     ).toEqual({
-      startDate: new Date(2026, 7, 8).toISOString(),
-      endDate: new Date(2026, 7, 9).toISOString(),
+      startDate: "2026-07-17T00:00:00+03:30",
+      endDate: "2026-07-18T00:00:00+03:30",
     });
   });
 });
