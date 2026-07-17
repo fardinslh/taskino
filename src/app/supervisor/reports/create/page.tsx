@@ -73,10 +73,6 @@ export default function SupervisorCreateReportsPage() {
     const titleQuery = filterTitle.trim().toLowerCase();
 
     return visibleFixedTasks.filter((task: any) => {
-      if (getId(task.assignedTo) === myId) {
-        return false;
-      }
-
       const recurrenceMatch =
         !filterRecurrence || (task.recurrence ?? "daily") === filterRecurrence;
       const specialistMatch =
