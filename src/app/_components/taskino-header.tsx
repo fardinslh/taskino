@@ -115,12 +115,18 @@ export function TaskinoHeader({
                   )}
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <p className="p-4 text-center text-xs text-[--text-3]">
-                      اعلان جدیدی نیست
-                    </p>
-                  ) : (
-                    notifications.map((notification) => {
+                  {(() => {
+                    const unread = notifications.filter(
+                      (n) => !n.isRead,
+                    );
+                    if (unread.length === 0) {
+                      return (
+                        <p className="p-4 text-center text-xs text-[--text-3]">
+                          اعلان جدیدی نیست
+                        </p>
+                      );
+                    }
+                    return unread.map((notification) => {
                       const localized = notificationText(notification);
                       return (
                         <button
@@ -139,8 +145,8 @@ export function TaskinoHeader({
                           </span>
                         </button>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </div>
               </div>
             )}

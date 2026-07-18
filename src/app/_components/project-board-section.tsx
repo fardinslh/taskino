@@ -29,6 +29,7 @@ import {
 import { LandingPageEntrance } from "./landing-page-entrance";
 import { AssigneeStack } from "./shared";
 import { TaskDeadlineCountdown } from "./task-deadline-countdown";
+import { useNavigationContext } from "./taskino-context";
 
 type ProjectBoardSectionProps = {
   progress: number;
@@ -70,6 +71,8 @@ export function ProjectBoardSection({
   onSelectTask,
 }: ProjectBoardSectionProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const { selectedTask } = useNavigationContext();
+
   const filteredTasks = tasks.filter((task) => {
     if (selectedDate && !isTaskVisibleOnDate(task, selectedDate)) return false;
 
@@ -209,7 +212,7 @@ export function ProjectBoardSection({
             void onMoveTask(result.draggableId, result.destination.droppableId);
           }}
         >
-          <div className="grid gap-4 bg-[--surface-2]/40 p-3 sm:p-4 lg:grid-cols-2">
+          <div className="grid gap-4 bg-[--surface-2]/40 p-3 sm:p-4 lg:grid-cols-3">
             {COLUMNS.map((column: any) => {
               const columnTasks = filteredTasks.filter(
                 (task) => (task.status ?? "todo") === column.status,
@@ -368,6 +371,24 @@ export function ProjectBoardSection({
                 </div>
               );
             })}
+            <div
+              className="min-h-[420px] lg:sticky lg:top-4 lg:h-[calc(100vh-8rem)]"
+              id="task-inline-detail"
+            >
+              {!selectedTask && (
+                <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-2xl bg-[--surface]/55 px-6 text-center shadow-[inset_0_0_0_1px_var(--border)]">
+                  <div className="flex size-12 items-center justify-center rounded-2xl bg-[#e8f4f7] text-[#1f7a8c] dark:bg-[#0f3040] dark:text-[#4fc3d5]">
+                    <ClipboardList size={22} />
+                  </div>
+                  <h3 className="mt-4 text-balance text-sm font-bold text-[--text]">
+                    جزئیات پروژه
+                  </h3>
+                  <p className="mt-1 max-w-52 text-pretty text-xs leading-5 text-[--text-3]">
+                    برای مشاهده جزئیات، یک پروژه را انتخاب کنید.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </DragDropContext>
       </div>

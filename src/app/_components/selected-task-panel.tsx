@@ -3,6 +3,7 @@
 import { excelApi, getId, type Task, type User } from "@/lib/api";
 import { isUnassignedTask } from "../_lib/task-helpers";
 import { TaskPanel } from "./task-panel";
+import { useNavigationContext } from "./taskino-context";
 
 type SelectedTaskPanelProps = {
   canEdit: boolean;
@@ -34,9 +35,12 @@ export function SelectedTaskPanel({
   users,
 }: SelectedTaskPanelProps) {
   const taskId = getId(task);
+  const { activeView } = useNavigationContext();
+  const inline = activeView === "tasks-admin";
 
   return (
     <TaskPanel
+      inline={inline}
       task={task}
       users={users}
       canEditAssignments={canEdit}

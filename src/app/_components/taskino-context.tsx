@@ -49,6 +49,7 @@ const navigationKeys = [
   "setSelectedPeriodFilter",
   "selectedStatusFilter",
   "setSelectedStatusFilter",
+  "selectedTask",
   "setSelectedTask",
   "setSelectedFixedTask",
   "showNewProjectForm",

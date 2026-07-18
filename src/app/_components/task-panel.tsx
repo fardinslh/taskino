@@ -3,13 +3,14 @@
 import { CheckCircle2, CircleDashed, Download, FileUp, UserPlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
+import { createPortal } from "react-dom";
 import { getId, type Task, type User } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
 import { formatDate, initials, statusLabel, userName } from "../_lib/task-helpers";
 
 // ─── Task Detail Panel ────────────────────────────────────────────────────────
 export function TaskPanel({
-  task, users, canEditAssignments, canComment, canClaim, canDownloadCompletionFile, canUploadCompletionFile, onDownloadExcel, onDownloadCompletionFile, onUploadCompletionFile, onCommentChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose,
+  task, users, canEditAssignments, canComment, canClaim, canDownloadCompletionFile, canUploadCompletionFile, onDownloadExcel, onDownloadCompletionFile, onUploadCompletionFile, onCommentChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose, inline,
 }: {
   task: Task; users: User[];
   canEditAssignments: boolean;
@@ -27,6 +28,7 @@ export function TaskPanel({
   onClaim: () => void;
   onDelete: () => void;
   onClose: () => void;
+  inline?: boolean;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [desc, setDesc] = useState(task.description ?? "");
@@ -52,25 +54,13 @@ export function TaskPanel({
   const showCompletionAttachment =
     showCompletionUpload || showCompletionDownload;
 
-  return (
-    <>
-      {/* Backdrop */}
-      <motion.div
-        animate={{ opacity: 1 }}
-        ref={overlayRef}
-        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm dark:bg-black/50"
-        exit={{ opacity: 0 }}
-        initial={{ opacity: 0 }}
-        onClick={onClose}
-        transition={{ duration: 0.2 }}
-      />
-      {/* Panel */}
+  const panel = (
       <motion.div
         animate={{ opacity: 1, x: 0 }}
-        className="fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-[--surface] shadow-2xl"
-        exit={{ opacity: 0, x: "-100%" }}
-        initial={{ opacity: 0, x: "-100%" }}
-        transition={{ type: "spring", duration: 0.36, bounce: 0 }}
+        className={inline ? "flex h-full w-full flex-col overflow-hidden rounded-2xl bg-[--surface] shadow-sm border border-[--border]" : "fixed inset-y-0 left-0 z-50 flex w-full max-w-sm flex-col bg-[--surface] shadow-2xl"}
+        exit={inline ? { opacity: 0 } : { opacity: 0, x: "-100%" }}
+        initial={inline ? { opacity: 0 } : { opacity: 0, x: "-100%" }}
+        transition={inline ? { duration: 0.2 } : { type: "spring", duration: 0.36, bounce: 0 }}
       >
         {/* Panel header */}
         <div className="flex items-center justify-between border-b border-[--border] px-5 py-4">
@@ -350,6 +340,26 @@ export function TaskPanel({
           </div>
         ) : null}
       </motion.div>
+  );
+
+  if (inline && typeof document !== "undefined") {
+    const target = document.getElementById("task-inline-detail");
+    return target ? createPortal(panel, target) : null;
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        animate={{ opacity: 1 }}
+        ref={overlayRef}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm dark:bg-black/50"
+        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }}
+        onClick={onClose}
+        transition={{ duration: 0.2 }}
+      />
+      {panel}
     </>
   );
 }
