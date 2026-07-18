@@ -1,8 +1,11 @@
 "use client";
 
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import DatePicker from "react-multi-date-picker";
+import jalali from "react-date-object/calendars/jalali";
+import persianFa from "react-date-object/locales/persian_fa";
 import {
   BarChart2,
   CalendarDays,
@@ -10,12 +13,21 @@ import {
   ClipboardList,
   FolderKanban,
   Plus,
+  Search,
   Star,
   TrendingUp,
   UsersRound,
+  X,
 } from "lucide-react";
 
-import { fixedTaskApi, getId } from "@/lib/api";
+import {
+  fixedTaskApi,
+  getId,
+  managerApi,
+  normalizeList,
+  type FixedTask,
+  type ListResponse,
+} from "@/lib/api";
 import { LandingPageEntrance } from "../_components/landing-page-entrance";
 import { AssigneeStack, Tooltip } from "../_components/shared";
 import { TaskDeadlineCountdown } from "../_components/task-deadline-countdown";
@@ -41,6 +53,14 @@ import {
 
 const durationOverdueTooltip =
   "زمان صرف‌شده از زمان تعیین‌شده توسط مدیر بیشتر شده است.";
+
+function dateParam(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function datePickerValue(value: string) {
+  return value ? new Date(`${value}T00:00:00`) : "";
+}
 
 function DraggablePortal({
   children,
@@ -99,7 +119,112 @@ function TasksPageContent() {
     deleteFixedTask,
   } = useFixedTaskContext();
   const [ratingTaskId, setRatingTaskId] = useState<string | null>(null);
+  const [draftFixedTaskFrom, setDraftFixedTaskFrom] = useState("");
+  const [draftFixedTaskTo, setDraftFixedTaskTo] = useState("");
+  const [appliedFixedTaskFrom, setAppliedFixedTaskFrom] = useState("");
+  const [appliedFixedTaskTo, setAppliedFixedTaskTo] = useState("");
+  const [fixedTaskDateLoading, setFixedTaskDateLoading] = useState(false);
+  const unfilteredFixedTasksRef = useRef<FixedTask[] | null>(null);
   const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
+  const fixedTaskDateFilterChanged =
+    draftFixedTaskFrom !== appliedFixedTaskFrom ||
+    draftFixedTaskTo !== appliedFixedTaskTo;
+  const hasFixedTaskDateFilter =
+    !!appliedFixedTaskFrom || !!appliedFixedTaskTo;
+  const boardFixedTemplates = useMemo(() => {
+    if (!hasFixedTaskDateFilter) return filteredFixedTemplates;
+
+    let list = fixedTasks;
+    if (selectedPeriodFilter) {
+      list = list.filter(
+        (task) => (task.recurrence ?? "daily") === selectedPeriodFilter,
+      );
+    }
+    if (selectedStatusFilter) {
+      list = list.filter(
+        (task) => (task.status ?? "todo") === selectedStatusFilter,
+      );
+    }
+
+    const query = taskQuery.trim().toLowerCase();
+    if (!query) return list;
+
+    return list.filter((task) =>
+      `${task.title} ${userName(task.assignedTo)} ${recurrenceLabel(task.recurrence)}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [
+    filteredFixedTemplates,
+    fixedTasks,
+    hasFixedTaskDateFilter,
+    selectedPeriodFilter,
+    selectedStatusFilter,
+    taskQuery,
+  ]);
+  const dateRangeFixedTasks = hasFixedTaskDateFilter
+    ? fixedTasks
+    : null;
+  const boardActiveFixedTaskCount =
+    dateRangeFixedTasks?.length ?? activeFixedTaskCount;
+  const boardFixedDoneTasks =
+    dateRangeFixedTasks?.filter((task) => task.status === "done").length ??
+    fixedDoneTasks;
+  const boardFixedOpenTasks =
+    dateRangeFixedTasks?.filter((task) => (task.status ?? "todo") !== "done")
+      .length ?? fixedOpenTasks;
+
+  async function loadFixedTasksForRange(from: string, to: string) {
+    if (!isManager || !token) return false;
+
+    setFixedTaskDateLoading(true);
+    try {
+      const response = await managerApi.fixedTasks(token, { from, to });
+      const filteredTasks =
+        !Array.isArray(response) &&
+        "fixedTasks" in response &&
+        Array.isArray(response.fixedTasks)
+          ? response.fixedTasks
+          : normalizeList(response as ListResponse<FixedTask>);
+      setFixedTasks(filteredTasks);
+      return true;
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "دریافت گزارش‌های ثابت ناموفق بود.",
+      );
+      return false;
+    } finally {
+      setFixedTaskDateLoading(false);
+    }
+  }
+
+  async function applyFixedTaskDateFilter() {
+    if (!hasFixedTaskDateFilter) {
+      unfilteredFixedTasksRef.current = fixedTasks;
+    }
+    const loaded = await loadFixedTasksForRange(
+      draftFixedTaskFrom,
+      draftFixedTaskTo,
+    );
+    if (!loaded) return;
+
+    setSelectedPeriodFilter("");
+    setAppliedFixedTaskFrom(draftFixedTaskFrom);
+    setAppliedFixedTaskTo(draftFixedTaskTo);
+  }
+
+  function clearFixedTaskDateFilter() {
+    setDraftFixedTaskFrom("");
+    setDraftFixedTaskTo("");
+    setAppliedFixedTaskFrom("");
+    setAppliedFixedTaskTo("");
+    if (unfilteredFixedTasksRef.current) {
+      setFixedTasks(unfilteredFixedTasksRef.current);
+      unfilteredFixedTasksRef.current = null;
+    }
+  }
 
   async function rateFixedTask(task: any, score: number) {
     const taskId = getId(task);
@@ -284,8 +409,8 @@ function TasksPageContent() {
                       برد گزارشات ثابت
                     </h2>
                     <p className="text-[11px] text-[--text-3]">
-                      گزارشات ثابت بر اساس دوره · {activeFixedTaskCount} مورد ·{" "}
-                      {fixedOpenTasks} در انتظار · {fixedDoneTasks} تکمیل شده
+                      گزارشات ثابت بر اساس دوره · {boardActiveFixedTaskCount} مورد ·{" "}
+                      {boardFixedOpenTasks} در انتظار · {boardFixedDoneTasks} تکمیل شده
                       {(() => {
                         const od = fixedTasks.filter(
                           (f: any) =>
@@ -349,10 +474,103 @@ function TasksPageContent() {
                 </div>
               </div>
 
+              {isManager && (
+                <div className="flex flex-col gap-3 border-b border-[#cce8ef] bg-[#f7fcfd] px-5 py-3 dark:border-[#1f5060] dark:bg-[#0d1f2d] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#dff3f7] text-[#1f7a8c] shadow-[inset_0_0_0_1px_rgba(31,122,140,0.08)] dark:bg-[#123747] dark:text-[#55c4d5]">
+                      <CalendarDays size={17} />
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-[--text]">
+                        فیلتر بازه تاریخ
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-[--text-3]">
+                        {hasFixedTaskDateFilter
+                          ? "نتایج بازه انتخاب‌شده نمایش داده می‌شود"
+                          : "تاریخ شروع و پایان را انتخاب کنید"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <DatePicker
+                      calendar={jalali}
+                      calendarPosition="bottom-right"
+                      containerClassName="w-32"
+                      format="YYYY/MM/DD"
+                      inputClass="h-10 w-32 rounded-xl border border-[--border] bg-[--surface] px-3 text-center text-xs font-semibold tabular-nums text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                      locale={persianFa}
+                      onChange={(date) => {
+                        if (!date || Array.isArray(date)) {
+                          setDraftFixedTaskFrom("");
+                          return;
+                        }
+                        setDraftFixedTaskFrom(dateParam(date.toDate()));
+                      }}
+                      placeholder="از تاریخ"
+                      portal
+                      value={datePickerValue(draftFixedTaskFrom)}
+                      zIndex={10000}
+                    />
+                    <span className="text-[11px] font-semibold text-[--text-3]">
+                      تا
+                    </span>
+                    <DatePicker
+                      calendar={jalali}
+                      calendarPosition="bottom-right"
+                      containerClassName="w-32"
+                      format="YYYY/MM/DD"
+                      inputClass="h-10 w-32 rounded-xl border border-[--border] bg-[--surface] px-3 text-center text-xs font-semibold tabular-nums text-[--text] outline-none transition-[border-color,box-shadow] placeholder:text-[--text-3] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                      locale={persianFa}
+                      minDate={
+                        datePickerValue(draftFixedTaskFrom) || undefined
+                      }
+                      onChange={(date) => {
+                        if (!date || Array.isArray(date)) {
+                          setDraftFixedTaskTo("");
+                          return;
+                        }
+                        setDraftFixedTaskTo(dateParam(date.toDate()));
+                      }}
+                      placeholder="تا تاریخ"
+                      portal
+                      value={datePickerValue(draftFixedTaskTo)}
+                      zIndex={10000}
+                    />
+                    <button
+                      className="flex h-10 items-center gap-1.5 rounded-xl bg-[#1f7a8c] px-4 text-xs font-bold text-white shadow-sm transition-[background-color,box-shadow,transform] hover:bg-[#196b7b] hover:shadow-md active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none disabled:active:scale-100"
+                      disabled={
+                        !draftFixedTaskFrom ||
+                        !draftFixedTaskTo ||
+                        !fixedTaskDateFilterChanged ||
+                        fixedTaskDateLoading
+                      }
+                      onClick={() => void applyFixedTaskDateFilter()}
+                      type="button"
+                    >
+                      <Search size={14} />
+                      {fixedTaskDateLoading ? "در حال اعمال…" : "اعمال فیلتر"}
+                    </button>
+                    {(draftFixedTaskFrom ||
+                      draftFixedTaskTo ||
+                      hasFixedTaskDateFilter) && (
+                      <button
+                        aria-label="حذف فیلتر بازه تاریخ"
+                        className="flex size-10 items-center justify-center rounded-xl text-[--text-3] transition-[background-color,color,transform] hover:bg-[--surface] hover:text-[--text] active:scale-[0.96]"
+                        disabled={fixedTaskDateLoading}
+                        onClick={clearFixedTaskDateFilter}
+                        type="button"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <DragDropContext onDragEnd={onDragEnd}>
                 <div className="grid gap-4 bg-[--surface-2]/40 p-4 lg:grid-cols-3">
                   {fixedStatusColumns.map((col: any) => {
-                    const allItems = filteredFixedTemplates.filter(
+                    const allItems = boardFixedTemplates.filter(
                       (ft: any) => (ft.status ?? "todo") === col.status,
                     );
                     const items = boardShowAll

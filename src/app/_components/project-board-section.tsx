@@ -159,7 +159,7 @@ export function ProjectBoardSection({
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:mr-auto sm:w-auto sm:flex-row">
-            <div className="relative sm:w-44">
+            <div className="relative sm:w-36">
               <CalendarDays
                 className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[--text-3]"
                 size={15}
@@ -170,7 +170,7 @@ export function ProjectBoardSection({
                 calendarPosition="bottom-right"
                 containerClassName="w-full"
                 format="YYYY/MM/DD"
-                inputClass="h-10 w-full rounded-xl border border-[--border] bg-[--surface] pr-9 pl-3 text-xs font-semibold text-[--text] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15 !text-right"
+                inputClass="h-10 w-full rounded-xl border border-[--border] bg-[--surface] pr-8 pl-3 text-xs font-semibold text-[--text] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15 !text-right"
                 locale={persianFa}
                 onChange={(value) => {
                   if (!value || Array.isArray(value)) {

@@ -919,6 +919,13 @@ export const taskApi = {
 export const managerApi = {
   statistics: (token: string) =>
     unwrapAxios(apiClient.get<ManagerStats>("/manager/statistics")),
+  fixedTasks: (token: string, params: { from: string; to: string }) =>
+    unwrapAxios<ListResponse<FixedTask> | ManagerAllTasks>(
+      apiClient.get(
+        `/manager/fixed-tasks${qs(params)}`,
+      ),
+      "دریافت گزارش‌های ثابت ناموفق بود",
+    ),
   users: (token: string, params?: BoolParams) =>
     unwrapAxios(
       apiClient.get<ListResponse<User>>(`/manager/users${qs(params)}`),
