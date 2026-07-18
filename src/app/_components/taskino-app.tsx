@@ -295,6 +295,7 @@ export function TaskinoApp({
             task={selectedTask}
             token={token}
             users={users}
+            inline={activeView === "tasks-admin" && !isManager && !isSupervisor}
             />
           )}
         </AnimatePresence>

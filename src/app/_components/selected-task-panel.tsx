@@ -18,6 +18,7 @@ type SelectedTaskPanelProps = {
   task: Task;
   token: string;
   users: User[];
+  inline?: boolean;
 };
 
 export function SelectedTaskPanel({
@@ -33,10 +34,9 @@ export function SelectedTaskPanel({
   task,
   token,
   users,
+  inline = false,
 }: SelectedTaskPanelProps) {
   const taskId = getId(task);
-  const { activeView } = useNavigationContext();
-  const inline = activeView === "tasks-admin";
 
   return (
     <TaskPanel
