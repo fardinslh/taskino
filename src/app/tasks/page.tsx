@@ -104,7 +104,8 @@ function TasksPageContent() {
     tasks,
     specialistWorkSummary,
   } = useTaskContext();
-  const { managerStats, managerTaskStatus, statsUsers } = useManagementContext();
+  const { managerStats, managerTaskStatus, statsUsers, users } =
+    useManagementContext();
   const {
     filteredFixedTemplates,
     fixedDoneTasks,
@@ -124,6 +125,7 @@ function TasksPageContent() {
   const [appliedFixedTaskFrom, setAppliedFixedTaskFrom] = useState("");
   const [appliedFixedTaskTo, setAppliedFixedTaskTo] = useState("");
   const [fixedTaskDateLoading, setFixedTaskDateLoading] = useState(false);
+  const [selectedFixedTaskUserId, setSelectedFixedTaskUserId] = useState("");
   const unfilteredFixedTasksRef = useRef<FixedTask[] | null>(null);
   const canMoveOwnFixedTasks = isSpecialist || isSupervisor;
   const fixedTaskDateFilterChanged =
@@ -131,47 +133,77 @@ function TasksPageContent() {
     draftFixedTaskTo !== appliedFixedTaskTo;
   const hasFixedTaskDateFilter =
     !!appliedFixedTaskFrom || !!appliedFixedTaskTo;
+  const fixedTaskUsers = useMemo(
+    () =>
+      users
+        .filter((user) => {
+          const role = user.roles;
+          return (
+            (role === "specialist" || role === "supervisor") &&
+            (!currentUser?.workField ||
+              !user.workField ||
+              user.workField === currentUser.workField)
+          );
+        })
+        .toSorted((first, second) =>
+          userName(first).localeCompare(userName(second), "fa"),
+        ),
+    [currentUser, users],
+  );
   const boardFixedTemplates = useMemo(() => {
-    if (!hasFixedTaskDateFilter) return filteredFixedTemplates;
+    let list = hasFixedTaskDateFilter ? fixedTasks : filteredFixedTemplates;
 
-    let list = fixedTasks;
-    if (selectedPeriodFilter) {
+    if (hasFixedTaskDateFilter) {
+      if (selectedPeriodFilter) {
+        list = list.filter(
+          (task) => (task.recurrence ?? "daily") === selectedPeriodFilter,
+        );
+      }
+      if (selectedStatusFilter) {
+        list = list.filter(
+          (task) => (task.status ?? "todo") === selectedStatusFilter,
+        );
+      }
+
+      const query = taskQuery.trim().toLowerCase();
+      if (query) {
+        list = list.filter((task) =>
+          `${task.title} ${userName(task.assignedTo)} ${recurrenceLabel(task.recurrence)}`
+            .toLowerCase()
+            .includes(query),
+        );
+      }
+    }
+
+    if (selectedFixedTaskUserId) {
       list = list.filter(
-        (task) => (task.recurrence ?? "daily") === selectedPeriodFilter,
+        (task) => getId(task.assignedTo) === selectedFixedTaskUserId,
       );
     }
-    if (selectedStatusFilter) {
-      list = list.filter(
-        (task) => (task.status ?? "todo") === selectedStatusFilter,
-      );
-    }
 
-    const query = taskQuery.trim().toLowerCase();
-    if (!query) return list;
-
-    return list.filter((task) =>
-      `${task.title} ${userName(task.assignedTo)} ${recurrenceLabel(task.recurrence)}`
-        .toLowerCase()
-        .includes(query),
-    );
+    return list;
   }, [
     filteredFixedTemplates,
     fixedTasks,
     hasFixedTaskDateFilter,
     selectedPeriodFilter,
     selectedStatusFilter,
+    selectedFixedTaskUserId,
     taskQuery,
   ]);
-  const dateRangeFixedTasks = hasFixedTaskDateFilter
-    ? fixedTasks
+  const filteredBoardSummary =
+    hasFixedTaskDateFilter || selectedFixedTaskUserId
+      ? boardFixedTemplates
     : null;
   const boardActiveFixedTaskCount =
-    dateRangeFixedTasks?.length ?? activeFixedTaskCount;
+    filteredBoardSummary?.length ?? activeFixedTaskCount;
   const boardFixedDoneTasks =
-    dateRangeFixedTasks?.filter((task) => task.status === "done").length ??
+    filteredBoardSummary?.filter((task) => task.status === "done").length ??
     fixedDoneTasks;
   const boardFixedOpenTasks =
-    dateRangeFixedTasks?.filter((task) => (task.status ?? "todo") !== "done")
+    filteredBoardSummary?.filter(
+      (task) => (task.status ?? "todo") !== "done",
+    )
       .length ?? fixedOpenTasks;
 
   async function loadFixedTasksForRange(from: string, to: string) {
@@ -452,6 +484,21 @@ function TasksPageContent() {
                       </button>
                     ))}
                   </div>
+                  <select
+                    aria-label="فیلتر گزارش‌های ثابت بر اساس کاربر"
+                    className="h-8 w-44 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs font-semibold text-[--text] outline-none transition-[border-color,box-shadow] focus:border-[#1f7a8c] focus:ring-2 focus:ring-[#1f7a8c]/15"
+                    onChange={(event) =>
+                      setSelectedFixedTaskUserId(event.target.value)
+                    }
+                    value={selectedFixedTaskUserId}
+                  >
+                    <option value="">همه کاربران</option>
+                    {fixedTaskUsers.map((user) => (
+                      <option key={getId(user)} value={getId(user)}>
+                        {userName(user)}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     className="h-8 w-44 rounded-lg border border-[--border] bg-[--surface] px-3 text-xs text-[--text] outline-none transition placeholder:text-[--text-3] focus:border-[#1f7a8c]"
                     placeholder="جستجوی گزارش…"
