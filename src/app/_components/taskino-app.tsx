@@ -295,6 +295,7 @@ export function TaskinoApp({
             task={selectedTask}
             token={token}
             users={users}
+            currentUser={currentUser}
             inline={activeView === "tasks-admin" && !isManager && !isSupervisor}
             />
           )}

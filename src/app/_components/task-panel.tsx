@@ -1,16 +1,51 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- User avatars may come from arbitrary backend hosts. */
+
 import { CheckCircle2, CircleDashed, Download, FileUp, UserPlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { getId, type Task, type User } from "@/lib/api";
 import { COLUMNS } from "../_lib/task-constants";
-import { formatDate, initials, statusLabel, userName } from "../_lib/task-helpers";
+import { avatarUrl, formatDate, initials, statusLabel, userName } from "../_lib/task-helpers";
+
+function AssigneeAvatar({ user }: { user?: User | string }) {
+  const [failed, setFailed] = useState(false);
+  const url = avatarUrl(user);
+  if (url && !failed) {
+    return (
+      <span className="group/avatar relative shrink-0 outline-none" tabIndex={0}>
+        <img
+          alt={userName(user)}
+          className="h-8 w-8 shrink-0 rounded-full object-cover"
+          src={url}
+          onError={() => setFailed(true)}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 right-10 z-30 h-44 w-44 -translate-y-1/2 overflow-hidden rounded-3xl bg-[--surface] p-2 opacity-0 shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_14px_32px_rgba(15,23,42,0.2)] transition-[opacity,filter] duration-150 ease-in [filter:blur(4px)] group-hover/avatar:opacity-100 group-hover/avatar:duration-300 group-hover/avatar:ease-[cubic-bezier(0.2,0,0,1)] group-hover/avatar:[filter:blur(0px)] group-focus-visible/avatar:opacity-100 group-focus-visible/avatar:duration-300 group-focus-visible/avatar:ease-[cubic-bezier(0.2,0,0,1)] group-focus-visible/avatar:[filter:blur(0px)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_14px_32px_rgba(0,0,0,0.35)]"
+        >
+          <img
+            alt=""
+            className="h-full w-full rounded-2xl object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+            onError={() => setFailed(true)}
+            src={url}
+          />
+        </span>
+      </span>
+    );
+  }
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-xs font-bold text-white">
+      {initials(user)}
+    </div>
+  );
+}
 
 // ─── Task Detail Panel ────────────────────────────────────────────────────────
 export function TaskPanel({
-  task, users, canEditAssignments, canComment, canClaim, canDownloadCompletionFile, canUploadCompletionFile, onDownloadExcel, onDownloadCompletionFile, onUploadCompletionFile, onCommentChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose, inline,
+  task, users, canEditAssignments, canComment, canClaim, canDownloadCompletionFile, canUploadCompletionFile, onDownloadExcel, onDownloadCompletionFile, onUploadCompletionFile, onCommentChange, onDescriptionChange, onAssign, onUnassign, onClaim, onDelete, onClose, inline, currentUser,
 }: {
   task: Task; users: User[];
   canEditAssignments: boolean;
@@ -29,6 +64,7 @@ export function TaskPanel({
   onDelete: () => void;
   onClose: () => void;
   inline?: boolean;
+  currentUser?: User | null;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [desc, setDesc] = useState(task.description ?? "");
@@ -249,13 +285,15 @@ export function TaskPanel({
               <div className="space-y-2">
                 {task.assignedTo.map((u, i) => {
                   const id = typeof u === "string" ? u : getId(u);
-                  const fullUser = users.find((usr) => getId(usr) === id) ?? (typeof u === "object" ? u : undefined);
+                  const fullUser =
+                    currentUser && (currentUser._id === id || getId(currentUser) === id)
+                      ? currentUser
+                      : users.find((usr) => getId(usr) === id) ??
+                        (typeof u === "object" ? u : undefined);
                   return (
                     <div key={i} className="flex items-center justify-between gap-3 rounded-xl bg-[--surface-2] px-3 py-2.5">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1f7a8c] to-[#165e6d] text-xs font-bold text-white">
-                          {initials(fullUser)}
-                        </div>
+                        <AssigneeAvatar user={fullUser} />
                         <div>
                           <p className="text-sm font-semibold">{userName(fullUser)}</p>
                           <p className="text-xs text-[--text-3]">{fullUser?.roles || "specialist"}</p>

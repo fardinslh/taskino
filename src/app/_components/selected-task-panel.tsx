@@ -19,6 +19,7 @@ type SelectedTaskPanelProps = {
   token: string;
   users: User[];
   inline?: boolean;
+  currentUser?: User | null;
 };
 
 export function SelectedTaskPanel({
@@ -35,6 +36,7 @@ export function SelectedTaskPanel({
   token,
   users,
   inline = false,
+  currentUser,
 }: SelectedTaskPanelProps) {
   const taskId = getId(task);
 
@@ -43,6 +45,7 @@ export function SelectedTaskPanel({
       inline={inline}
       task={task}
       users={users}
+      currentUser={currentUser}
       canEditAssignments={canEdit}
       canComment={canEdit}
       canClaim={canClaim && isUnassignedTask(task)}
