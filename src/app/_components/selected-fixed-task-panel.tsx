@@ -219,19 +219,22 @@ export function SelectedFixedTaskPanel({
           )}
 
           {hasManagerRating && (
-            <div className="rounded-xl bg-amber-50 p-3 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.16)] dark:bg-amber-950/25">
+            <div className="rounded-xl bg-amber-50 p-3 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.16)] dark:bg-amber-950/25 space-y-1.5">
               <div className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
                   <Award size={14} />
                   امتیاز مدیر
                 </span>
                 <strong className="text-sm font-black tabular-nums text-amber-700 dark:text-amber-300">
-                  {task.ratingScore?.toLocaleString("fa-IR")} ·{" "}
-                  {managerRatingLabel}
+                  {task.ratingScore?.toLocaleString("fa-IR")} از ۵
                 </strong>
               </div>
+              <div className="flex items-center justify-between text-xs text-amber-800/80 dark:text-amber-400/80">
+                <span>ارزیابی کیفیت:</span>
+                <span className="font-bold">{managerRatingLabel}</span>
+              </div>
               {task.ratingComment?.trim() && (
-                <p className="mt-2 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
+                <p className="mt-2 border-t border-amber-500/10 pt-1.5 text-pretty text-xs leading-5 text-amber-900/75 dark:text-amber-100/75">
                   {task.ratingComment}
                 </p>
               )}
@@ -250,6 +253,7 @@ export function SelectedFixedTaskPanel({
               <div className="mt-2 flex items-center gap-0.5">
                 {RATING_OPTIONS.map((value) => {
                   const selected = ratingScore === value;
+                  const isFilled = ratingScore !== null && value <= ratingScore;
                   return (
                     <button
                       aria-pressed={selected}
@@ -257,7 +261,9 @@ export function SelectedFixedTaskPanel({
                       className={`flex h-10 w-10 items-center justify-center rounded-lg transition-[background-color,color,transform] active:scale-[0.96] ${
                         selected
                           ? "bg-amber-500/10 text-amber-500"
-                          : "text-amber-500/35 hover:bg-amber-500/10 hover:text-amber-500 dark:text-amber-400/35"
+                          : isFilled
+                            ? "text-amber-500 hover:bg-amber-500/10"
+                            : "text-amber-500/35 hover:bg-amber-500/10 hover:text-amber-500 dark:text-amber-400/35"
                       }`}
                       disabled={ratingSubmitting}
                       key={value}
@@ -267,7 +273,7 @@ export function SelectedFixedTaskPanel({
                       }}
                       type="button"
                     >
-                      <Star fill={selected ? "currentColor" : "none"} size={18} />
+                      <Star fill={isFilled ? "currentColor" : "none"} size={18} />
                     </button>
                   );
                 })}

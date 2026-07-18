@@ -32,7 +32,7 @@ type TaskinoHeaderProps = {
   onMarkAllNotificationsRead: () => void;
   onNotificationClick: (notification: Notification) => void;
   onRefresh: () => void;
-  onToggleDarkMode: () => void;
+  onToggleDarkMode: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onToggleMobileSidebar: () => void;
   onToggleNotifications: () => void;
   showNotifications: boolean;
@@ -154,7 +154,7 @@ export function TaskinoHeader({
 
           <button
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-[--border] bg-[--surface] text-[--text-2] transition hover:bg-[--surface-2]"
-            onClick={onToggleDarkMode}
+            onClick={(e) => onToggleDarkMode(e)}
             type="button"
           >
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}

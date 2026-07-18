@@ -11,8 +11,9 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import type { User } from "@/lib/api";
-import { initials, userName } from "../_lib/task-helpers";
+import { getId, type User } from "@/lib/api";
+import { initials, userName, avatarUrl } from "../_lib/task-helpers";
+import { useManagementContext, useSessionContext } from "./taskino-context";
 
 // ─── Shared components ────────────────────────────────────────────────────────
 export function Tooltip({
@@ -148,15 +149,51 @@ export function FilterChip({ active, label, count, onClick }: { active?: boolean
   );
 }
 
+function AssigneeMiniAvatar({ user }: { user?: User | string }) {
+  const [failed, setFailed] = useState(false);
+  const url = avatarUrl(user);
+  if (url && !failed) {
+    return (
+      <img
+        alt={userName(user)}
+        className="h-6 w-6 shrink-0 rounded-full object-cover border-2 border-[--surface] shadow-sm"
+        src={url}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[--surface] bg-gradient-to-br from-[#e8f4f7] to-[#d0edf3] dark:from-[#0f3040] dark:to-[#1f5060] text-[9px] font-bold text-[#1f7a8c] dark:text-[#4fc3d5] shadow-sm">
+      {initials(user)}
+    </span>
+  );
+}
+
 export function AssigneeStack({ users, fallback }: { users?: Array<string | User>; fallback?: string | User }) {
-  const visible = users?.length ? users.slice(0, 3) : fallback ? [fallback] : [];
+  const management = useManagementContext();
+  const session = useSessionContext();
+  const contextUsers = management.users ?? [];
+  const currentUser = session.currentUser ?? null;
+
+  const resolveUser = (u?: string | User) => {
+    if (!u) return undefined;
+    const id = typeof u === "string" ? u : getId(u);
+    if (currentUser && (currentUser._id === id || getId(currentUser) === id)) {
+      return currentUser;
+    }
+    return contextUsers.find((usr) => getId(usr) === id) ?? (typeof u === "object" ? u : undefined);
+  };
+
+  const resolvedUsers = (users ?? []).map(resolveUser).filter(Boolean) as User[];
+  const visible = resolvedUsers.length ? resolvedUsers.slice(0, 3) : fallback ? [resolveUser(fallback)].filter(Boolean) as User[] : [];
+
   if (!visible.length) return <span className="text-xs text-[--text-3]">بدون مسئول</span>;
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex -space-x-1.5 space-x-reverse">
         {visible.map((u, i) => (
-          <span key={`${userName(u)}-${i}`} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[--surface] bg-gradient-to-br from-[#e8f4f7] to-[#d0edf3] dark:from-[#0f3040] dark:to-[#1f5060] text-[9px] font-bold text-[#1f7a8c] dark:text-[#4fc3d5] shadow-sm" title={userName(u)}>
-            {initials(u)}
+          <span key={`${userName(u)}-${i}`} title={userName(u)} className="relative block shrink-0">
+            <AssigneeMiniAvatar user={u} />
           </span>
         ))}
       </div>

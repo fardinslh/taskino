@@ -9,12 +9,14 @@ type SelectedTaskPanelProps = {
   canEdit: boolean;
   canClaim: boolean;
   canDownloadCompletionFile: boolean;
+  canRate?: boolean;
   onClaim: (taskId: string) => void;
   onClose: () => void;
   onDelete: (taskId: string) => void;
   onError: (message: string) => void;
   onUpdate: (taskId: string, body: Record<string, unknown>) => void;
   onUploadCompletionFile?: (taskId: string, file: File) => void;
+  onRate?: (taskId: string, score: number, ratingComment?: string) => Promise<void>;
   task: Task;
   token: string;
   users: User[];
@@ -26,12 +28,14 @@ export function SelectedTaskPanel({
   canEdit,
   canClaim,
   canDownloadCompletionFile,
+  canRate = false,
   onClaim,
   onClose,
   onDelete,
   onError,
   onUpdate,
   onUploadCompletionFile,
+  onRate,
   task,
   token,
   users,
@@ -51,6 +55,8 @@ export function SelectedTaskPanel({
       canClaim={canClaim && isUnassignedTask(task)}
       canDownloadCompletionFile={canDownloadCompletionFile}
       canUploadCompletionFile={!!onUploadCompletionFile}
+      canRate={canRate}
+      onRate={onRate}
       onDownloadExcel={() => {
         const excel = task.excelFile;
         const excelId = typeof excel === "string" ? excel : getId(excel);

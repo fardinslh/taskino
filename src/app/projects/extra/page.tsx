@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Plus,
   RefreshCw,
+  Star,
   UserRound,
 } from "lucide-react";
 
@@ -36,7 +37,7 @@ import { formatDate, statusLabel, userName } from "../../_lib/task-helpers";
 const PAGE_SIZE = 10;
 
 export default function ExtraProjectsPage() {
-  const { activeView } = useNavigationContext();
+  const { activeView, setSelectedTask } = useNavigationContext();
   const { isManager, isSpecialist, isSupervisor, myId, token } =
     useSessionContext();
   const { setError, setMessage } = useFeedbackContext();
@@ -344,7 +345,8 @@ export default function ExtraProjectsPage() {
 
               return (
                 <article
-                  className="rounded-xl border border-[--border] bg-[--surface] p-4 shadow-sm"
+                  className="cursor-pointer rounded-xl border border-[--border] bg-[--surface] p-4 shadow-sm transition hover:shadow-md"
+                  onClick={() => setSelectedTask(task)}
                   key={getId(task)}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -377,6 +379,25 @@ export default function ExtraProjectsPage() {
                       <span className="rounded-full bg-[--surface-2] px-2.5 py-1 text-[10px] font-semibold text-[--text-2]">
                         {statusLabel(task.status)}
                       </span>
+                      {task.ratingScore != null && (
+                        <span
+                          aria-label={`امتیاز مدیر: ${task.ratingScore} از ۵`}
+                          className="flex items-center gap-px text-amber-500 mt-1"
+                          title={`امتیاز مدیر: ${task.ratingScore} از ۵`}
+                        >
+                          {[1, 2, 3, 4, 5].map((score) => (
+                            <Star
+                              fill={
+                                score <= Math.round(task.ratingScore ?? 0)
+                                  ? "currentColor"
+                                  : "none"
+                              }
+                              key={score}
+                              size={11}
+                            />
+                          ))}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -406,7 +427,10 @@ export default function ExtraProjectsPage() {
                       <button
                         className="h-10 rounded-lg border border-red-200 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950/40"
                         disabled={reviewingId === getId(task)}
-                        onClick={() => void reviewExtraTask(task, "rejected")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void reviewExtraTask(task, "rejected");
+                        }}
                         type="button"
                       >
                         رد
@@ -414,7 +438,10 @@ export default function ExtraProjectsPage() {
                       <button
                         className="h-10 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                         disabled={reviewingId === getId(task)}
-                        onClick={() => void reviewExtraTask(task, "approved")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void reviewExtraTask(task, "approved");
+                        }}
                         type="button"
                       >
                         تایید
@@ -428,7 +455,10 @@ export default function ExtraProjectsPage() {
                     <button
                       className="mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-semibold text-white transition-transform active:scale-[0.96] disabled:opacity-50"
                       disabled={updatingId === getId(task)}
-                      onClick={() => void advanceTask(task)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void advanceTask(task);
+                      }}
                       type="button"
                     >
                       {updatingId === getId(task)

@@ -102,6 +102,9 @@ export type Task = {
   endDate?: string;
   endTime?: string;
   doneTime?: string;
+  ratingScore?: number | null;
+  ratingStatus?: "weak" | "normal" | "good" | null;
+  ratingComment?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -890,6 +893,15 @@ export const taskApi = {
       apiClient.get<ListResponse<Task>>(
         `/tasks/user${qs({ userName, lastName })}`,
       ),
+    ),
+  rate: (
+    token: string,
+    id: string,
+    body: { score: number; ratingComment?: string },
+  ) =>
+    unwrapAxios(
+      apiClient.patch<Task>(`/tasks/${id}/rating`, body),
+      "ثبت امتیاز گزارش ناموفق بود",
     ),
   bySpecialist: (token: string, userId: string, params?: Params) =>
     unwrapAxios(

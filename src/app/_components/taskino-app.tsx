@@ -70,6 +70,7 @@ export function TaskinoApp({
     setSelectedFixedTask,
     setSelectedTask,
     setFixedTasks,
+    setTasks,
     setShowNotifications,
     setSidebarCollapsed,
     showNotifications,
@@ -185,6 +186,59 @@ export function TaskinoApp({
     setMessage("امتیاز گزارش ثبت شد.");
   }
 
+  async function rateSelectedTask(
+    taskId: string,
+    score: number,
+    ratingComment?: string,
+  ) {
+    const ratedTask = await taskApi.rate(token, taskId, {
+      ...(ratingComment ? { ratingComment } : {}),
+      score,
+    });
+
+    setTasks((current) =>
+      current.map((task) => (getId(task) === taskId ? ratedTask : task)),
+    );
+    setSelectedTask(ratedTask);
+    setMessage("امتیاز گزارش ثبت شد.");
+  }
+
+  const handleToggleDarkMode = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const x = event.clientX;
+    const y = event.clientY;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y),
+    );
+
+    // @ts-ignore
+    if (!document.startViewTransition) {
+      setDarkMode(!darkMode);
+      return;
+    }
+
+    // @ts-ignore
+    const transition = document.startViewTransition(() => {
+      setDarkMode(!darkMode);
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 400,
+          easing: "ease-in-out",
+          pseudoElement: "::view-transition-new(root)",
+        },
+      );
+    });
+  };
+
   return (
     <TaskinoProvider value={controller}>
       <MotionConfig reducedMotion="user">
@@ -208,7 +262,7 @@ export function TaskinoApp({
           }
           onRefresh={() => void loadData()}
           onToggleMobileSidebar={() => setMobileSidebarOpen((value) => !value)}
-          onToggleDarkMode={() => setDarkMode(!darkMode)}
+          onToggleDarkMode={handleToggleDarkMode}
           onToggleNotifications={() => setShowNotifications(!showNotifications)}
           showNotifications={showNotifications}
           sidebarCollapsed={sidebarCollapsed}
@@ -276,12 +330,15 @@ export function TaskinoApp({
           />
         )}
 
-        <AnimatePresence>
+        <AnimatePresence initial={false} mode="wait">
           {selectedTask && (
             <SelectedTaskPanel
+            key={getId(selectedTask)}
             canClaim={isSpecialist}
             canDownloadCompletionFile={isManager || isSupervisor}
             canEdit={isManager}
+            canRate={isManager}
+            onRate={rateSelectedTask}
             onClaim={(taskId) => void claimTask(taskId)}
             onClose={() => setSelectedTask(null)}
             onDelete={(taskId) => void deleteTask(taskId)}

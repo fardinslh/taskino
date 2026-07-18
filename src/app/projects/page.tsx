@@ -13,6 +13,7 @@ import {
   Layers3,
   Plus,
   Sparkles,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -542,6 +543,25 @@ function ProjectsPageContent() {
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
+                        {task.ratingScore != null && (
+                          <span
+                            aria-label={`امتیاز مدیر: ${task.ratingScore} از ۵`}
+                            className="flex items-center gap-px text-amber-500"
+                            title={`امتیاز مدیر: ${task.ratingScore} از ۵`}
+                          >
+                            {[1, 2, 3, 4, 5].map((score) => (
+                              <Star
+                                fill={
+                                  score <= Math.round(task.ratingScore ?? 0)
+                                    ? "currentColor"
+                                    : "none"
+                                }
+                                key={score}
+                                size={12}
+                              />
+                            ))}
+                          </span>
+                        )}
                         <span
                           className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
                             COLUMNS.find(
