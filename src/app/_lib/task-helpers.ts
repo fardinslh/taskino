@@ -44,11 +44,15 @@ export function roleLabel(role?: string) {
 }
 
 export function workFieldLabel(field?: string) {
-  return WORK_FIELDS.find(([value]) => value === field)?.[1] ?? field ?? "عملیات";
+  return (
+    WORK_FIELDS.find(([value]) => value === field)?.[1] ??
+    field ??
+    "بهبود عملیات و برنامه ریزی"
+  );
 }
 
 export function appTitleForWorkField(field?: WorkField | string) {
-  if (field === "it") return "مدیریت واحد فناوری اطلاعات";
+  if (field === "it") return "مدیریت واحد منابع انسانی";
   return "مدیریت واحد بهبود عملیات و برنامه ریزی";
 }
 

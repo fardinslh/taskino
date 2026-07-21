@@ -47,8 +47,8 @@ export const TASK_PERIODS: Array<[TaskPeriod, string]> = [
 ];
 
 export const WORK_FIELDS: Array<[WorkField, string]> = [
-  ["operations", "عملیات"],
-  ["it", "فناوری اطلاعات"],
+  ["operations", "بهبود عملیات و برنامه ریزی"],
+  ["it", "منابع انسانی"],
 ];
 
 export const COLUMNS = [
