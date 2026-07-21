@@ -327,6 +327,7 @@ export type DailyProgressEntry = {
   completedFixedTasks?: number;
   taskProgressPercentage?: number;
   fixedTaskProgressPercentage?: number;
+  doneFixedTaskProgressPercentage?: number;
   progressPercentage?: number;
   performanceStatus?: "good" | "normal" | "weak" | "bad";
   evaluatedAt?: string;
@@ -334,6 +335,8 @@ export type DailyProgressEntry = {
 
 export type MyDailyProgressStats = MyProgressStats & {
   averageProgressPercentage?: number;
+  doneFixedTaskProgressPercentage?: number;
+  doneTaskPercentage?: number;
   averageTaskProgressPercentage?: number;
   averageFixedTaskProgressPercentage?: number;
   dayCount?: number;

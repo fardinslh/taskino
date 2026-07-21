@@ -350,10 +350,11 @@ function DashboardPageContent() {
             </div>
           )}
 
-          <PersonalPerformanceCard
+          <DailyPerformanceCard
             stats={specialistProgressStats}
             fallbackProgress={specialistProgress}
             fallbackStatus={currentUser?.performanceStatus}
+            token={token}
           />
         </LandingPageEntrance>
       )}
@@ -1066,7 +1067,7 @@ function DashboardPageContent() {
           {/* Specialist performance */}
 
           {isSpecialist && activeView === "dashboard" && (
-            <SpecialistPerformanceCard
+            <DailyPerformanceCard
               fallbackProgress={specialistProgress}
               fallbackStatus={currentUser?.performanceStatus}
               stats={specialistProgressStats}
@@ -1319,7 +1320,8 @@ function averageDailyProgress(
   field:
     | "progressPercentage"
     | "taskProgressPercentage"
-    | "fixedTaskProgressPercentage",
+    | "fixedTaskProgressPercentage"
+    | "doneFixedTaskProgressPercentage",
 ) {
   if (!entries?.length) return undefined;
   return Math.round(
@@ -1328,7 +1330,7 @@ function averageDailyProgress(
   );
 }
 
-function SpecialistPerformanceCard({
+function DailyPerformanceCard({
   stats,
   fallbackProgress,
   fallbackStatus,
@@ -1367,19 +1369,27 @@ function SpecialistPerformanceCard({
     dailyStats?.performanceStatus ??
     stats?.performanceStatus ??
     fallbackStatus;
-  const projectProgress = boundedPercent(
-    dailyStats?.averageTaskProgressPercentage ??
-      averageDailyProgress(dailyStats?.data, "taskProgressPercentage") ??
+  const pendingProjectProgress = boundedPercent(
+    averageDailyProgress(dailyStats?.data, "taskProgressPercentage") ??
+      dailyStats?.averageTaskProgressPercentage ??
       dailyStats?.taskProgressPercentage ??
       bucketRate(dailyStats?.tasks ?? dailyStats?.projects) ??
       stats?.taskProgressPercentage,
   );
-  const reportProgress = boundedPercent(
-    dailyStats?.averageFixedTaskProgressPercentage ??
-      averageDailyProgress(dailyStats?.data, "fixedTaskProgressPercentage") ??
+  const pendingReportProgress = boundedPercent(
+    averageDailyProgress(dailyStats?.data, "fixedTaskProgressPercentage") ??
+      dailyStats?.averageFixedTaskProgressPercentage ??
       dailyStats?.fixedTaskProgressPercentage ??
       bucketRate(dailyStats?.fixedTasks ?? dailyStats?.reports) ??
       stats?.fixedTaskProgressPercentage,
+  );
+  const doneProjectProgress = boundedPercent(dailyStats?.doneTaskPercentage);
+  const doneReportProgress = boundedPercent(
+    dailyStats?.doneFixedTaskProgressPercentage ??
+      averageDailyProgress(
+        dailyStats?.data,
+        "doneFixedTaskProgressPercentage",
+      ),
   );
 
   async function loadDailyProgress() {
@@ -1465,19 +1475,24 @@ function SpecialistPerformanceCard({
             };
   const metrics = [
     {
-      label: "پیشرفت پروژه‌ها",
-      tone: "text-indigo-600 dark:text-indigo-400",
-      value: projectProgress,
-    },
-    {
-      label: "پیشرفت گزارش‌ها",
+      label: "گزارش‌های انجام‌شده",
       tone: "text-[#1f7a8c] dark:text-cyan-400",
-      value: reportProgress,
+      value: pendingReportProgress,
     },
     {
-      label: "پیشرفت کلی",
+      label: "گزارش‌های امتیاز داده‌شده",
+      tone: "text-violet-600 dark:text-violet-400",
+      value: doneReportProgress,
+    },
+    {
+      label: "پروژه‌های انجام‌شده",
+      tone: "text-indigo-600 dark:text-indigo-400",
+      value: pendingProjectProgress,
+    },
+    {
+      label: "پروژه‌های امتیاز داده‌شده",
       tone: "text-emerald-600 dark:text-emerald-400",
-      value: rate,
+      value: doneProjectProgress,
     },
   ];
 
@@ -1634,12 +1649,16 @@ function SpecialistPerformanceCard({
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-3 bg-[--surface-2]/65">
+      <div className="grid grid-cols-2 bg-[--surface-2]/65 sm:grid-cols-4">
         {metrics.map((metric, index) => (
           <motion.div
             animate={{ opacity: 1, y: 0 }}
             className={`flex min-w-0 flex-col items-center justify-center gap-2 px-4 py-4 ${
-              index > 0 ? "border-s border-[--border]" : ""
+              index % 2 !== 0 ? "border-s border-[--border]" : ""
+            } ${
+              index === 2 ? "sm:border-s sm:border-[--border]" : ""
+            } ${
+              index > 1 ? "border-t border-[--border] sm:border-t-0" : ""
             }`}
             initial={reduceMotion ? false : { opacity: 0, y: 10 }}
             key={metric.label}
@@ -1654,96 +1673,12 @@ function SpecialistPerformanceCard({
               tone={metric.tone}
               value={metric.value}
             />
-            <p className="truncate text-center text-[11px] font-medium text-[--text-3]">
+            <p className="min-h-8 text-pretty text-center text-xs font-medium leading-5 text-[--text-3]">
               {metric.label}
             </p>
           </motion.div>
         ))}
       </div>
     </section>
-  );
-}
-
-function PersonalPerformanceCard({
-  stats,
-  fallbackProgress,
-  fallbackStatus,
-}: {
-  stats: MyProgressStats | null;
-  fallbackProgress: number;
-  fallbackStatus?: string;
-}) {
-  const rate = stats?.progressPercentage ?? fallbackProgress;
-  const status = stats?.performanceStatus ?? fallbackStatus;
-  const statusLabel =
-    status === "good"
-      ? "خوب"
-      : status === "weak" || status === "bad"
-        ? "بد"
-        : status === "normal"
-          ? "متوسط"
-          : "—";
-  const statusClass =
-    status === "good"
-      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
-      : status === "weak" || status === "bad"
-        ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
-        : "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
-  const metrics = [
-    {
-      label: "پیشرفت پروژه‌ها",
-      value: stats?.taskProgressPercentage ?? 0,
-      tone: "text-indigo-600 dark:text-indigo-400",
-    },
-    {
-      label: "پیشرفت گزارش‌ها",
-      value: stats?.fixedTaskProgressPercentage ?? 0,
-      tone: "text-[#1f7a8c] dark:text-cyan-400",
-    },
-    {
-      label: "پیشرفت کلی",
-      value: rate,
-      tone: "text-emerald-600 dark:text-emerald-400",
-    },
-  ];
-
-  return (
-    <div className="rounded-2xl border border-[--border] bg-[--surface] p-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={17} className="text-violet-600" />
-          <h2 className="font-bold">عملکرد من</h2>
-        </div>
-        <span
-          className={`rounded-md px-2.5 py-1 text-xs font-bold ${statusClass}`}
-        >
-          {statusLabel}
-        </span>
-      </div>
-      <div className="mt-3 flex items-center gap-2">
-        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[--border]">
-          <div
-            className="h-full rounded-full bg-gradient-to-l from-violet-600 to-violet-400"
-            style={{ width: `${Math.min(100, Math.max(0, rate))}%` }}
-          />
-        </div>
-        <span className="text-sm font-bold text-violet-600">{rate}%</span>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            className="flex min-w-0 flex-col items-center gap-2 rounded-xl bg-[--surface-2] px-2 py-3"
-          >
-            <CircularProgress
-              label={metric.label}
-              tone={metric.tone}
-              value={metric.value}
-            />
-            <p className="text-[11px] text-[--text-3]">{metric.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

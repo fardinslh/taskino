@@ -38,6 +38,7 @@ import {
   normalizeList,
   type DailyDurationBalance,
   type FixedTask,
+  type ListResponse,
   type MyDailyProgressStats,
   type Task,
   type WorkStatusCounts,
@@ -54,6 +55,7 @@ import { fixedTaskOccurrenceKey } from "../_lib/fixed-task-identity";
 import {
   avatarUrl,
   formatDate,
+  isFixedTaskOverdue,
   recurrenceLabel,
   userName,
 } from "../_lib/task-helpers";
@@ -137,6 +139,20 @@ function mergeFixedTasks(...lists: FixedTask[][]) {
   ];
 }
 
+function groupFixedTasksForUser(tasks: FixedTask[], userId: string) {
+  const userTasks = tasks.filter(
+    (task) => getId(task.assignedTo) === userId,
+  );
+
+  return {
+    done: userTasks.filter((task) => task.status === "done"),
+    overdue: userTasks.filter((task) => isFixedTaskOverdue(task)),
+    todo: userTasks.filter(
+      (task) => task.status !== "done" && !isFixedTaskOverdue(task),
+    ),
+  } satisfies FixedTaskLists;
+}
+
 function fixedTaskDetailDate(
   task: FixedTask,
   listKey: WorkDetailListKey<FixedTask>,
@@ -181,6 +197,9 @@ export default function AnalyticsPage() {
   >({});
   const [fixedTaskLists, setFixedTaskLists] = useState<
     Record<string, FixedTaskLists>
+  >({});
+  const [fixedTaskDateFilteredUsers, setFixedTaskDateFilteredUsers] = useState<
+    Record<string, boolean>
   >({});
   const [taskLists, setTaskLists] = useState<Record<string, TaskLists>>({});
   const [detailsLoadingUserId, setDetailsLoadingUserId] = useState<
@@ -287,6 +306,7 @@ export default function AnalyticsPage() {
       setExpandedUserId(null);
       setDurationBalances({});
       setFixedTaskLists({});
+      setFixedTaskDateFilteredUsers({});
       setTaskLists({});
     } catch (err) {
       setSummaries([]);
@@ -419,6 +439,87 @@ export default function AnalyticsPage() {
     setTaskDetailsLoadingUserId(null);
   }
 
+  async function filterFixedTaskDetails(
+    userId: string,
+    rangeFrom: string,
+    rangeTo: string,
+  ) {
+    setDetailsLoadingUserId(userId);
+    try {
+      const response = await managerApi.fixedTasks(token, {
+        from: rangeFrom,
+        to: rangeTo,
+      });
+      const tasks =
+        !Array.isArray(response) &&
+        "fixedTasks" in response &&
+        Array.isArray(response.fixedTasks)
+          ? response.fixedTasks
+          : normalizeList(response as ListResponse<FixedTask>);
+
+      setFixedTaskLists((current) => ({
+        ...current,
+        [userId]: groupFixedTasksForUser(tasks, userId),
+      }));
+      setFixedTaskDateFilteredUsers((current) => ({
+        ...current,
+        [userId]: true,
+      }));
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "دریافت گزارش‌های بازه انتخاب‌شده ناموفق بود.",
+      );
+      throw error;
+    } finally {
+      setDetailsLoadingUserId(null);
+    }
+  }
+
+  async function clearFixedTaskDetailsFilter(userId: string) {
+    setDetailsLoadingUserId(userId);
+    const { from: activeFrom, to: activeTo } = activeRange;
+    const rangeTo = sameDayRangeEnd(activeFrom, activeTo);
+
+    try {
+      const [overdue, done, todo] = await Promise.all([
+        managerApi.overdueFixedTasks(token, {
+          from: activeFrom,
+          to: rangeTo,
+          userId,
+        }),
+        managerApi.doneFixedTasks(token, {
+          from: activeFrom,
+          to: rangeTo,
+          userId,
+        }),
+        managerApi.todoFixedTasks(token, { userId }),
+      ]);
+      setFixedTaskLists((current) => ({
+        ...current,
+        [userId]: {
+          done: normalizeList(done),
+          overdue: normalizeList(overdue),
+          todo: normalizeList(todo),
+        },
+      }));
+      setFixedTaskDateFilteredUsers((current) => ({
+        ...current,
+        [userId]: false,
+      }));
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "بازنشانی فیلتر گزارش‌ها ناموفق بود.",
+      );
+      throw error;
+    } finally {
+      setDetailsLoadingUserId(null);
+    }
+  }
+
   function handleRatedTask(ratedTask: FixedTask) {
     const ratedTaskId = getId(ratedTask);
     setFixedTasks((current) =>
@@ -525,11 +626,24 @@ export default function AnalyticsPage() {
                   durationLoading={durationLoadingUserId === summaryUser.userId}
                   entranceIndex={index}
                   expanded={expandedUserId === summaryUser.userId}
+                  fixedTaskDateFiltered={
+                    fixedTaskDateFilteredUsers[summaryUser.userId] ?? false
+                  }
                   fixedTaskDetails={fixedTaskLists[summaryUser.userId]}
                   fixedTaskDetailsLoading={
                     detailsLoadingUserId === summaryUser.userId
                   }
                   key={summaryUser.userId}
+                  onClearFixedTaskDateFilter={() =>
+                    clearFixedTaskDetailsFilter(summaryUser.userId)
+                  }
+                  onFilterFixedTasks={(rangeFrom, rangeTo) =>
+                    filterFixedTaskDetails(
+                      summaryUser.userId,
+                      rangeFrom,
+                      rangeTo,
+                    )
+                  }
                   onRateFixedTask={setRatingTask}
                   onToggle={() => void toggleUser(summaryUser.userId)}
                   progress={dailyProgress[summaryUser.userId]}
@@ -657,8 +771,11 @@ function UserAnalyticsCard({
   durationLoading,
   entranceIndex,
   expanded,
+  fixedTaskDateFiltered,
   fixedTaskDetails,
   fixedTaskDetailsLoading,
+  onClearFixedTaskDateFilter,
+  onFilterFixedTasks,
   onRateFixedTask,
   onToggle,
   progress,
@@ -674,8 +791,11 @@ function UserAnalyticsCard({
   durationLoading: boolean;
   entranceIndex: number;
   expanded: boolean;
+  fixedTaskDateFiltered: boolean;
   fixedTaskDetails?: FixedTaskLists;
   fixedTaskDetailsLoading: boolean;
+  onClearFixedTaskDateFilter: () => Promise<void>;
+  onFilterFixedTasks: (from: string, to: string) => Promise<void>;
   onRateFixedTask: (task: FixedTask) => void;
   onToggle: () => void;
   progress?: MyDailyProgressStats;
@@ -732,7 +852,9 @@ function UserAnalyticsCard({
   const visibleFixedTaskDetails = fixedTaskDetails
     ? {
         ...fixedTaskDetails,
-        done: mergeFixedTasks(fixedTaskDetails.done, completedReports),
+        done: fixedTaskDateFiltered
+          ? fixedTaskDetails.done
+          : mergeFixedTasks(fixedTaskDetails.done, completedReports),
       }
     : fixedTaskDetails;
 
@@ -833,6 +955,8 @@ function UserAnalyticsCard({
                   <FixedTaskDetailsPanel
                     data={visibleFixedTaskDetails}
                     loading={fixedTaskDetailsLoading}
+                    onClearDateFilter={onClearFixedTaskDateFilter}
+                    onFilter={onFilterFixedTasks}
                     onRate={onRateFixedTask}
                     statusFilter={statusFilter}
                   />
@@ -858,11 +982,15 @@ function UserAnalyticsCard({
 function FixedTaskDetailsPanel({
   data,
   loading,
+  onClearDateFilter,
+  onFilter,
   onRate,
   statusFilter,
 }: {
   data?: FixedTaskLists;
   loading: boolean;
+  onClearDateFilter: () => Promise<void>;
+  onFilter: (from: string, to: string) => Promise<void>;
   onRate: (task: FixedTask) => void;
   statusFilter: StatusFilter;
 }) {
@@ -871,6 +999,8 @@ function FixedTaskDetailsPanel({
       data={data}
       dateFilter={{
         getItemDate: fixedTaskDetailDate,
+        onApply: onFilter,
+        onClear: onClearDateFilter,
         title: "فیلتر بازه تاریخ گزارش‌ها",
       }}
       description="یک وضعیت را انتخاب کنید تا فهرست کامل گزارش‌های آن را ببینید."
@@ -932,6 +1062,8 @@ function WorkDetailsPanel<T>({
   data?: WorkDetailLists<T>;
   dateFilter?: {
     getItemDate: (item: T, listKey: WorkDetailListKey<T>) => string | undefined;
+    onApply?: (from: string, to: string) => Promise<void>;
+    onClear?: () => Promise<void>;
     title: string;
   };
   description: string;
@@ -948,6 +1080,10 @@ function WorkDetailsPanel<T>({
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [detailFrom, setDetailFrom] = useState("");
   const [detailTo, setDetailTo] = useState("");
+  const [appliedDetailFrom, setAppliedDetailFrom] = useState("");
+  const [appliedDetailTo, setAppliedDetailTo] = useState("");
+  const [dateFilterLoading, setDateFilterLoading] = useState(false);
+  const [dateFilterRequestError, setDateFilterRequestError] = useState("");
   const sections = [
     {
       emptySuffix: "معوقی",
@@ -984,18 +1120,32 @@ function WorkDetailsPanel<T>({
     statusFilter === "all"
       ? (sections.find((section) => section.key === selectedKey) ?? sections[0])
       : (filteredSection ?? sections[0]);
-  const isDateFilterActive = Boolean(dateFilter && (detailFrom || detailTo));
-  const dateFilterError =
+  const usesRemoteDateFilter = Boolean(dateFilter?.onApply);
+  const filterFrom = usesRemoteDateFilter ? appliedDetailFrom : detailFrom;
+  const filterTo = usesRemoteDateFilter ? appliedDetailTo : detailTo;
+  const isDateFilterActive = Boolean(
+    dateFilter &&
+      (detailFrom || detailTo || appliedDetailFrom || appliedDetailTo),
+  );
+  const dateFilterValidationError =
     detailFrom && detailTo && detailFrom > detailTo
       ? "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد."
       : "";
+  const dateFilterError =
+    dateFilterValidationError || dateFilterRequestError;
   const visibleData = useMemo(() => {
-    if (!data || !dateFilter || !isDateFilterActive || dateFilterError) {
+    if (
+      !data ||
+      !dateFilter ||
+      !filterFrom ||
+      !filterTo ||
+      (!usesRemoteDateFilter && Boolean(dateFilterValidationError))
+    ) {
       return data;
     }
 
-    const fromDate = parseDateBoundary(detailFrom);
-    const toDate = parseDateBoundary(detailTo, true);
+    const fromDate = parseDateBoundary(filterFrom);
+    const toDate = parseDateBoundary(filterTo, true);
     const entries = (Object.keys(data) as WorkDetailListKey<T>[]).map((key) => [
       key,
       data[key].filter((item) => {
@@ -1013,12 +1163,63 @@ function WorkDetailsPanel<T>({
   }, [
     data,
     dateFilter,
-    dateFilterError,
-    detailFrom,
-    detailTo,
-    isDateFilterActive,
+    dateFilterValidationError,
+    filterFrom,
+    filterTo,
+    usesRemoteDateFilter,
   ]);
   const activeTasks = visibleData?.[activeSection.key] ?? [];
+
+  async function applyDateFilter() {
+    if (
+      !dateFilter?.onApply ||
+      !detailFrom ||
+      !detailTo ||
+      dateFilterValidationError
+    ) {
+      return;
+    }
+
+    setDateFilterLoading(true);
+    setDateFilterRequestError("");
+    try {
+      await dateFilter.onApply(detailFrom, detailTo);
+      setAppliedDetailFrom(detailFrom);
+      setAppliedDetailTo(detailTo);
+    } catch (error) {
+      setDateFilterRequestError(
+        error instanceof Error
+          ? error.message
+          : "اعمال فیلتر تاریخ ناموفق بود.",
+      );
+    } finally {
+      setDateFilterLoading(false);
+    }
+  }
+
+  async function clearDateFilter() {
+    setDateFilterRequestError("");
+    if (dateFilter?.onClear && (appliedDetailFrom || appliedDetailTo)) {
+      setDateFilterLoading(true);
+      try {
+        await dateFilter.onClear();
+      } catch (error) {
+        setDateFilterRequestError(
+          error instanceof Error
+            ? error.message
+            : "پاک کردن فیلتر تاریخ ناموفق بود.",
+        );
+        setDateFilterLoading(false);
+        return;
+      }
+      setDateFilterLoading(false);
+    }
+
+    setDetailFrom("");
+    setDetailTo("");
+    setAppliedDetailFrom("");
+    setAppliedDetailTo("");
+  }
 
   return (
     <section className="overflow-hidden rounded-2xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_8px_22px_rgba(15,23,42,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
@@ -1088,7 +1289,13 @@ function WorkDetailsPanel<T>({
                       <CalendarDays size={17} className="text-violet-600" />
                       {dateFilter.title}
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                    <div
+                      className={`grid gap-3 sm:items-end ${
+                        usesRemoteDateFilter
+                          ? "sm:grid-cols-[1fr_1fr_auto_auto]"
+                          : "sm:grid-cols-[1fr_1fr_auto]"
+                      }`}
+                    >
                       <DateField
                         label="از تاریخ"
                         onChange={setDetailFrom}
@@ -1099,13 +1306,32 @@ function WorkDetailsPanel<T>({
                         onChange={setDetailTo}
                         value={detailTo}
                       />
+                      {usesRemoteDateFilter && (
+                        <button
+                          className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#1f7a8c] px-4 text-sm font-black text-white transition-[background-color,transform] hover:bg-[#196b7b] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={
+                            !detailFrom ||
+                            !detailTo ||
+                            Boolean(dateFilterValidationError) ||
+                            dateFilterLoading ||
+                            (detailFrom === appliedDetailFrom &&
+                              detailTo === appliedDetailTo)
+                          }
+                          onClick={() => void applyDateFilter()}
+                          type="button"
+                        >
+                          {dateFilterLoading ? (
+                            <Loader2 className="animate-spin" size={15} />
+                          ) : (
+                            <Search size={15} />
+                          )}
+                          {dateFilterLoading ? "در حال اعمال…" : "اعمال فیلتر"}
+                        </button>
+                      )}
                       <button
                         className="h-11 rounded-xl border border-[--border] bg-[--surface] px-4 text-sm font-black text-[--text-2] transition-[background-color,transform] hover:bg-[--border] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
-                        disabled={!isDateFilterActive}
-                        onClick={() => {
-                          setDetailFrom("");
-                          setDetailTo("");
-                        }}
+                        disabled={!isDateFilterActive || dateFilterLoading}
+                        onClick={() => void clearDateFilter()}
                         type="button"
                       >
                         پاک کردن
