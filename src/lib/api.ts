@@ -955,9 +955,9 @@ export const managerApi = {
       ),
       "دریافت گزارش‌های ثابت ناموفق بود",
     ),
-  users: (token: string, params?: BoolParams) =>
+  users: (token: string) =>
     unwrapAxios(
-      apiClient.get<ListResponse<User>>(`/manager/users${qs(params)}`),
+      apiClient.get<ListResponse<User>>("/manager/users/all"),
     ),
   userDailyProgress: (
     token: string,

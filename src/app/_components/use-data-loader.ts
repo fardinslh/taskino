@@ -349,7 +349,7 @@ export function useDataLoader({
       const [u, t, leaves, statsRes, unreadRes, notifRes, leaveStatsRes] =
         await Promise.all([
           userIsManager
-            ? managerApi.users(authToken, { limit: 100 }).catch(() => [])
+            ? managerApi.users(authToken).catch(() => [])
             : Promise.resolve([] as User[]),
           userIsManager
             ? managerApi

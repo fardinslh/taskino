@@ -1392,11 +1392,6 @@ function DailyPerformanceCard({
       ),
   );
   const dayCount = dailyStats?.dayCount ?? dailyStats?.data?.length ?? 0;
-  const totalProjectCount = dailyStats?.totalTasks ?? stats?.totalTasks ?? 0;
-  const completedProjectCount =
-    dailyStats?.completedTasks ?? stats?.completedTasks ?? 0;
-  const totalReportCount = dailyStats?.totalFixedTasks ?? 0;
-  const completedReportCount = dailyStats?.completedFixedTasks ?? 0;
   const startScore = dailyStats?.startScore ?? 0;
 
   async function loadDailyProgress() {
@@ -1510,21 +1505,9 @@ function DailyPerformanceCard({
       value: dayCount.toLocaleString("fa-IR"),
     },
     {
-      icon: FolderKanban,
-      iconClass: "text-indigo-600 dark:text-indigo-400",
-      label: "پروژه‌های تکمیل‌شده",
-      value: `${completedProjectCount.toLocaleString("fa-IR")} / ${totalProjectCount.toLocaleString("fa-IR")}`,
-    },
-    {
-      icon: FileSpreadsheet,
-      iconClass: "text-violet-600 dark:text-violet-400",
-      label: "گزارش‌های تکمیل‌شده",
-      value: `${completedReportCount.toLocaleString("fa-IR")} / ${totalReportCount.toLocaleString("fa-IR")}`,
-    },
-    {
       icon: Award,
       iconClass: "text-amber-600 dark:text-amber-400",
-      label: "امتیاز شروع",
+      label: "امتیاز",
       value: startScore.toLocaleString("fa-IR"),
     },
   ];
@@ -1680,7 +1663,7 @@ function DailyPerformanceCard({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             {rangeHighlights.map((highlight) => {
               const Icon = highlight.icon;
 
