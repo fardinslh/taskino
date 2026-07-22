@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Loader2,
@@ -12,6 +13,7 @@ import {
 import {
   getId,
   managerApi,
+  normalizeList,
   userApi,
   type User,
   type WorkField,
@@ -61,6 +63,42 @@ function TeamPageContent() {
     setTeamSearching, setTeamSearchResult, showNewUserForm, teamSearching,
     teamSearchResult, updateUserRole, users,
   } = useManagementContext();
+  const [teamUsers, setTeamUsers] = useState<User[]>([]);
+
+  const loadTeamUsers = useCallback(async () => {
+    if (!isManager || !token) return;
+
+    try {
+      const response = await managerApi.allUsers(token);
+      setTeamUsers(normalizeList(response));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "دریافت اعضای تیم ناموفق بود",
+      );
+    }
+  }, [isManager, setError, token]);
+
+  useEffect(() => {
+    if (activeView !== "team" || !isManager || !token) return;
+
+    let cancelled = false;
+    void managerApi
+      .allUsers(token)
+      .then((response) => {
+        if (!cancelled) setTeamUsers(normalizeList(response));
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "دریافت اعضای تیم ناموفق بود",
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, isManager, setError, token]);
 
   const {
     formState: { isSubmitting: isCreatingUser },
@@ -109,6 +147,7 @@ function TeamPageContent() {
       resetCreate();
       setShowNewUserForm(false);
       await loadData();
+      await loadTeamUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : "ساخت کاربر ناموفق بود");
     }
@@ -135,6 +174,21 @@ function TeamPageContent() {
   function clearTeamSearch() {
     resetSearch();
     setTeamSearchResult(null);
+  }
+
+  async function approveTeamUser(userId: string) {
+    await approveUser(userId);
+    await loadTeamUsers();
+  }
+
+  async function deleteTeamUser(userId: string) {
+    await deleteUser(userId);
+    await loadTeamUsers();
+  }
+
+  async function updateTeamUserRole(userId: string, role: string) {
+    await updateUserRole(userId, role);
+    await loadTeamUsers();
   }
 
   if (activeView !== "team") return null;
@@ -197,7 +251,7 @@ function TeamPageContent() {
           {teamSearchResult !== null && teamSearchResult.length === 0 && (
             <p className="rounded-xl border border-dashed border-[--border] p-6 text-center text-sm text-[--text-3]">کاربری با این نام یافت نشد</p>
           )}
-          {(teamSearchResult ?? users).map((user: User) => (
+          {(teamSearchResult ?? (isManager ? teamUsers : users)).map((user: User) => (
             <div key={getId(user)} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[--border] bg-[--surface-2] px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1f7a8c] text-xs font-bold text-white">{initials(user)}</div>
@@ -214,21 +268,21 @@ function TeamPageContent() {
               {isManager ? (
                 <div className="flex flex-wrap items-center gap-2">
                   {user.isActive === false && (
-                    <button className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400" onClick={() => void approveUser(getId(user))} type="button">
+                    <button className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400" onClick={() => void approveTeamUser(getId(user))} type="button">
                       تأیید
                     </button>
                   )}
                   <select
                     className="h-8 rounded-lg border border-[--border] bg-[--surface] px-2 text-xs"
                     value={user.roles ?? "specialist"}
-                    onChange={(event) => void updateUserRole(getId(user), event.target.value)}
+                    onChange={(event) => void updateTeamUserRole(getId(user), event.target.value)}
                   >
                     <option value="specialist">کارشناس</option>
                     <option value="supervisor">سرپرست</option>
                     <option value="manager">مدیر</option>
                   </select>
                   {getId(user) !== myId && (
-                    <button className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40" onClick={() => void deleteUser(getId(user))} type="button">
+                    <button className="flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/40" onClick={() => void deleteTeamUser(getId(user))} type="button">
                       <Trash2 size={14} />
                     </button>
                   )}
