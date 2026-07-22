@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 import {
@@ -26,12 +27,21 @@ type TaskinoAppProps = {
   children?: ReactNode;
 };
 
+type ThemeViewTransition = {
+  finished: Promise<void>;
+};
+
+type ThemeTransitionDocument = Document & {
+  startViewTransition?: (update: () => void) => ThemeViewTransition;
+};
+
 export function TaskinoApp({
   initialView = "dashboard",
   children,
 }: TaskinoAppProps) {
   const controller = useTaskinoProviderValue(initialView);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const themeTransitionInProgress = useRef(false);
   const {
     activeView,
     activeFixedTaskCount,
@@ -204,39 +214,60 @@ export function TaskinoApp({
   }
 
   const handleToggleDarkMode = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const x = event.clientX;
-    const y = event.clientY;
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y),
-    );
+    if (themeTransitionInProgress.current) return;
 
-    // @ts-ignore
-    if (!document.startViewTransition) {
-      setDarkMode(!darkMode);
+    const nextDarkMode = !darkMode;
+    const buttonBounds = event.currentTarget.getBoundingClientRect();
+    const x = buttonBounds.left + buttonBounds.width / 2;
+    const y = buttonBounds.top + buttonBounds.height / 2;
+    const endRadius =
+      Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y),
+      ) * 1.2;
+
+    const startViewTransition = (
+      document as ThemeTransitionDocument
+    ).startViewTransition?.bind(document);
+    const applyTheme = () => {
+      document.documentElement.classList.toggle("dark", nextDarkMode);
+      setDarkMode(nextDarkMode);
+    };
+
+    if (
+      !startViewTransition ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      applyTheme();
       return;
     }
 
-    // @ts-ignore
-    const transition = document.startViewTransition(() => {
-      setDarkMode(!darkMode);
+    themeTransitionInProgress.current = true;
+    document.documentElement.style.setProperty(
+      "--theme-transition-x",
+      `${x}px`,
+    );
+    document.documentElement.style.setProperty(
+      "--theme-transition-y",
+      `${y}px`,
+    );
+    document.documentElement.style.setProperty(
+      "--theme-transition-radius",
+      `${endRadius}px`,
+    );
+    document.documentElement.dataset.themeTransitionDirection = nextDarkMode
+      ? "to-dark"
+      : "to-light";
+
+    const transition = startViewTransition(() => {
+      flushSync(applyTheme);
     });
 
-    transition.ready.then(() => {
-      document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${endRadius}px at ${x}px ${y}px)`,
-          ],
-        },
-        {
-          duration: 400,
-          easing: "ease-in-out",
-          pseudoElement: "::view-transition-new(root)",
-        },
-      );
-    });
+    void transition.finished
+      .catch(() => undefined)
+      .finally(() => {
+        themeTransitionInProgress.current = false;
+      });
   };
 
   return (

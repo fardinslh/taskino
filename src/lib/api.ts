@@ -335,14 +335,17 @@ export type DailyProgressEntry = {
 
 export type MyDailyProgressStats = MyProgressStats & {
   averageProgressPercentage?: number;
+  completedFixedTasks?: number;
   doneFixedTaskProgressPercentage?: number;
   doneTaskPercentage?: number;
   averageTaskProgressPercentage?: number;
   averageFixedTaskProgressPercentage?: number;
   dayCount?: number;
   from?: string;
+  startScore?: number;
   to?: string;
   total?: number;
+  totalFixedTasks?: number;
   data?: DailyProgressEntry[];
   fixedTasks?: ProgressBucket;
   projects?: ProgressBucket;

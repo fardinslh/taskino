@@ -211,6 +211,7 @@ export function notificationText(notification: Notification) {
     "Task Completed": "گزارش تکمیل شد",
     "Fixed Task Completed": "گزارش ثابت تکمیل شد",
     "Fixed Task Rated": "گزارش ثابت امتیازدهی شد",
+    "Leave Request": "درخواست مرخصی جدید",
     "Leave Request Created": "درخواست مرخصی جدید",
     "Leave Request Submitted": "درخواست مرخصی جدید",
     "Leave Request Approved": "درخواست مرخصی تأیید شد",
@@ -247,6 +248,9 @@ export function notificationText(notification: Notification) {
   );
   const leaveRequestSubmitted = message.match(
     /^(.+?)\s+(?:submitted|created)\s+a leave request\.?$/i,
+  );
+  const newLeaveRequest = message.match(
+    /^A new leave request has been submitted\s*:?\s*(.*?)\.?$/i,
   );
   const myLeaveRequestDecision = message.match(
     /^Your leave request has been\s+(approved|rejected)\.?$/i,
@@ -318,8 +322,10 @@ export function notificationText(notification: Notification) {
     localizedMessage = name
       ? `${name} ثبت‌نام کرده و منتظر تایید شماست.`
       : "یک کاربر جدید ثبت‌نام کرده و منتظر تایید شماست.";
-  } else if (leaveRequestSubmitted) {
-    const name = leaveRequestSubmitted[1]?.trim();
+  } else if (leaveRequestSubmitted || newLeaveRequest) {
+    const name = (
+      leaveRequestSubmitted?.[1] ?? newLeaveRequest?.[1]
+    )?.trim();
     localizedMessage = name
       ? `${name} درخواست مرخصی ثبت کرد.`
       : "یک درخواست مرخصی جدید ثبت شد.";

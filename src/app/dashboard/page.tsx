@@ -1391,6 +1391,13 @@ function DailyPerformanceCard({
         "doneFixedTaskProgressPercentage",
       ),
   );
+  const dayCount = dailyStats?.dayCount ?? dailyStats?.data?.length ?? 0;
+  const totalProjectCount = dailyStats?.totalTasks ?? stats?.totalTasks ?? 0;
+  const completedProjectCount =
+    dailyStats?.completedTasks ?? stats?.completedTasks ?? 0;
+  const totalReportCount = dailyStats?.totalFixedTasks ?? 0;
+  const completedReportCount = dailyStats?.completedFixedTasks ?? 0;
+  const startScore = dailyStats?.startScore ?? 0;
 
   async function loadDailyProgress() {
     if (!token || !from || !to) return;
@@ -1493,6 +1500,32 @@ function DailyPerformanceCard({
       label: "پروژه‌های امتیاز داده‌شده",
       tone: "text-emerald-600 dark:text-emerald-400",
       value: doneProjectProgress,
+    },
+  ];
+  const rangeHighlights = [
+    {
+      icon: CalendarDays,
+      iconClass: "text-[#1f7a8c] dark:text-cyan-400",
+      label: "روزهای بازه",
+      value: dayCount.toLocaleString("fa-IR"),
+    },
+    {
+      icon: FolderKanban,
+      iconClass: "text-indigo-600 dark:text-indigo-400",
+      label: "پروژه‌های تکمیل‌شده",
+      value: `${completedProjectCount.toLocaleString("fa-IR")} / ${totalProjectCount.toLocaleString("fa-IR")}`,
+    },
+    {
+      icon: FileSpreadsheet,
+      iconClass: "text-violet-600 dark:text-violet-400",
+      label: "گزارش‌های تکمیل‌شده",
+      value: `${completedReportCount.toLocaleString("fa-IR")} / ${totalReportCount.toLocaleString("fa-IR")}`,
+    },
+    {
+      icon: Award,
+      iconClass: "text-amber-600 dark:text-amber-400",
+      label: "امتیاز شروع",
+      value: startScore.toLocaleString("fa-IR"),
     },
   ];
 
@@ -1618,7 +1651,7 @@ function DailyPerformanceCard({
             </div>
           </div>
 
-          <div className="h-3 overflow-hidden rounded-full bg-slate-200/80 p-[3px] shadow-inner dark:bg-slate-800">
+          <div className="h-3 overflow-hidden rounded-full bg-slate-200/80 p-[3px] shadow-inner dark:bg-slate-700/90 dark:ring-1 dark:ring-inset dark:ring-white/15 dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)]">
             <div className="relative h-full overflow-hidden rounded-full">
               <motion.div
                 animate={{ scaleX: rate / 100 }}
@@ -1645,6 +1678,27 @@ function DailyPerformanceCard({
                 )}
               </motion.div>
             </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {rangeHighlights.map((highlight) => {
+              const Icon = highlight.icon;
+
+              return (
+                <div
+                  className="min-w-0 rounded-xl bg-[--surface-2]/70 px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--border)]"
+                  key={highlight.label}
+                >
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-[--text-3]">
+                    <Icon className={highlight.iconClass} size={14} />
+                    <span className="truncate">{highlight.label}</span>
+                  </div>
+                  <strong className="mt-1 block text-sm font-extrabold tabular-nums text-[--text]">
+                    {highlight.value}
+                  </strong>
+                </div>
+              );
+            })}
           </div>
         </motion.div>
       </div>

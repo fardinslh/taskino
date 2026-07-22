@@ -101,6 +101,21 @@ describe("notification text localization", () => {
     });
   });
 
+  it("localizes the current backend leave request template", () => {
+    expect(
+      notificationText({
+        _id: "notification-current-leave-template",
+        title: "Leave Request",
+        message:
+          "A new leave request has been submitted: پوریا باری زاده",
+        type: "leave_request",
+      }),
+    ).toEqual({
+      title: "درخواست مرخصی جدید",
+      message: "پوریا باری زاده درخواست مرخصی ثبت کرد.",
+    });
+  });
+
   it("localizes extra task decision notifications", () => {
     expect(
       notificationText({
