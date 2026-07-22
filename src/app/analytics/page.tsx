@@ -20,13 +20,16 @@ import {
   ChevronDown,
   CheckCircle2,
   Clock3,
+  Crown,
   FileSpreadsheet,
   FileText,
   FolderKanban,
   Loader2,
   MessageSquareText,
+  RefreshCw,
   Search,
   Star,
+  Trophy,
   UserRound,
   X,
 } from "lucide-react";
@@ -41,6 +44,7 @@ import {
   type ListResponse,
   type MyDailyProgressStats,
   type Task,
+  type UserCompletionRating,
   type WorkStatusCounts,
   type WorkStatusSummaryUser,
 } from "@/lib/api";
@@ -216,6 +220,12 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(false);
   const [hasLoadedSummaries, setHasLoadedSummaries] = useState(false);
   const [error, setError] = useState("");
+  const [completionRatings, setCompletionRatings] = useState<
+    UserCompletionRating[]
+  >([]);
+  const [completionRatingsLoading, setCompletionRatingsLoading] =
+    useState(true);
+  const [completionRatingsError, setCompletionRatingsError] = useState("");
   const showInitialSkeleton =
     summaries.length === 0 &&
     !hasLoadedSummaries &&
@@ -247,6 +257,25 @@ export default function AnalyticsPage() {
 
     return grouped;
   }, [activeRange, fixedTasks]);
+
+  async function fetchCompletionRatings() {
+    if (!token) return;
+    setCompletionRatingsLoading(true);
+    setCompletionRatingsError("");
+    try {
+      const response = await managerApi.completionRatings(token);
+      setCompletionRatings(response.data);
+    } catch (error) {
+      setCompletionRatings([]);
+      setCompletionRatingsError(
+        error instanceof Error
+          ? error.message
+          : "دریافت رتبه‌بندی عملکرد کاربران ناموفق بود.",
+      );
+    } finally {
+      setCompletionRatingsLoading(false);
+    }
+  }
 
   async function fetchSummaries() {
     if (!from || !to || selectableUsers.length === 0) return;
@@ -546,11 +575,20 @@ export default function AnalyticsPage() {
   }
 
   const loadLatestSummaries = useEffectEvent(fetchSummaries);
+  const loadLatestCompletionRatings = useEffectEvent(fetchCompletionRatings);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => void loadLatestSummaries(), 0);
     return () => window.clearTimeout(timeoutId);
   }, [selectableUsers, token]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(
+      () => void loadLatestCompletionRatings(),
+      0,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [token]);
 
   if (!isManager) return null;
 
@@ -560,6 +598,13 @@ export default function AnalyticsPage() {
         <ManagerSummaryBanner
           activeUsers={managerStats?.activeUsers ?? users.length}
           firstName={userName(currentUser ?? undefined).split(" ")[0]}
+        />
+
+        <CompletionLeaderboard
+          error={completionRatingsError}
+          loading={completionRatingsLoading}
+          onRetry={() => void fetchCompletionRatings()}
+          ratings={completionRatings}
         />
 
         <header className="rounded-2xl bg-[--surface] p-5 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_12px_30px_rgba(15,23,42,0.06)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
@@ -1869,6 +1914,267 @@ function SummaryMetric({
         {value}
       </p>
       <p className="mt-0.5 text-[11px] font-bold text-[--text-3]">{label}</p>
+    </div>
+  );
+}
+
+function CompletionLeaderboard({
+  error,
+  loading,
+  onRetry,
+  ratings,
+}: {
+  error: string;
+  loading: boolean;
+  onRetry: () => void;
+  ratings: UserCompletionRating[];
+}) {
+  const orderedRatings = ratings
+    .slice()
+    .sort((first, second) => first.rank - second.rank);
+  const podium = orderedRatings.slice(0, 3);
+  const remaining = orderedRatings.slice(3);
+  const podiumStyles = {
+    1: {
+      accent: "from-amber-400 to-yellow-500",
+      card: "bg-amber-50/90 dark:bg-amber-950/25",
+      order: "sm:order-2 sm:-translate-y-3",
+      ring: "shadow-[0_0_0_1px_rgba(245,158,11,0.28),0_18px_36px_-20px_rgba(245,158,11,0.8)]",
+    },
+    2: {
+      accent: "from-slate-300 to-slate-500",
+      card: "bg-slate-50/90 dark:bg-slate-900/50",
+      order: "sm:order-1",
+      ring: "shadow-[0_0_0_1px_rgba(100,116,139,0.18)]",
+    },
+    3: {
+      accent: "from-orange-400 to-orange-600",
+      card: "bg-orange-50/90 dark:bg-orange-950/20",
+      order: "sm:order-3",
+      ring: "shadow-[0_0_0_1px_rgba(234,88,12,0.2)]",
+    },
+  } as const;
+
+  return (
+    <section className="overflow-hidden rounded-3xl bg-[--surface] shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_14px_34px_-24px_rgba(219,39,119,0.55)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <div className="relative overflow-hidden bg-gradient-to-l from-fuchsia-700 via-pink-600 to-rose-500 px-5 py-4 text-white sm:px-6">
+        <div className="pointer-events-none absolute -top-12 -left-8 h-36 w-36 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -right-10 -bottom-16 h-40 w-40 rounded-full bg-black/10" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] backdrop-blur-sm">
+              <Trophy size={21} />
+            </span>
+            <div>
+              <h2 className="text-balance text-lg font-black">
+                رقابت عملکرد تیم
+              </h2>
+              <p className="mt-0.5 text-xs font-medium text-white/75">
+                رتبه‌بندی تمام‌وقت پروژه‌ها و گزارش‌های تکمیل‌شده
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold tabular-nums shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]">
+              {ratings.length.toLocaleString("fa-IR")} نفر
+            </span>
+            <button
+              aria-label="به‌روزرسانی رتبه‌بندی"
+              className="flex size-10 items-center justify-center rounded-xl bg-white/15 transition-[background-color,transform] duration-150 hover:bg-white/25 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={loading}
+              onClick={onRetry}
+              type="button"
+            >
+              <RefreshCw
+                className={loading ? "animate-spin motion-reduce:animate-none" : ""}
+                size={17}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-6">
+        {loading && ratings.length === 0 ? (
+          <div
+            aria-label="در حال دریافت رتبه‌بندی عملکرد"
+            className="grid animate-pulse gap-3 motion-reduce:animate-none sm:grid-cols-3"
+            role="status"
+          >
+            {Array.from({ length: 3 }, (_, index) => (
+              <div
+                className="h-52 rounded-2xl bg-[--surface-2]"
+                key={index}
+              />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center rounded-2xl bg-red-50 px-4 py-8 text-center dark:bg-red-950/25">
+            <AlertTriangle className="text-red-500" size={26} />
+            <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
+              {error}
+            </p>
+            <button
+              className="mt-4 h-10 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition-[background-color,transform] duration-150 hover:bg-red-700 active:scale-[0.96]"
+              onClick={onRetry}
+              type="button"
+            >
+              تلاش دوباره
+            </button>
+          </div>
+        ) : orderedRatings.length === 0 ? (
+          <div className="rounded-2xl bg-[--surface-2] px-4 py-10 text-center">
+            <Trophy className="mx-auto text-[--text-3]" size={30} />
+            <p className="mt-3 text-sm font-bold text-[--text-2]">
+              هنوز فعالیت تکمیل‌شده‌ای برای رتبه‌بندی وجود ندارد.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid items-end gap-3 pt-3 sm:grid-cols-3">
+              {podium.map((rating) => {
+                const rank = rating.rank as 1 | 2 | 3;
+                const style = podiumStyles[rank];
+                const displayName =
+                  `${rating.firstName} ${rating.lastName}`.trim() || "کاربر";
+
+                return (
+                  <article
+                    className={`relative overflow-hidden rounded-2xl p-4 ${style.card} ${style.order} ${style.ring} ${podium.length === 1 ? "sm:col-start-2" : ""}`}
+                    key={rating.userId}
+                  >
+                    <div
+                      className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${style.accent}`}
+                    />
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span
+                          className={`flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-black text-white shadow-sm ${style.accent}`}
+                        >
+                          {rank === 1 ? <Crown size={20} /> : rank.toLocaleString("fa-IR")}
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-black text-[--text]">
+                            {displayName}
+                          </h3>
+                          <p className="mt-0.5 text-[10px] font-bold text-[--text-3]">
+                            رتبه {rating.rank.toLocaleString("fa-IR")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-left">
+                        <strong className="block text-xl font-black tabular-nums text-pink-600 dark:text-pink-400">
+                          {rating.totalCompleted.toLocaleString("fa-IR")}
+                        </strong>
+                        <span className="block text-[9px] font-bold text-[--text-3]">
+                          کار تکمیل‌شده
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-1.5 text-center">
+                      <LeaderboardMetric
+                        label="پروژه"
+                        value={rating.completedTasks}
+                      />
+                      <LeaderboardMetric
+                        label="گزارش"
+                        value={rating.completedFixedTasks}
+                      />
+                      <LeaderboardMetric
+                        emphasized
+                        label="مجموع"
+                        value={rating.totalCompleted}
+                      />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {remaining.length > 0 && (
+              <div className="mt-5 overflow-hidden rounded-2xl bg-[--surface-2]/70 shadow-[inset_0_0_0_1px_var(--border)]">
+                {remaining.map((rating) => {
+                  const displayName =
+                    `${rating.firstName} ${rating.lastName}`.trim() || "کاربر";
+
+                  return (
+                    <div
+                      className="grid items-center gap-3 border-b border-[--border] px-3 py-3 last:border-b-0 sm:grid-cols-[42px_minmax(140px,1fr)_minmax(180px,auto)_auto] sm:px-4"
+                      key={rating.userId}
+                    >
+                      <span className="flex size-9 items-center justify-center rounded-xl bg-[--surface] text-sm font-black tabular-nums text-[--text-2] shadow-[inset_0_0_0_1px_var(--border)]">
+                        {rating.rank.toLocaleString("fa-IR")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-[--text]">
+                          {displayName}
+                        </p>
+                        <p className="mt-0.5 text-[10px] font-medium text-[--text-3]">
+                          {rating.totalCompleted.toLocaleString("fa-IR")} کار تکمیل‌شده
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[11px] font-bold text-[--text-3]">
+                        <span className="rounded-lg bg-[--surface] px-2 py-1 shadow-[inset_0_0_0_1px_var(--border)]">
+                          پروژه {rating.completedTasks.toLocaleString("fa-IR")}
+                        </span>
+                        <span className="rounded-lg bg-[--surface] px-2 py-1 shadow-[inset_0_0_0_1px_var(--border)]">
+                          گزارش {rating.completedFixedTasks.toLocaleString("fa-IR")}
+                        </span>
+                      </div>
+                      <div className="text-left">
+                        <strong className="block text-base font-black tabular-nums text-pink-600 dark:text-pink-400">
+                          {rating.totalCompleted.toLocaleString("fa-IR")}
+                        </strong>
+                        <span className="block text-[9px] font-bold text-[--text-3]">
+                          مجموع واقعی
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="mt-4 text-pretty text-[11px] leading-5 text-[--text-3]">
+              رتبه‌بندی بر اساس مجموع واقعی پروژه‌ها و گزارش‌های تکمیل‌شده در
+              تمام مدت فعالیت محاسبه می‌شود.
+            </p>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function LeaderboardMetric({
+  emphasized = false,
+  label,
+  value,
+}: {
+  emphasized?: boolean;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div
+      className={`rounded-xl px-1.5 py-2 ${
+        emphasized
+          ? "bg-pink-600 text-white dark:bg-pink-500"
+          : "bg-white/65 text-[--text] dark:bg-white/5"
+      }`}
+    >
+      <strong className="block text-sm font-black tabular-nums">
+        {value.toLocaleString("fa-IR")}
+      </strong>
+      <span
+        className={`mt-0.5 block text-[9px] font-bold ${
+          emphasized ? "text-white/75" : "text-[--text-3]"
+        }`}
+      >
+        {label}
+      </span>
     </div>
   );
 }

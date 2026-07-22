@@ -437,6 +437,22 @@ export type UserProgress = {
   performanceEvaluatedAt?: string;
 };
 
+export type UserCompletionRating = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  completedTasks: number;
+  completedFixedTasks: number;
+  totalCompleted: number;
+  rank: number;
+  completionRate: number;
+};
+
+export type UserCompletionRatingList = {
+  total: number;
+  data: UserCompletionRating[];
+};
+
 export type WorkStatusCounts = {
   total: number;
   done: number;
@@ -925,6 +941,13 @@ export const taskApi = {
 export const managerApi = {
   statistics: (token: string) =>
     unwrapAxios(apiClient.get<ManagerStats>("/manager/statistics")),
+  completionRatings: (token: string) =>
+    unwrapAxios(
+      apiClient.get<UserCompletionRatingList>(
+        "/users/manager/completion-ratings",
+      ),
+      "دریافت رتبه‌بندی عملکرد کاربران ناموفق بود",
+    ),
   fixedTasks: (token: string, params: { from: string; to: string }) =>
     unwrapAxios<ListResponse<FixedTask> | ManagerAllTasks>(
       apiClient.get(
